@@ -16,8 +16,10 @@ import {
   ExternalLink,
   Copy,
   CheckCircle2,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { AddFUNToWalletButton } from "@/components/mint/AddFUNToWalletButton";
 
 const CONTRACT_ADDRESS = "0x39A1b047D5d143f8874888cfa1d30Fb2AE6F0CD6";
 
@@ -157,7 +159,7 @@ export function MintGuideFullFlow({ defaultOpen = true }: { defaultOpen?: boolea
       icon: <Zap className="h-4 w-4" />,
       phase: "claim",
       tips: (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <p className="text-xs text-muted-foreground">Mỗi bước cần 1 giao dịch MetaMask (tốn tBNB gas).</p>
           <div className="flex items-center gap-1.5 text-xs">
             <span className="text-muted-foreground">Contract:</span>
@@ -176,6 +178,7 @@ export function MintGuideFullFlow({ defaultOpen = true }: { defaultOpen?: boolea
               BscScan <ExternalLink className="h-3 w-3 inline" />
             </a>
           </div>
+          <AddFUNToWalletButton />
         </div>
       ),
     },
