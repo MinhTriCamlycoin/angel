@@ -4,6 +4,7 @@ import { FUNMoneyBalanceCard } from "@/components/mint/FUNMoneyBalanceCard";
 import { MintActionsList } from "@/components/mint/MintActionsList";
 import { TokenLifecyclePanel } from "@/components/mint/TokenLifecyclePanel";
 import { MintGuideFullFlow } from "@/components/mint/MintGuideFullFlow";
+import { AddFUNToWalletButton } from "@/components/mint/AddFUNToWalletButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnmintedCount } from "@/hooks/useUnmintedCount";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,11 @@ export default function Mint() {
                 <div className="lg:col-span-1">
                   <div className="lg:sticky lg:top-24 space-y-4">
                     <FUNMoneyBalanceCard />
+
+                    {/* Add FUN to Wallet */}
+                    <div className="flex justify-center">
+                      <AddFUNToWalletButton />
+                    </div>
 
                     {/* Token Lifecycle Panel */}
                     <TokenLifecyclePanel />
