@@ -63,6 +63,7 @@ import AdminUserManagement from "./pages/AdminUserManagement";
 import AdminWalletManagement from "./pages/AdminWalletManagement";
 import AdminFraudAlerts from "./pages/AdminFraudAlerts";
 import AdminTreasury from "./pages/AdminTreasury";
+import AdminContractStatus from "./pages/AdminContractStatus";
 import CoordinatorGate from "./pages/CoordinatorGate";
 import CoordinatorProject from "./pages/CoordinatorProject";
 import DynamicRoute from "./pages/DynamicRoute";
@@ -123,6 +124,7 @@ const App = () => (
               <Route path="/admin/wallet-management" element={<AdminWalletManagement />} />
               <Route path="/admin/fraud-alerts" element={<AdminFraudAlerts />} />
               <Route path="/admin/treasury" element={<AdminTreasury />} />
+              <Route path="/admin/contract-status" element={<AdminContractStatus />} />
               <Route path="/receipt/:receiptId" element={<Receipt />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/community-questions" element={<CommunityQuestions />} />

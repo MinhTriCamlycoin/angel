@@ -56,6 +56,7 @@ const navGroups: NavGroup[] = [
       { to: "/admin/treasury", icon: Vault, label: "Ví Treasury" },
       { to: "/admin/project-fund", icon: Heart, label: "Quỹ" },
       { to: "/admin/mint-approval", icon: Shield, label: "Mint Approval" },
+      { to: "/admin/contract-status", icon: Shield, label: "Contract" },
       { to: "/admin/tip-reports", icon: Gift, label: "Tip Reports" },
     ],
   },
