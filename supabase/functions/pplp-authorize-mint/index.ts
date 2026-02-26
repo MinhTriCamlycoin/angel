@@ -18,8 +18,8 @@ const BSC_TESTNET_RPC_LIST = [
 
 const BSC_TESTNET_CHAIN_ID = 97n;
 
-// FUNMoneyProductionV1_2_1 contract address
-const CONTRACT_ADDRESS = "0x1aa8DE8B1E4465C6d729E8564893f8EF823a5ff2";
+// FUNMoneyProductionV1_2_1 contract address (migrated)
+const CONTRACT_ADDRESS = "0x39A1b047D5d143f8874888cfa1d30Fb2AE6F0CD6";
 
 // Actual contract ABI for lockWithPPLP flow
 const CONTRACT_ABI = [

@@ -248,7 +248,7 @@ Deno.serve(async (req) => {
 
         successCount++;
         totalCamlyDistributed += camlyAmount;
-        results.push({ user_id, status: "success", camly_amount: camlyAmount, tx_id: txId });
+        results.push({ user_id, status: "success", camly_amount: camlyAmount });
 
         console.log(`[Lì xì] ✅ ${displayName} (${user_id}): ${fun_amount} FUN → ${camlyAmount.toLocaleString()} Camly`);
       } catch (err) {
