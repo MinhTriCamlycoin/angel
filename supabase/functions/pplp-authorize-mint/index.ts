@@ -23,9 +23,13 @@ const CONTRACT_ADDRESS = "0x39A1b047D5d143f8874888cfa1d30Fb2AE6F0CD6";
 
 // Registered Attester (via govSetAttester on contract)
 // Wallet: 0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D
-// Derived from TREASURY_PRIVATE_KEY secret
+// Derived from ATTESTER_PRIVATE_KEY secret
+// Role: Ký mint on-chain (lockWithPPLP) — ĐỘC LẬP với Treasury wallet
 // Current: 1-sig (attesterThreshold = 1)
 // Future: 3-sig when additional attester keys are added
+//
+// ⚠️ KHÔNG NHẦM LẪN với Treasury wallet (0x416336c3b7ACAe89F47EAD2707412f20DA159ac8)
+// Treasury wallet chỉ dùng để chi trả thưởng (Rút thưởng, Lì xì) — KHÔNG liên quan đến mint
 
 // Actual contract ABI for lockWithPPLP flow
 const CONTRACT_ABI = [

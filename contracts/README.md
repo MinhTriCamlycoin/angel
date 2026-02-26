@@ -140,7 +140,10 @@ npx hardhat run scripts/deploy.js --network bscMainnet
 
 | # | Wallet | Role | Status |
 |---|--------|------|--------|
-| 1 | `0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D` | Treasury Signer (derived from TREASURY_PRIVATE_KEY) | ✅ Active |
+| 1 | `0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D` | Mint Signer (ký lockWithPPLP on-chain) | ✅ Active |
+
+> ⚠️ **Attester wallet ĐỘC LẬP với Treasury wallet** (`0x416336c3b7ACAe89F47EAD2707412f20DA159ac8`).
+> Treasury chỉ dùng để chi trả thưởng (Rút thưởng, Lì xì) — KHÔNG liên quan đến mint on-chain.
 
 ### Attester Threshold
 
