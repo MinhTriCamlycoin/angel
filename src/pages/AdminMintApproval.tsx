@@ -30,6 +30,8 @@ import {
   BarChart3,
   PauseCircle,
   PlayCircle,
+  Users,
+  Package,
 } from "lucide-react";
 import { MintExportButton } from "@/components/admin/MintExportButton";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -106,6 +108,9 @@ export default function AdminMintApproval() {
   const [pausedReason, setPausedReason] = useState("");
   const [isTogglingPause, setIsTogglingPause] = useState(false);
   const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [isBatchLocking, setIsBatchLocking] = useState(false);
+  const [batchLockProgress, setBatchLockProgress] = useState({ done: 0, total: 0, current: "" });
+  const [showBatchLockConfirm, setShowBatchLockConfirm] = useState(false);
 
   const fetchRequests = useCallback(async () => {
     setIsLoading(true);
@@ -303,6 +308,84 @@ export default function AdminMintApproval() {
       setIsCleaningUp(false);
     }
   }, [requests, fetchRequests, fetchGlobalCounts]);
+
+  // ============================================
+  // BATCH LOCK BY USER (gom mint requests)
+  // ============================================
+
+  // Group pending requests by actor_id + wallet
+  const batchLockGroups = useMemo(() => {
+    const pending = requests.filter(r => r.status === "pending" && !r.is_banned);
+    const groups: Record<string, { actor_id: string; wallet: string; display_name: string; requests: MintRequestRow[] }> = {};
+    for (const r of pending) {
+      const key = `${r.actor_id}__${r.recipient_address}`;
+      if (!groups[key]) {
+        groups[key] = {
+          actor_id: r.actor_id,
+          wallet: r.recipient_address,
+          display_name: r.profiles?.display_name || r.actor_id.slice(0, 8),
+          requests: [],
+        };
+      }
+      groups[key].requests.push(r);
+    }
+    // Only groups with 1+ pending requests
+    return Object.values(groups).filter(g => g.requests.length > 0).sort((a, b) => b.requests.length - a.requests.length);
+  }, [requests]);
+
+  const batchLockTotalUsers = batchLockGroups.length;
+  const batchLockTotalActions = batchLockGroups.reduce((s, g) => s + g.requests.length, 0);
+  const batchLockTotalFun = batchLockGroups.reduce((s, g) => s + g.requests.reduce((ss, r) => ss + r.amount, 0), 0);
+
+  const handleBatchLockByUser = useCallback(async () => {
+    if (batchLockGroups.length === 0) {
+      toast.info("Không có yêu cầu pending nào để gom");
+      return;
+    }
+
+    setShowBatchLockConfirm(false);
+    setIsBatchLocking(true);
+    setBatchLockProgress({ done: 0, total: batchLockGroups.length, current: "" });
+
+    let successCount = 0;
+    let failCount = 0;
+    let totalMinted = 0;
+
+    for (let i = 0; i < batchLockGroups.length; i++) {
+      const group = batchLockGroups[i];
+      setBatchLockProgress({ done: i, total: batchLockGroups.length, current: group.display_name });
+
+      try {
+        const { data, error } = await supabase.functions.invoke("pplp-batch-lock", {
+          body: { actor_id: group.actor_id, wallet_address: group.wallet },
+        });
+
+        if (error) throw error;
+
+        if (data?.success) {
+          successCount++;
+          totalMinted += data.user_amount || 0;
+          console.log(`[Batch] ✓ ${group.display_name}: ${group.requests.length} actions → TX: ${data.tx_hash}`);
+        } else {
+          failCount++;
+          console.error(`[Batch] ✗ ${group.display_name}: ${data?.error}`);
+        }
+      } catch (e: any) {
+        failCount++;
+        console.error(`[Batch] ✗ ${group.display_name}:`, e?.message || e);
+      }
+
+      setBatchLockProgress({ done: i + 1, total: batchLockGroups.length, current: group.display_name });
+    }
+
+    toast.success(
+      `⚡ Gom & Ký hoàn tất: ${successCount} users thành công, ${failCount} thất bại. Tổng: ${totalMinted.toLocaleString()} FUN`,
+      { duration: 8000 }
+    );
+
+    setIsBatchLocking(false);
+    await Promise.all([fetchRequests(), fetchGlobalCounts()]);
+  }, [batchLockGroups, fetchRequests, fetchGlobalCounts]);
 
   // Helper: extract error body from FunctionsHttpError (409 returns body in context)
   const extractErrorBody = async (error: unknown): Promise<string> => {
@@ -713,6 +796,70 @@ export default function AdminMintApproval() {
                   </Button>
                 ) : null;
               })()}
+              {/* ⚡ Batch Lock by User */}
+              {!mintPaused && batchLockTotalActions > 0 && (
+                <>
+                  <Button
+                    size="sm"
+                    onClick={() => setShowBatchLockConfirm(true)}
+                    disabled={isBatchLocking}
+                    className="bg-gradient-to-r from-violet-500 to-indigo-500 hover:from-violet-600 hover:to-indigo-600 text-white"
+                  >
+                    {isBatchLocking ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        {batchLockProgress.done}/{batchLockProgress.total}
+                      </>
+                    ) : (
+                      <>
+                        <Package className="h-4 w-4 mr-1" />
+                        ⚡ Gom & Ký ({batchLockTotalUsers} users, {batchLockTotalActions} actions)
+                      </>
+                    )}
+                  </Button>
+                  {/* Confirm Dialog */}
+                  {showBatchLockConfirm && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowBatchLockConfirm(false)}>
+                      <div className="bg-background border rounded-xl shadow-xl p-6 max-w-md w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-lg font-bold flex items-center gap-2">
+                          <Package className="h-5 w-5 text-violet-500" />
+                          Gom & Ký theo User
+                        </h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between p-2 rounded bg-muted">
+                            <span className="flex items-center gap-1"><Users className="h-4 w-4" /> Users</span>
+                            <strong>{batchLockTotalUsers}</strong>
+                          </div>
+                          <div className="flex justify-between p-2 rounded bg-muted">
+                            <span className="flex items-center gap-1"><Zap className="h-4 w-4" /> Actions</span>
+                            <strong>{batchLockTotalActions}</strong>
+                          </div>
+                          <div className="flex justify-between p-2 rounded bg-muted">
+                            <span className="flex items-center gap-1"><Coins className="h-4 w-4" /> Tổng FUN</span>
+                            <strong className="text-amber-600">{batchLockTotalFun.toLocaleString("vi-VN")}</strong>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Mỗi user sẽ được gom tất cả pending requests thành 1 lệnh <code>lockWithPPLP</code> on-chain duy nhất. Tiết kiệm gas đáng kể.
+                        </p>
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="outline" size="sm" onClick={() => setShowBatchLockConfirm(false)}>
+                            Hủy
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={handleBatchLockByUser}
+                            className="bg-gradient-to-r from-violet-500 to-indigo-500 hover:from-violet-600 hover:to-indigo-600 text-white"
+                          >
+                            <Package className="h-4 w-4 mr-1" />
+                            Xác nhận gom {batchLockTotalUsers} users
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
               <Button variant="outline" size="sm" onClick={fetchRequests} disabled={isLoading}>
                 <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? "animate-spin" : ""}`} />
                 Làm mới
@@ -755,6 +902,24 @@ export default function AdminMintApproval() {
                   <div
                     className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${((isRetryingAll ? retryProgress : batchProgress).done / (isRetryingAll ? retryProgress : batchProgress).total) * 100}%` }}
+                  />
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Batch Lock Progress */}
+          {isBatchLocking && (
+            <Alert className="border-violet-200 bg-violet-50 dark:bg-violet-950/30">
+              <Loader2 className="h-4 w-4 animate-spin text-violet-600" />
+              <AlertDescription className="text-violet-700 dark:text-violet-300 text-sm">
+                <strong>⚡ Đang gom & ký theo user...</strong>{" "}
+                {batchLockProgress.done}/{batchLockProgress.total} users
+                {batchLockProgress.current && <span className="ml-1">— {batchLockProgress.current}</span>}
+                <div className="mt-2 w-full bg-violet-200 dark:bg-violet-800 rounded-full h-2">
+                  <div
+                    className="bg-violet-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(batchLockProgress.done / Math.max(1, batchLockProgress.total)) * 100}%` }}
                   />
                 </div>
               </AlertDescription>
