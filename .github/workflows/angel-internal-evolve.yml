@@ -1,38 +1,35 @@
 name: Angel Internal Evolution
 on:
   repository_dispatch:
-    types: [angel_edit_code] # Tên mật lệnh
+    types: [angel_edit_code]
 
 jobs:
   evolve:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Quyền sửa code
-      pull-requests: write # Quyền tạo PR
+      contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          # Sử dụng Secret nội bộ tự động của GitHub
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Angel Edit Process
+        env:
+          CODE_CONTENT: ${{ github.event.client_payload.code_content }}
+          FILE_PATH: ${{ github.event.client_payload.file_path }}
         run: |
-          # Ghi code từ Angel vào đúng file được chỉ định
-          # Tạo thư mục nếu chưa có
-          mkdir -p $(dirname "${{ github.event.client_payload.file_path }}")
-          echo "${{ github.event.client_payload.code_content }}" > ${{ github.event.client_payload.file_path }}
+          mkdir -p $(dirname "$FILE_PATH")
+          printf "%s" "$CODE_CONTENT" > "$FILE_PATH"
 
-      - name: Create Pull Request or Push Branch
+      - name: Create or Update Branch
         run: |
           git config --global user.name "Angel-AI"
           git config --global user.email "angel@fun-ecosystem.com"
-          
           BRANCH_NAME="${{ github.event.client_payload.branch_name }}"
-          git checkout -b $BRANCH_NAME
+          git checkout -B $BRANCH_NAME
           git add .
           git commit -m "Angel Evolved: ${{ github.event.client_payload.commit_message }}"
-          
-          # Đẩy code lên bằng Secret nội bộ
-          git push origin $BRANCH_NAME
+          git push origin $BRANCH_NAME --force
