@@ -1,39 +1,43 @@
 
 
-## Plan: Khôi phục tài khoản Tú Nguyễn (tunguyen) — False Positive
+## Plan: Thống nhất action on-chain thành FUN_REWARD duy nhất
 
-### Vấn đề
-- 38 fraud signals "Device hash matches" chưa được giải quyết → hệ thống anti-sybil đóng băng thưởng (≥3 signals severity ≥3 → reward_multiplier = 0)
-- Tier hiện tại: 0 (sai — tài khoản đã 37 ngày tuổi, đủ điều kiện Tier 2)
-- User kia (`97ca62bf-...`) không tồn tại trong profiles → false positive
+### Vấn đề hiện tại
+- Mỗi loại hành động (QUESTION_ASK, CONTENT_CREATE, JOURNAL_WRITE...) đều gọi `lockWithPPLP()` với action name riêng
+- Contract yêu cầu mỗi action phải được `govRegisterAction()` trước → phải đăng ký 12+ actions
+- Nếu thiếu 1 action → lỗi `ACTION_NOT_REGISTERED` on-chain
+
+### Giải pháp
+Tất cả gọi on-chain đều dùng **1 action duy nhất: `"FUN_REWARD"`**. Phân biệt loại hành động chỉ ở database (`pplp_actions.action_type`).
 
 ### Thay đổi
 
-| # | Loại | Mô tả |
+| # | File | Mô tả |
 |---|------|-------|
-| 1 | SQL Migration | Resolve toàn bộ 38 fraud signals (đánh dấu `is_resolved = true`, ghi chú admin xác nhận hợp lệ) |
-| 2 | SQL Migration | Nâng tier từ 0 lên 2 (tài khoản 37 ngày, đủ điều kiện tier 2: 30d+) |
+| 1 | `supabase/functions/pplp-authorize-mint/index.ts` | Thay `actionName = action.action_type` → `actionName = "FUN_REWARD"` (hardcode). Giữ `action.action_type` trong log/DB để audit |
+| 2 | `contracts/scripts/deploy.js` | Đổi danh sách `initialActions` thành chỉ `["FUN_REWARD"]` |
+| 3 | `docs/FUN_MONEY_MINTING_SYSTEM.md` | Cập nhật tài liệu mô tả kiến trúc unified action |
 
-### SQL sẽ thực thi
+### Chi tiết kỹ thuật
 
-```sql
--- 1. Resolve 38 fraud signals
-UPDATE pplp_fraud_signals 
-SET is_resolved = true, 
-    resolved_by = 'admin_manual',
-    resolved_at = now(),
-    details = details || '{"resolution": "Admin xác nhận người dùng hợp lệ - false positive do device hash trùng user không tồn tại"}'::jsonb
-WHERE actor_id = 'e4af2f75-9f26-4e07-bca5-0197cf815f9d' 
-  AND is_resolved = false;
+Thay đổi cốt lõi trong `pplp-authorize-mint/index.ts` (line 379-381):
 
--- 2. Nâng tier lên 2
-UPDATE pplp_user_tiers 
-SET tier = 2, updated_at = now() 
-WHERE user_id = 'e4af2f75-9f26-4e07-bca5-0197cf815f9d';
+```text
+TRƯỚC:
+  const actionName = action.action_type;        // "QUESTION_ASK", "CONTENT_CREATE"...
+  const actionHash = hashActionName(actionName);
+
+SAU:
+  const UNIFIED_ACTION = "FUN_REWARD";
+  const actionName = UNIFIED_ACTION;             // Always "FUN_REWARD" on-chain
+  const actionHash = hashActionName(actionName);
+  // action.action_type vẫn được lưu trong DB để phân biệt
 ```
 
-### Kết quả sau khi xử lý
-- Anti-sybil `checkAntiSybil()` sẽ trả `risk_level: 'clear'`, `reward_multiplier: 1.0`
-- Thưởng đăng bài, nhật ký, chat sẽ hoạt động bình thường trở lại
-- Tier 2 → được 100% giới hạn hành động hàng ngày
+- `action_hash` trong `pplp_mint_requests` sẽ luôn là `keccak256("FUN_REWARD")`
+- Database columns `action_type`, `metadata` vẫn giữ nguyên để audit/reporting
+- Chỉ cần đăng ký **1 lần** `govRegisterAction("FUN_REWARD", 1)` trên contract mới
+
+### Yêu cầu tiên quyết
+- Guardian wallet phải gọi `govRegisterAction("FUN_REWARD", 1)` trên contract `0x39A1...0CD6` trước khi mint
 
