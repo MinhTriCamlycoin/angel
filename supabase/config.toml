@@ -167,6 +167,9 @@ verify_jwt = false
 [functions.pplp-batch-processor]
 verify_jwt = false
 
+[functions.pplp-batch-lock]
+verify_jwt = false
+
 [functions.get-tip-receipt]
 verify_jwt = false
 
