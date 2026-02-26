@@ -134,6 +134,25 @@ npx hardhat run scripts/deploy.js --network bscMainnet
 | BSC Testnet | `0x39A1b047D5d143f8874888cfa1d30Fb2AE6F0CD6` |
 | BSC Mainnet | To be deployed after audit |
 
+## Governance Setup
+
+### Registered Attesters
+
+| # | Wallet | Role | Status |
+|---|--------|------|--------|
+| 1 | `0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D` | Treasury Signer (derived from TREASURY_PRIVATE_KEY) | ✅ Active |
+
+### Attester Threshold
+
+- **Current**: `attesterThreshold = 1` (1-sig) — đủ 1 chữ ký để `lockWithPPLP()`
+- **Future**: `attesterThreshold = 3` (3-sig) — sẽ áp dụng khi bổ sung thêm attester keys
+
+### Registered Actions
+
+| Action | Version | Description |
+|--------|---------|-------------|
+| `FUN_REWARD` | 1 | Unified action cho tất cả reward types (via `govRegisterAction`) |
+
 ## Security Considerations
 
 1. **Multi-Attester**: Requires threshold signatures to lock tokens
