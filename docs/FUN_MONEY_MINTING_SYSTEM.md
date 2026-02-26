@@ -96,6 +96,11 @@
 > đều sử dụng chung `actionName = "FUN_REWARD"` khi gọi `lockWithPPLP()` on-chain.
 > Phân biệt loại hành động chỉ ở database (`pplp_actions.action_type`).
 > Chỉ cần `govRegisterAction("FUN_REWARD", 1)` **một lần duy nhất** trên contract.
+>
+> **Attester Configuration**:
+> - Attester wallet: `0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D` (derived from TREASURY_PRIVATE_KEY)
+> - Current: 1-sig (`attesterThreshold = 1`)
+> - Future: 3-sig khi bổ sung thêm attester keys
 
 ---
 

@@ -21,6 +21,12 @@ const BSC_TESTNET_CHAIN_ID = 97n;
 // FUNMoneyProductionV1_2_1 contract address (migrated)
 const CONTRACT_ADDRESS = "0x39A1b047D5d143f8874888cfa1d30Fb2AE6F0CD6";
 
+// Registered Attester (via govSetAttester on contract)
+// Wallet: 0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D
+// Derived from TREASURY_PRIVATE_KEY secret
+// Current: 1-sig (attesterThreshold = 1)
+// Future: 3-sig when additional attester keys are added
+
 // Actual contract ABI for lockWithPPLP flow
 const CONTRACT_ABI = [
   "function name() view returns (string)",

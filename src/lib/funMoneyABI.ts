@@ -90,6 +90,13 @@ export const FUN_MONEY_ABI = [
   "event ExcessRecycled(uint256 amount)",
 ] as const;
 
+// Registered Attesters (via govSetAttester on contract)
+// Current: 1-sig (attesterThreshold = 1)
+// Future: 3-sig when additional attester keys are added
+export const REGISTERED_ATTESTERS = [
+  "0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D", // Attester #1 (Treasury signer)
+] as const;
+
 // Contract addresses per network
 export const FUN_MONEY_ADDRESSES: Record<number, string> = {
   56: "", // BSC Mainnet - to be deployed later
