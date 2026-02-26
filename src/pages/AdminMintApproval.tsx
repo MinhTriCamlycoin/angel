@@ -64,6 +64,9 @@ interface MintRequestRow {
     display_name: string | null;
     avatar_url: string | null;
   };
+  // Ban/fraud flags
+  is_banned?: boolean;
+  is_suspicious?: boolean;
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -102,6 +105,7 @@ export default function AdminMintApproval() {
   const [mintPaused, setMintPaused] = useState(false);
   const [pausedReason, setPausedReason] = useState("");
   const [isTogglingPause, setIsTogglingPause] = useState(false);
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
 
   const fetchRequests = useCallback(async () => {
     setIsLoading(true);
@@ -150,9 +154,38 @@ export default function AdminMintApproval() {
         });
       }
 
+      // Cross-check banned users (active suspensions)
+      const bannedSet = new Set<string>();
+      for (let i = 0; i < actorIds.length; i += 200) {
+        const chunk = actorIds.slice(i, i + 200);
+        const { data: suspensions } = await supabase
+          .from("user_suspensions")
+          .select("user_id")
+          .in("user_id", chunk)
+          .is("lifted_at", null);
+        (suspensions || []).forEach((s: any) => bannedSet.add(s.user_id));
+      }
+
+      // Cross-check suspicious users (unresolved fraud signals severity >= 3)
+      const suspiciousSet = new Set<string>();
+      for (let i = 0; i < actorIds.length; i += 200) {
+        const chunk = actorIds.slice(i, i + 200);
+        const { data: fraudSignals } = await supabase
+          .from("pplp_fraud_signals")
+          .select("actor_id")
+          .in("actor_id", chunk)
+          .eq("is_resolved", false)
+          .gte("severity", 3);
+        (fraudSignals || []).forEach((f: any) => {
+          if (!bannedSet.has(f.actor_id)) suspiciousSet.add(f.actor_id);
+        });
+      }
+
       const enriched = allData.map((r: any) => ({
         ...r,
         profiles: profilesMap[r.actor_id] || { display_name: null, avatar_url: null },
+        is_banned: bannedSet.has(r.actor_id),
+        is_suspicious: suspiciousSet.has(r.actor_id),
       }));
 
       setRequests(enriched);
@@ -231,6 +264,45 @@ export default function AdminMintApproval() {
     fetchGlobalCounts();
     fetchMintPauseStatus();
   }, [fetchRequests, fetchGlobalCounts, fetchMintPauseStatus]);
+
+  // Cleanup banned/suspicious mint requests
+  const handleCleanupBanned = useCallback(async () => {
+    const bannedPending = requests.filter(r => r.status === "pending" && r.is_banned).length;
+    const suspiciousPending = requests.filter(r => r.status === "pending" && r.is_suspicious).length;
+
+    if (bannedPending === 0 && suspiciousPending === 0) {
+      toast.info("Không có yêu cầu nào từ tài khoản vi phạm hoặc nghi gian lận");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Sẽ từ chối ${bannedPending} yêu cầu từ tài khoản bị ban và gắn cờ ${suspiciousPending} yêu cầu nghi gian lận. Tiếp tục?`
+    );
+    if (!confirmed) return;
+
+    setIsCleaningUp(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cleanup-banned-mint-requests");
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(
+          `🛡️ ${data.message}`,
+          { duration: 6000 }
+        );
+      } else {
+        toast.error(data?.error || "Lỗi không xác định");
+      }
+
+      await Promise.all([fetchRequests(), fetchGlobalCounts()]);
+    } catch (error: any) {
+      console.error("Cleanup error:", error);
+      toast.error("Lỗi khi lọc tài khoản vi phạm");
+    } finally {
+      setIsCleaningUp(false);
+    }
+  }, [requests, fetchRequests, fetchGlobalCounts]);
 
   // Helper: extract error body from FunctionsHttpError (409 returns body in context)
   const extractErrorBody = async (error: unknown): Promise<string> => {
@@ -621,6 +693,26 @@ export default function AdminMintApproval() {
                   )}
                 </Button>
               )}
+              {/* Cleanup banned/suspicious button */}
+              {(() => {
+                const bannedCount = requests.filter(r => r.status === "pending" && r.is_banned).length;
+                const suspiciousCount = requests.filter(r => r.status === "pending" && r.is_suspicious).length;
+                return (bannedCount > 0 || suspiciousCount > 0) ? (
+                  <Button
+                    size="sm"
+                    onClick={handleCleanupBanned}
+                    disabled={isCleaningUp}
+                    className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white"
+                  >
+                    {isCleaningUp ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : (
+                      <Shield className="h-4 w-4 mr-1" />
+                    )}
+                    🛡️ Lọc vi phạm ({bannedCount + suspiciousCount})
+                  </Button>
+                ) : null;
+              })()}
               <Button variant="outline" size="sm" onClick={fetchRequests} disabled={isLoading}>
                 <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? "animate-spin" : ""}`} />
                 Làm mới
@@ -888,7 +980,7 @@ function MintRequestCard({
   const statusInfo = STATUS_CONFIG[request.status] || STATUS_CONFIG.pending;
 
   return (
-    <Card className={`transition-all hover:shadow-sm ${isSelected ? "ring-2 ring-primary/50 bg-primary/5" : ""}`}>
+    <Card className={`transition-all hover:shadow-sm ${isSelected ? "ring-2 ring-primary/50 bg-primary/5" : ""} ${request.is_banned ? "border-red-400 bg-red-50/50 dark:bg-red-950/20" : request.is_suspicious ? "border-orange-400 bg-orange-50/50 dark:bg-orange-950/20" : ""}`}>
       <CardContent className="p-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           {/* Checkbox */}
@@ -907,6 +999,16 @@ function MintRequestCard({
               <Badge variant={statusInfo.variant} className="text-xs">
                 {statusInfo.label}
               </Badge>
+              {request.is_banned && (
+                <Badge className="text-xs bg-red-600 text-white border-red-600">
+                  🚫 Tài khoản bị ban
+                </Badge>
+              )}
+              {request.is_suspicious && !request.is_banned && (
+                <Badge className="text-xs bg-orange-500 text-white border-orange-500">
+                  ⚠️ Nghi gian lận
+                </Badge>
+              )}
               <span className="text-xs text-muted-foreground">
                 {formatDistanceToNow(new Date(request.created_at), { addSuffix: true, locale: vi })}
               </span>
