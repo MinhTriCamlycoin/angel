@@ -351,7 +351,7 @@ contract FUNMoney is ERC20, AccessControl, EIP712 {
 
 ### BSC Testnet (Chain ID: 97)
 - **Contract**: FUNMoneyProductionV1_2_1
-- **Address**: 0x1aa8DE8B1E4465C6d729E8564893f8EF823a5ff2
+- **Address**: 0x39A1b047D5d143f8874888cfa1d30Fb2AE6F0CD6
 - **Treasury Wallet**: 0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D
 
 ### Vesting Flow (3 bước)
@@ -363,7 +363,7 @@ contract FUNMoney is ERC20, AccessControl, EIP712 {
 - name: "FUN Money"
 - version: "1.2.1"
 - chainId: 97
-- verifyingContract: 0x1aa8DE8B1E4465C6d729E8564893f8EF823a5ff2
+- verifyingContract: 0x39A1b047D5d143f8874888cfa1d30Fb2AE6F0CD6
 
 ---
 
@@ -1469,7 +1469,7 @@ FUN Money là token BEP-20 trên mạng BSC (Binance Smart Chain):
 • Không "in trước để bán" - không có pre-mint
 • Không phụ thuộc "khan hiếm" 
 • Được mint theo giá trị Ánh Sáng mà cộng đồng tạo ra
-• Địa chỉ hợp đồng: 0x1aa8DE8B1E4465C6d729E8564893f8EF823a5ff2 (BSC Testnet)
+• Địa chỉ hợp đồng: 0x39A1b047D5d143f8874888cfa1d30Fb2AE6F0CD6 (BSC Testnet)
 
 ## QUY TRÌNH MINT 3 BƯỚC
 

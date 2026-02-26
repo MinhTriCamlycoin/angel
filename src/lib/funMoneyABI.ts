@@ -4,7 +4,7 @@
  * This is the ACTUAL ABI of the deployed contract on BSC Testnet.
  * Flow: lockWithPPLP() → activate() → claim() → transfer()
  * 
- * Contract: 0x1aa8DE8B1E4465C6d729E8564893f8EF823a5ff2
+ * Contract: 0x39A1b047D5d143f8874888cfa1d30Fb2AE6F0CD6
  */
 
 export const FUN_MONEY_ABI = [
@@ -93,7 +93,7 @@ export const FUN_MONEY_ABI = [
 // Contract addresses per network
 export const FUN_MONEY_ADDRESSES: Record<number, string> = {
   56: "", // BSC Mainnet - to be deployed later
-  97: "0x1aa8DE8B1E4465C6d729E8564893f8EF823a5ff2", // BSC Testnet
+  97: "0x39A1b047D5d143f8874888cfa1d30Fb2AE6F0CD6", // BSC Testnet
 };
 
 // EIP-712 Domain for PPLP signatures (used by attesters)
@@ -102,7 +102,7 @@ export const FUN_MONEY_DOMAIN = {
   name: "FUN Money",
   version: "1.2.1",
   chainId: 97, // BSC Testnet
-  verifyingContract: "0x1aa8DE8B1E4465C6d729E8564893f8EF823a5ff2",
+  verifyingContract: "0x39A1b047D5d143f8874888cfa1d30Fb2AE6F0CD6",
 };
 
 // PureLoveProof types for EIP-712 (attester signing)

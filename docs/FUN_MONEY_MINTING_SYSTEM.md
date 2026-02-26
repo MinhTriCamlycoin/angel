@@ -376,7 +376,7 @@ RETURNS INTEGER;
 ## ⚙️ Smart Contract Details
 
 ### Contract: FUNMoneyProductionV1_2_1
-- **Address (BSC Testnet):** `0x1aa8DE8B1E4465C6d729E8564893f8EF823a5ff2`
+- **Address (BSC Testnet):** `0x39A1b047D5d143f8874888cfa1d30Fb2AE6F0CD6`
 - **Chain ID:** 97
 - **Standard:** BEP-20 (ERC-20 compatible)
 
@@ -407,7 +407,7 @@ function govSetAttesterThreshold(uint256 newThreshold)
   name: "FUN Money",
   version: "1.2.1",
   chainId: 97,
-  verifyingContract: "0x1aa8DE8B1E4465C6d729E8564893f8EF823a5ff2"
+  verifyingContract: "0x39A1b047D5d143f8874888cfa1d30Fb2AE6F0CD6"
 }
 ```
 

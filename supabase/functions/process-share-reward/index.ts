@@ -70,14 +70,14 @@ Deno.serve(async (req) => {
     if (rewardAmount !== ALLOWED_REWARD) {
       console.warn(`Attempted reward manipulation: requested ${rewardAmount}, allowed ${ALLOWED_REWARD}`);
     }
-    // ============= ANTI-SYBIL: Áp dụng hệ số Age Gate =============
-    const actualReward = applyAgeGateReward(ALLOWED_REWARD, antiSybil.reward_multiplier);
-
     // Use service role for database operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // ============= ANTI-SYBIL: Account Age Gate + Suspension Check =============
     const antiSybil = await checkAntiSybil(supabaseAdmin, userId, 'share');
+
+    // ============= ANTI-SYBIL: Áp dụng hệ số Age Gate =============
+    const actualReward = applyAgeGateReward(ALLOWED_REWARD, antiSybil.reward_multiplier);
 
     // Register device fingerprint + IP hash (fire and forget)
     const ipHash = await extractIpHash(req);
