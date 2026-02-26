@@ -89,7 +89,7 @@ serve(async (req) => {
 
     if (!signerPrivateKey) {
       return new Response(
-        JSON.stringify({ error: "TREASURY_PRIVATE_KEY not configured" }),
+        JSON.stringify({ error: "ATTESTER_PRIVATE_KEY not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
