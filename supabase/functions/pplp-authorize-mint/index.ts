@@ -161,9 +161,9 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const signerPrivateKey = Deno.env.get("TREASURY_PRIVATE_KEY");
+    const signerPrivateKey = Deno.env.get("ATTESTER_PRIVATE_KEY") || Deno.env.get("TREASURY_PRIVATE_KEY");
 
-    console.log(`[PPLP Lock] Treasury private key configured: ${!!signerPrivateKey}`);
+    console.log(`[PPLP Lock] Attester private key configured: ${!!signerPrivateKey}`);
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
