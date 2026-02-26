@@ -376,8 +376,10 @@ serve(async (req) => {
     // User's portion in wei (18 decimals) - only user portion goes on-chain
     const amountWei = userAmount * BigInt(10 ** 18);
     
-    // Action name for contract (e.g., "QUESTION_ASK")
-    const actionName = action.action_type;
+    // Unified on-chain action: always "FUN_REWARD" regardless of action_type
+    // action.action_type is preserved in DB for audit/reporting
+    const UNIFIED_ACTION = "FUN_REWARD";
+    const actionName = UNIFIED_ACTION;
     const actionHash = hashActionName(actionName);
     
     // Evidence hash - ensure it's proper bytes32 format

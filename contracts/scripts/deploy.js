@@ -55,27 +55,14 @@ async function main() {
   console.log("  Contract Address:", contractAddress);
   console.log("");
 
-  // Register initial action types (Master Charter 5D)
+  // Register unified action type — all reward types use "FUN_REWARD" on-chain.
+  // Individual action types (QUESTION_ASK, CONTENT_CREATE, etc.) are tracked
+  // only at the database level (pplp_actions.action_type) for audit/reporting.
   const initialActions = [
-    "QUESTION_ASK",
-    "LEARN_COMPLETE",
-    "CONTENT_CREATE",
-    "DONATE",
-    "VOLUNTEER",
-    "TREE_PLANT",
-    "DAILY_RITUAL",
-    "COMMUNITY_POST",
-    "COMMUNITY_COMMENT",
-    "COMMUNITY_ENGAGEMENT",
-    "JOURNAL_SUBMIT",
-    "SHARE_CONTENT",
-    "MENTOR_HELP",
-    "IDEA_SUBMIT",
-    "DAILY_LOGIN",
-    "VISION_CREATE",
+    "FUN_REWARD",
   ];
 
-  console.log("Registering action types (Master Charter 5D)...");
+  console.log("Registering unified action type (FUN_REWARD)...");
   for (const actionName of initialActions) {
     try {
       const tx = await funMoney.govRegisterAction(actionName, 1);

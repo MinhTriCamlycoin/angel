@@ -87,10 +87,15 @@
        ↓
 5. Admin reviews → Clicks "Approve & Sign"
        ↓
-6. pplp-authorize-mint → EIP-712 sign + lockWithPPLP on-chain (status: minted)
-       ↓
+6. pplp-authorize-mint → EIP-712 sign + lockWithPPLP("FUN_REWARD") on-chain (status: minted)
+       ↓                   ⚡ Unified action: all types use "FUN_REWARD" on-chain
 7. User Activate → Claim → FUN flows to wallet ✨
 ```
+
+> **Kiến trúc Unified Action**: Tất cả action types (QUESTION_ASK, CONTENT_CREATE, JOURNAL_WRITE...)
+> đều sử dụng chung `actionName = "FUN_REWARD"` khi gọi `lockWithPPLP()` on-chain.
+> Phân biệt loại hành động chỉ ở database (`pplp_actions.action_type`).
+> Chỉ cần `govRegisterAction("FUN_REWARD", 1)` **một lần duy nhất** trên contract.
 
 ---
 
