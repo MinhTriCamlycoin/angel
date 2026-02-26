@@ -1,33 +1,34 @@
 
 
-## Plan: Cập nhật tài liệu attester wallet & cấu hình 1-sig
+## Plan: Tạo hướng dẫn Mint FUN Money từ A đến Z
+
+Thay thế phần hướng dẫn 4 bước hiện tại (chỉ Activate & Claim) bằng hướng dẫn toàn diện 8 bước, bao gồm toàn bộ quy trình từ đăng ký tài khoản đến nhận FUN Money về ví.
 
 ### Thay đổi
 
 | # | File | Mô tả |
 |---|------|-------|
-| 1 | `supabase/functions/pplp-authorize-mint/index.ts` | Thêm comment ghi rõ attester wallet address và ghi chú 1-sig hiện tại, 3-sig sẽ áp dụng sau |
-| 2 | `docs/FUN_MONEY_MINTING_SYSTEM.md` | Cập nhật tài liệu: ghi rõ attester wallet, giải thích cơ chế 1-sig → 3-sig trong tương lai |
-| 3 | `src/lib/funMoneyABI.ts` | Thêm constant `ATTESTER_ADDRESSES` chứa danh sách attester đã đăng ký |
-| 4 | `contracts/README.md` | Cập nhật thông tin attester và governance setup |
+| 1 | `src/components/mint/MintGuideFullFlow.tsx` | Component mới: hướng dẫn 8 bước A-Z với stepper, icon, collapsible |
+| 2 | `src/pages/Mint.tsx` | Thay Collapsible guide cũ bằng `MintGuideFullFlow` |
+
+### 8 bước hướng dẫn
+
+1. **Đăng ký & đăng nhập** Angel AI (email/Google)
+2. **Cài MetaMask** + thêm mạng BSC Testnet (Chain ID 97)
+3. **Lấy tBNB miễn phí** từ faucet để trả gas
+4. **Lưu địa chỉ ví** vào Profile trên Angel AI
+5. **Thực hiện Light Actions** (chat, đăng bài, nhật ký, tặng quà...)
+6. **Gửi yêu cầu Mint** — nhấn "Gửi tất cả yêu cầu mint" sau khi đạt Light Score >= 60
+7. **Chờ Admin duyệt** — FUN được lock on-chain sau khi admin ký EIP-712
+8. **Activate → Claim** — 2 giao dịch MetaMask để nhận FUN về ví
+
+Mỗi bước có icon, mô tả ngắn, và tips/links hành động (faucet, BscScan, trang Profile...). Stepper hiển thị dọc với connecting line, collapsible để user có thể thu gọn.
 
 ### Chi tiết kỹ thuật
 
-**`pplp-authorize-mint/index.ts`** — thêm block comment sau `CONTRACT_ADDRESS`:
-```typescript
-// Registered Attester (via govSetAttester on contract)
-// Wallet: 0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D
-// Derived from TREASURY_PRIVATE_KEY secret
-// Current: 1-sig (attesterThreshold = 1)
-// Future: 3-sig when additional attester keys are added
-```
-
-**`src/lib/funMoneyABI.ts`** — thêm constant:
-```typescript
-export const REGISTERED_ATTESTERS = [
-  "0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D", // Attester #1 (Treasury signer)
-] as const;
-```
-
-Không thay đổi logic code — chỉ cập nhật documentation và constants để tracking.
+- Component nhận props optional `defaultOpen` (mặc định `true`)
+- Mỗi step có `status` visual: số thứ tự với màu gradient theo giai đoạn (xanh dương cho setup, vàng cho earn, xanh lá cho claim)
+- Giữ nguyên nút "Lấy tBNB miễn phí" và link BscScan
+- Thêm link nội bộ đến `/profile` (lưu ví), `/community` (đăng bài), `/chat` (chat Angel AI)
+- Contract address `0x39A1...0CD6` hiển thị với link BscScan để user add token vào MetaMask
 
