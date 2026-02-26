@@ -91,11 +91,15 @@ export const FUN_MONEY_ABI = [
 ] as const;
 
 // Registered Attesters (via govSetAttester on contract)
+// Role: Ký mint on-chain (lockWithPPLP) — ĐỘC LẬP với Treasury wallet
 // Current: 1-sig (attesterThreshold = 1)
 // Future: 3-sig when additional attester keys are added
 export const REGISTERED_ATTESTERS = [
-  "0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D", // Attester #1 (Treasury signer)
+  "0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D", // Attester #1 (Mint signer — NOT Treasury)
 ] as const;
+
+// Treasury wallet (chi trả thưởng — KHÔNG dùng để ký mint)
+// 0x416336c3b7ACAe89F47EAD2707412f20DA159ac8
 
 // Contract addresses per network
 export const FUN_MONEY_ADDRESSES: Record<number, string> = {

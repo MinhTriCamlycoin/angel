@@ -98,7 +98,8 @@
 > Chỉ cần `govRegisterAction("FUN_REWARD", 1)` **một lần duy nhất** trên contract.
 >
 > **Attester Configuration**:
-> - Attester wallet: `0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D` (derived from TREASURY_PRIVATE_KEY)
+> - Attester wallet: `0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D` (ký mint on-chain)
+> - Treasury wallet: `0x416336c3b7ACAe89F47EAD2707412f20DA159ac8` (chi trả thưởng — ĐỘC LẬP)
 > - Current: 1-sig (`attesterThreshold = 1`)
 > - Future: 3-sig khi bổ sung thêm attester keys
 
