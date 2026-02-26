@@ -111,6 +111,7 @@ export default function AdminMintApproval() {
   const [isBatchLocking, setIsBatchLocking] = useState(false);
   const [batchLockProgress, setBatchLockProgress] = useState({ done: 0, total: 0, current: "" });
   const [showBatchLockConfirm, setShowBatchLockConfirm] = useState(false);
+  const [bannedIds, setBannedIds] = useState<Set<string>>(new Set());
 
   const fetchRequests = useCallback(async () => {
     setIsLoading(true);
@@ -170,6 +171,7 @@ export default function AdminMintApproval() {
           .is("lifted_at", null);
         (suspensions || []).forEach((s: any) => bannedSet.add(s.user_id));
       }
+      setBannedIds(bannedSet);
 
       // Cross-check suspicious users (unresolved fraud signals severity >= 3)
       const suspiciousSet = new Set<string>();
@@ -268,6 +270,34 @@ export default function AdminMintApproval() {
     fetchRequests();
     fetchGlobalCounts();
     fetchMintPauseStatus();
+
+    // Realtime: auto-update when a user gets banned
+    const channel = supabase
+      .channel('admin-mint-suspensions')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'user_suspensions' },
+        (payload) => {
+          const newBannedUserId = payload.new?.user_id as string;
+          if (newBannedUserId) {
+            setBannedIds(prev => {
+              const next = new Set(prev);
+              next.add(newBannedUserId);
+              return next;
+            });
+            // Also update existing requests in-memory
+            setRequests(prev => prev.map(r => 
+              r.actor_id === newBannedUserId ? { ...r, is_banned: true } : r
+            ));
+            toast.warning(`🚫 Tài khoản mới bị ban — danh sách đã cập nhật`, { duration: 5000 });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchRequests, fetchGlobalCounts, fetchMintPauseStatus]);
 
   // Cleanup banned/suspicious mint requests
@@ -581,9 +611,10 @@ export default function AdminMintApproval() {
     await fetchRequests();
   }, [requests, fetchRequests]);
 
-  // Filter by tab
+  // Filter by tab — banned requests are EXCLUDED from pending and shown in dedicated tab
   const filteredRequests = requests.filter((r) => {
-    if (activeTab === "pending") return r.status === "pending";
+    if (activeTab === "banned") return r.is_banned;
+    if (activeTab === "pending") return r.status === "pending" && !r.is_banned;
     if (activeTab === "signed") return r.status === "signed";
     if (activeTab === "minted") return r.status === "minted";
     if (activeTab === "rejected") return r.status === "rejected" || r.status === "expired";
@@ -591,10 +622,11 @@ export default function AdminMintApproval() {
   });
 
   const counts = {
-    pending: requests.filter((r) => r.status === "pending").length,
+    pending: requests.filter((r) => r.status === "pending" && !r.is_banned).length,
     signed: requests.filter((r) => r.status === "signed").length,
     minted: requests.filter((r) => r.status === "minted").length,
     rejected: requests.filter((r) => r.status === "rejected" || r.status === "expired").length,
+    banned: requests.filter((r) => r.is_banned).length,
   };
 
   // Mini chart data: mints per day (last 7 days)
@@ -1003,10 +1035,14 @@ export default function AdminMintApproval() {
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="pending" className="gap-1">
                 <Clock className="h-3.5 w-3.5" />
-                Chờ duyệt ({globalCounts ? globalCounts.pending.toLocaleString("vi-VN") : counts.pending})
+                Chờ duyệt ({counts.pending})
+              </TabsTrigger>
+              <TabsTrigger value="banned" className="gap-1 text-destructive data-[state=active]:text-destructive">
+                <Shield className="h-3.5 w-3.5" />
+                🚫 Bị ban ({counts.banned})
               </TabsTrigger>
               <TabsTrigger value="signed" className="gap-1">
                 <FileCheck className="h-3.5 w-3.5" />
@@ -1023,6 +1059,21 @@ export default function AdminMintApproval() {
             </TabsList>
 
             <TabsContent value={activeTab} className="mt-4 space-y-3">
+              {/* Banned tab warning banner */}
+              {activeTab === "banned" && counts.banned > 0 && (
+                <Alert className="border-destructive/50 bg-destructive/10">
+                  <Shield className="h-4 w-4 text-destructive" />
+                  <AlertTitle className="text-destructive font-bold">
+                    🚫 Danh sách yêu cầu từ tài khoản bị ban ({counts.banned})
+                  </AlertTitle>
+                  <AlertDescription className="text-destructive/80 text-sm">
+                    Các yêu cầu dưới đây thuộc về tài khoản đã bị đình chỉ vĩnh viễn.
+                    Danh sách này được tách riêng để admin không nhầm lẫn khi ký duyệt.
+                    Sử dụng nút <strong>"Lọc vi phạm"</strong> để từ chối hàng loạt.
+                    {" "}Danh sách cập nhật <strong>realtime</strong> khi có tài khoản mới bị ban.
+                  </AlertDescription>
+                </Alert>
+              )}
               {/* Select All Bar */}
               {!isLoading && filteredRequests.length > 0 && (
                 <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
