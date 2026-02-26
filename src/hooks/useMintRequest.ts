@@ -98,9 +98,11 @@ export function useMintRequest() {
           }
         }
 
+        // Unified on-chain action: always hash "FUN_REWARD" regardless of action_type
+        const UNIFIED_ACTION = "FUN_REWARD";
         const actionHash = "0x" + Array.from(
           new Uint8Array(
-            await crypto.subtle.digest("SHA-256", new TextEncoder().encode(action.action_type))
+            await crypto.subtle.digest("SHA-256", new TextEncoder().encode(UNIFIED_ACTION))
           )
         ).map(b => b.toString(16).padStart(2, "0")).join("");
 
@@ -183,9 +185,11 @@ export function useMintRequest() {
             const score = Array.isArray(scoreRaw) ? scoreRaw[0] : scoreRaw;
             if (!score || score.decision !== "pass") return null;
 
+            // Unified on-chain action: always hash "FUN_REWARD"
+            const UNIFIED_ACTION = "FUN_REWARD";
             const actionHash = "0x" + Array.from(
               new Uint8Array(
-                await crypto.subtle.digest("SHA-256", new TextEncoder().encode(action.action_type))
+                await crypto.subtle.digest("SHA-256", new TextEncoder().encode(UNIFIED_ACTION))
               )
             ).map(b => b.toString(16).padStart(2, "0")).join("");
 
