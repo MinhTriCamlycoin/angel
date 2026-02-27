@@ -6,6 +6,9 @@ import { StreakCalendar } from "@/components/earn/StreakCalendar";
 import { EarlyAdopterProgress } from "@/components/earn/EarlyAdopterProgress";
 import { EarnBreakdown } from "@/components/earn/EarnBreakdown";
 import { FUNMoneyStatsBanner } from "@/components/earn/FUNMoneyStatsBanner";
+import { LightLevelBadge } from "@/components/pplp/LightLevelBadge";
+import { BehaviorSequenceTracker } from "@/components/pplp/BehaviorSequenceTracker";
+import { LightActivityCategories } from "@/components/pplp/LightActivityCategories";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -176,6 +179,17 @@ export default function Earn() {
 
           {/* Early Adopter Progress */}
           <EarlyAdopterProgress />
+
+          {/* Light Level & Sequences */}
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-1 space-y-6">
+              <LightLevelBadge />
+              <LightActivityCategories />
+            </div>
+            <div className="lg:col-span-2">
+              <BehaviorSequenceTracker />
+            </div>
+          </div>
 
           {/* FUN Money Stats Banner */}
           <FUNMoneyStatsBanner userId={user?.id} />
