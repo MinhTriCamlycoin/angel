@@ -43,8 +43,8 @@ export function Leaderboard() {
     <div className="rounded-2xl p-[2px] bg-gradient-to-br from-sky-400 via-purple-500 to-pink-500 shadow-lg">
       <div className="rounded-[14px] bg-background p-4">
         {/* Title */}
-        <div className="flex justify-center mb-3">
-          <RainbowTitle text={t("leaderboard.topRanking")} />
+        <div className="flex justify-center items-center mb-4 py-1">
+          <RainbowTitle text={t("leaderboard.topRanking")} className="text-2xl md:text-3xl tracking-[3px]" />
         </div>
 
         {/* Member list */}
