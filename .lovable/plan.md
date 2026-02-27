@@ -1,112 +1,97 @@
 
 
-## Kế hoạch: Event-based Scoring Model + AI Light Score Architecture
+## Kế hoạch: Scoring Rule Versioning + API + Reason Codes + Transparency Dashboard (Phần 3–9)
 
-Yêu cầu này bổ sung 7 bảng mới và 3 RPC/trigger để chuyển hệ thống PPLP sang mô hình Event-sourcing hoàn chỉnh. Nhiều bảng đã tồn tại (pplp_actions, pplp_scores, pplp_behavior_sequences, pplp_fraud_signals, pplp_mint_cycles, pplp_mint_allocations) nên chỉ cần tạo các bảng còn thiếu và cập nhật logic.
-
-### Ánh xạ: Bản thiết kế → Hệ thống hiện tại
-
-| Bản thiết kế | Đã có? | Hành động |
-|---|---|---|
-| `users` | ✅ `auth.users` + `user_light_agreements` | Không cần |
-| `profiles` | ✅ `profiles` (thiếu `pplp_accepted_at`, `reputation_level`) | **Thêm cột** |
-| `content` | ❌ (dữ liệu rải ở `community_posts`, `gratitude_journal`) | **Tạo view** `content_unified` |
-| `events` | ❌ (dùng `pplp_actions` nhưng thiếu chuẩn event-sourcing) | **Tạo bảng** `pplp_events` |
-| `pplp_ratings` | ❌ | **Tạo bảng** |
-| `signals_anti_farm` | ✅ `pplp_fraud_signals` | Không cần |
-| `features_user_day` | ❌ | **Tạo bảng** |
-| `light_score_ledger` | ❌ (chỉ có `pplp_scores` per-action) | **Tạo bảng** |
-| `score_explanations` | ❌ | **Tạo bảng** |
-| `mint_epochs` | ✅ `pplp_mint_cycles` | Không cần |
-| `mint_allocations` | ✅ `pplp_mint_allocations` | Không cần |
-| `sequences` | ✅ `pplp_behavior_sequences` | Không cần |
+### Hiện trạng
+- `scoring_rules` table: **chưa có** (chỉ có `pplp_policies` với schema khác)
+- `light_score_ledger`: **thiếu cột** `rule_version`
+- API endpoints chuẩn hoá: **chưa có** (chỉ có edge functions riêng lẻ)
+- Reason codes tích cực: **chưa có** hệ thống chuẩn
+- Anti-whale cap: **chưa có** trong `process-mint-cycle`
+- Transparency Dashboard: **chưa có**
 
 ---
 
-### Bước 1: Database Migration — 5 bảng mới + cập nhật profiles
+### Bước 1: Database Migration
 
 | # | Đối tượng | Chi tiết |
 |---|-----------|---------|
-| 1 | Thêm cột vào `profiles` | `pplp_accepted_at`, `pplp_version`, `mantra_ack_at`, `reputation_level` (enum: seed/sprout/builder/guardian/architect), `reputation_score` |
-| 2 | Tạo `pplp_events` (append-only) | `event_id`, `event_type`, `actor_user_id`, `target_type`, `target_id`, `context_id`, `occurred_at`, `source`, `payload_json`, `ingest_hash`, `scoring_tags` |
-| 3 | Tạo `pplp_ratings` | `rating_id`, `content_id`, `rater_user_id`, 5 cột trụ (0/1/2), `comment`, `weight_applied` |
-| 4 | Tạo `features_user_day` | PK `(user_id, date)`, count_posts, count_comments, count_help, avg_rating_weighted, consistency_streak, sequence_count, anti_farm_risk |
-| 5 | Tạo `light_score_ledger` | `user_id`, `period`, `period_start/end`, base_score, 4 multipliers, final_light_score, `level`, `explain_ref` |
-| 6 | Tạo `score_explanations` | `explain_ref` (PK), `top_contributors_json`, `penalties_json`, `version` |
-| 7 | Tạo view `content_unified` | Union từ `community_posts`, `gratitude_journal`, `chat_history` |
-| 8 | RPC `build_features_user_day(_user_id, _date)` | Aggregate events → ghi vào `features_user_day` |
-| 9 | RPC `compute_light_score_ledger(_user_id, _period, _start, _end)` | Tính điểm tổng hợp theo chu kỳ → ghi `light_score_ledger` + `score_explanations` |
-| 10 | Trigger trên `pplp_actions` | Auto-insert vào `pplp_events` khi action mới được tạo (bridge event-sourcing) |
+| 1 | Tạo bảng `scoring_rules` | `rule_version` PK, `name`, `description`, `formula_json`, `weight_config_json`, `multiplier_config_json`, `penalty_config_json`, `effective_from`, `effective_to`, `status` (draft/active/deprecated) |
+| 2 | Thêm cột `rule_version TEXT` vào `light_score_ledger` | Liên kết mỗi kỳ tính điểm với rule cụ thể |
+| 3 | Thêm cột `reason_codes TEXT[]` vào `light_score_ledger` | Lưu reason codes tích cực cho mỗi entry |
+| 4 | Thêm cột `trend TEXT` vào `light_score_ledger` | Giá trị: stable/growing/reflecting/rebalancing |
+| 5 | Tạo bảng `transparency_snapshots` | `epoch_id`, `total_light_system`, `total_fun_minted`, `allocation_by_level JSONB`, `mentor_chains_completed INT`, `value_loops_completed INT`, `active_users INT`, `created_at` |
+| 6 | Thêm cột `max_share_per_user NUMERIC DEFAULT 0.03` vào `pplp_mint_cycles` | Anti-whale cap (3% mặc định) |
+| 7 | Insert bản ghi `scoring_rules` V1.0 | Seed data với formula & weights hiện tại |
 
-### Bước 2: Cập nhật Edge Function `pplp-score-action`
+### Bước 2: Edge Functions — 5 API Endpoints chuẩn hoá
+
+| # | Function | Method | Mô tả |
+|---|----------|--------|-------|
+| 1 | `pplp-event-ingest` | POST | Nhận event chuẩn → validate → insert `pplp_events` → trả `event_id` |
+| 2 | `pplp-submit-rating` | POST | Nhận rating 5 trụ → validate → insert `pplp_ratings` với `weight_applied` |
+| 3 | `pplp-light-profile` | GET | Trả Light Level + Trend + streak + sequences (public-safe, không raw score) |
+| 4 | `pplp-light-me` | GET | Trả chi tiết score riêng tư cho chính user (period, multipliers, reason_codes) |
+| 5 | `pplp-mint-summary` | GET | Trả epoch summary (mint_pool, total_light, rule_version, anti-whale cap) |
+
+### Bước 3: Cập nhật `pplp-score-action` — Reason Codes + Rule Version
 
 | # | Thay đổi |
 |---|----------|
-| 1 | Sau khi insert `pplp_scores`, auto-insert `pplp_events` record với đầy đủ schema chuẩn |
-| 2 | Gọi `build_features_user_day` để cập nhật materialized features |
-| 3 | Insert `score_explanations` kèm chi tiết top contributors & penalties |
+| 1 | Thêm hệ thống reason codes tích cực (CONSISTENCY_STRONG, MENTOR_CHAIN_COMPLETED, VALUE_LOOP_ACTIVE...) |
+| 2 | Lưu `rule_version` từ `scoring_rules` active vào `pplp_scores` và `light_score_ledger` |
+| 3 | Tính `trend` dựa trên so sánh score hiện tại vs period trước |
 
-### Bước 3: Edge Function mới `pplp-ai-pillar-analyzer`
+### Bước 4: Cập nhật `process-mint-cycle` — Anti-Whale + Transparency
 
-| # | Chức năng |
-|---|-----------|
-| 1 | Nhận content (post/journal/comment) → gọi Lovable AI (gemini-3-flash-preview) |
-| 2 | Phân tích 5 cột trụ (0/1/2 cho mỗi trụ) + Ego Risk Score (0–1) |
-| 3 | Trả về `ai_pillar_scores`, `ai_ego_risk`, `ai_explanations` |
-| 4 | Được gọi bởi `pplp-score-action` khi action có content để phân tích |
+| # | Thay đổi |
+|---|----------|
+| 1 | Áp dụng `max_share_per_user` cap (mặc định 3% of epoch pool) |
+| 2 | Sau khi finalize, insert `transparency_snapshots` với thống kê toàn hệ |
 
-### Bước 4: Frontend — Thêm PPLP Rating UI + Score Explanation
+### Bước 5: Frontend — Transparency Dashboard + Level/Trend UI
 
 | # | Component | Mô tả |
 |---|-----------|-------|
-| 1 | `PPLPRatingCard` | Form cho user chấm điểm 5 trụ (0/1/2) cho bài viết cộng đồng |
-| 2 | `PPLPScoreRadar` cập nhật | Hiển thị dữ liệu từ `light_score_ledger` thay vì per-action scores |
-| 3 | `ScoreExplanationPanel` | Hiển thị lý do điểm (audit trail) — chỉ cho chính user xem |
+| 1 | `TransparencyDashboard` | Hiển thị tổng Light toàn hệ, FUN Minted, % theo Level, mentor chains, value loops — không cá nhân |
+| 2 | Cập nhật `LightLevelBadge` | Thêm hiển thị Trend (Growing/Stable/Reflecting/Rebalancing) |
+| 3 | Cập nhật `ScoreExplanationPanel` | Hiển thị reason codes bằng ngôn ngữ tích cực, hiển thị rule_version |
 
-### Bước 5: Tài liệu
+### Bước 6: Tài liệu
 
 | # | Tệp |
 |---|-----|
-| 1 | Cập nhật `docs/PPLP_REWARD_MECHANISM.md` với Event-based Scoring Model schema và AI Architecture diagram |
+| 1 | Cập nhật `docs/PPLP_REWARD_MECHANISM.md` — thêm Scoring Rule Versioning, API Endpoints, Reason Codes, Level System, Anti-Whale, Transparency |
 
 ---
 
 ### Chi tiết kỹ thuật
 
-**Event Schema chuẩn (`pplp_events`):**
+**Reason Codes (ngôn ngữ tích cực):**
 ```text
-event_id       UUID PK
-event_type     TEXT (LOGIN, POST_CREATED, PPLP_RATING_SUBMITTED, ...)
-actor_user_id  UUID FK
-target_type    TEXT (user/content/wallet/system)
-target_id      UUID nullable
-context_id     UUID nullable (session/thread/group)
-occurred_at    TIMESTAMPTZ
-source         TEXT (web/mobile/api)
-payload_json   JSONB
-ingest_hash    TEXT (keccak256 of payload for tamper detection)
-scoring_tags   TEXT[] (pplp_pillar_candidate, sequence_candidate)
+Tích cực: CONSISTENCY_STRONG, MENTOR_CHAIN_COMPLETED, VALUE_LOOP_ACTIVE,
+          COMMUNITY_VALIDATED, CROSS_PLATFORM_CONTRIBUTOR,
+          HEALING_IMPACT_DETECTED, GOVERNANCE_PARTICIPATION
+
+Điều chỉnh: INTERACTION_PATTERN_UNSTABLE, RATING_CLUSTER_REVIEW,
+            CONTENT_REVIEW_IN_PROGRESS, TEMPORARY_WEIGHT_ADJUSTMENT,
+            QUALITY_SIGNAL_LOW
 ```
 
-**AI Pillar Analyzer prompt flow:**
+**Anti-Whale trong Mint Engine:**
 ```text
-Content → Lovable AI (gemini-3-flash-preview)
-  → Tool call: analyze_pplp_pillars
-  → Returns: {
-      pillars: { truth: 0-2, sustain: 0-2, heal: 0-2, service: 0-2, unity: 0-2 },
-      ego_risk: 0.0-1.0,
-      explanation: "..."
-    }
+user_share = user_contribution / total_contribution
+capped_share = MIN(user_share, max_share_per_user)  // default 3%
+allocation = capped_share * mint_pool
+// Excess redistributed proportionally to others
 ```
 
-**Pipeline hoàn chỉnh:**
+**Level + Trend mapping:**
 ```text
-Event Ingest → pplp_events (append-only)
-  → Validate (dedupe via ingest_hash, policy check)
-  → Feature Builder (build_features_user_day)
-  → Scoring Engine (pplp-score-action + AI analyzer)
-  → light_score_ledger + score_explanations
-  → Mint Engine (process-mint-cycle, epoch-based)
-  → On-chain Execution
+0–20: Light Seed    | Trend: stable/growing/reflecting/rebalancing
+21–40: Light Sprout  | (based on comparing current vs previous period)
+41–60: Light Builder |
+61–80: Light Guardian|
+81+:   Light Architect|
 ```
 
