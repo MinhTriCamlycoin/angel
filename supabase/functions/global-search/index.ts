@@ -110,7 +110,7 @@ serve(async (req) => {
 
       // Search by wallet address in saved_wallet_addresses
       const { data: usersByWallet } = await supabase
-        .from("saved_wallet_addresses")
+        .from("user_wallet_addresses")
         .select("user_id, wallet_address")
         .ilike("wallet_address", `%${searchQuery}%`)
         .limit(5);
@@ -124,7 +124,7 @@ serve(async (req) => {
             type: "user",
             title: u.display_name || "Thành viên",
             description: u.handle ? `@${u.handle}` : (u.bio?.substring(0, 100) || ""),
-            url: `/user/${u.user_id}`,
+            url: u.handle ? `/${u.handle}` : `/user/${u.user_id}`,
             createdAt: "",
             avatar: u.avatar_url,
           });
@@ -146,7 +146,7 @@ serve(async (req) => {
               type: "user",
               title: profile?.display_name || "Thành viên",
               description: `Ví: ${w.wallet_address.substring(0, 6)}...${w.wallet_address.slice(-4)}`,
-              url: `/user/${w.user_id}`,
+              url: profile?.handle ? `/${profile.handle}` : `/user/${w.user_id}`,
               createdAt: "",
               avatar: profile?.avatar_url,
             });
