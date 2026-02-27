@@ -320,7 +320,29 @@ serve(async (req) => {
 
     console.log(`[PPLP] Action ${action.id} scored: ${decision.toUpperCase()} - LightScore: ${lightScore.toFixed(2)}, Reward: ${finalReward}`);
 
-    // ========== 9. Run fraud detection ==========
+    // ========== 9. Detect behavior sequences ==========
+    let sequenceResult = null;
+    if (decision === 'pass') {
+      try {
+        const { data: seqData, error: seqError } = await supabase
+          .rpc('detect_behavior_sequences', {
+            _user_id: action.actor_id,
+            _action_id: action.id,
+            _action_type: action.action_type,
+          });
+
+        if (seqError) {
+          console.error('[PPLP] Sequence detection error:', seqError);
+        } else {
+          sequenceResult = seqData;
+          console.log(`[PPLP] Sequence: updated=${seqData?.sequences_updated}, completed=${seqData?.sequences_completed}, bonus=${seqData?.bonus_multiplier}`);
+        }
+      } catch (seqErr) {
+        console.error('[PPLP] Sequence detection failed:', seqErr);
+      }
+    }
+
+    // ========== 10. Run fraud detection ==========
     let fraudResult = null;
     try {
       const fraudCheckResponse = await fetch(`${supabaseUrl}/functions/v1/pplp-detect-fraud`, {
@@ -349,7 +371,7 @@ serve(async (req) => {
       console.error('[PPLP] Fraud detection call failed:', fraudError);
     }
 
-    // ========== 10. AUTO-MINT with Caps & Diminishing Returns ==========
+    // ========== 11. AUTO-MINT with Caps & Diminishing Returns ==========
     let mintResult = null;
     if (decision === 'pass' && finalReward > 0) {
       try {
@@ -405,8 +427,9 @@ serve(async (req) => {
                 max_daily: capResult.max_daily
               };
             } else {
-              // Apply diminishing returns and tier multiplier to final reward
-              const adjustedReward = Math.floor(capResult.adjusted_reward * capMultiplier);
+              // Apply diminishing returns, tier multiplier, and sequence bonus
+              const sequenceBonus = (sequenceResult?.sequences_completed > 0) ? sequenceResult.bonus_multiplier : 1.0;
+              const adjustedReward = Math.floor(capResult.adjusted_reward * capMultiplier * sequenceBonus);
 
               // FUN Money: Keep status as "scored" - do NOT auto-mint Camly Coins
               // User will claim FUN Money via pplp-authorize-mint -> lockWithPPLP on-chain
@@ -493,6 +516,7 @@ serve(async (req) => {
           recommendation: fraudResult.recommendation,
         } : null,
         mint: mintResult,
+        sequence: sequenceResult,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
