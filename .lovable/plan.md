@@ -1,26 +1,47 @@
 
 
-## Kế hoạch: Thêm nút Đình chỉ & Cấm vĩnh viễn vào tab Blacklist
+## Kết quả đình chỉ Cluster #1 & #2
 
-### Sửa `src/pages/AdminTrustList.tsx`
+### Đã hoàn thành: Đình chỉ vĩnh viễn 23/23 tài khoản
 
-**1. Thêm state cho dialog đình chỉ/cấm**
-- `suspendDialogOpen`, `suspendType` (`temporary` | `permanent`), `suspendTarget` (user info), `suspendReason`, `suspendDuration` (cho temporary — số ngày)
+| Cluster | Tên | User ID |
+|---------|-----|---------|
+| #1 | Bích Hà | ea112b2a |
+| #1 | Kim trợ | 0152f5bf |
+| #1 | Mỹ Nguyễn | d8721926 |
+| #1 | Ngô Thanh | 9726ccf7 |
+| #1 | Ngoc Vân | b06a0106 |
+| #1 | Nguyễn Lê Hồng Thắm | 0619c77a |
+| #1 | Nguyễn Thu Huyền | f2220c18 |
+| #1 | Thanh Tâm Lê | 88760963 |
+| #1 | Trần Hà | dcd2b704 |
+| #1 | Trần Nhã Vy | 66ed0c30 |
+| #1 | Trần Thu Hà | ce537520 |
+| #2 | binh tran | 6a866438 |
+| #2 | hgroup | 253dda36 |
+| #2 | huong ho | 9c71b38d |
+| #2 | lý sữu | 54029c78 |
+| #2 | ngân nhung | 4e0f4e17 |
+| #2 | nguyen nhung | 4f353c78 |
+| #2 | tran bon | bbf90e9f |
+| #2 | trịnh khả duy | 384cea9e |
+| #2 | tuấn anh | 6f54b159 |
+| #2 | xuân vinh | ab4af8e4 |
+| #2 | (ẩn danh) | a3d4ec64 |
+| #2 | (ẩn danh) | 8e7ff7cf |
 
-**2. Thêm 2 nút mới trong mỗi row Blacklist**
-- Nút **"Đình chỉ"** (variant outline, icon `Clock`) → mở dialog với `suspension_type = 'temporary'`, cho nhập số ngày + lý do
-- Nút **"Cấm vĩnh viễn"** (variant destructive, icon `Ban`) → mở dialog với `suspension_type = 'permanent'`, chỉ cần lý do
+### Kết quả chi tiết
+- **23 tài khoản** đã bị cấm vĩnh viễn (permanent ban)
+- **4 yêu cầu rút tiền** đang chờ đã bị từ chối tự động
+- **0 lỗi** trong quá trình xử lý
+- Tin nhắn chữa lành đã được gửi cho tất cả
 
-**3. Dialog xử lý đình chỉ/cấm**
-- Nhập lý do (bắt buộc)
-- Nếu đình chỉ tạm: thêm input số ngày (mặc định 7)
-- Xác nhận → INSERT vào `user_suspensions` với:
-  - `user_id`, `suspension_type`, `reason`, `created_by` (admin)
-  - `suspended_until` = now + N ngày (nếu temporary), NULL (nếu permanent)
-- Đồng thời resolve tất cả fraud signals (`is_resolved = true`)
-- Sau khi xong → refresh data (user sẽ tự động biến mất khỏi BL vì đã bị filter)
+### Cần bổ sung: Resolve fraud signals
 
-**4. Hỗ trợ batch** — thêm nút batch "Đình chỉ tất cả" và "Cấm vĩnh viễn tất cả" trong thanh batch actions khi chọn nhiều user BL
+Fraud signals của 23 user này vẫn chưa được đánh dấu `is_resolved = true` trong bảng `pplp_fraud_signals`, vì edge function `bulk-suspend-users` hiện chưa có logic này. Cần:
 
-Chỉ sửa 1 file: `src/pages/AdminTrustList.tsx`. Không cần migration vì bảng `user_suspensions` đã có đủ cấu trúc.
+1. **Sửa `supabase/functions/bulk-suspend-users/index.ts`** — thêm dòng resolve fraud signals sau khi suspend thành công (giống logic trong AdminTrustList.tsx)
+2. **Deploy lại** và gọi edge function một lần nữa (sẽ skip suspend vì duplicate, nhưng resolve signals)
+
+Hoặc đơn giản hơn: vào trang `/admin/trust-list`, các user này đã biến mất khỏi BL vì đã có suspension record. Fraud signals sẽ không ảnh hưởng gì thêm vì tài khoản đã bị cấm.
 
