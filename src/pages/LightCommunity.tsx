@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import angelAvatar from "@/assets/angel-avatar.png";
 
 function MemberCard({ user, index }: { user: LeaderboardUser; index: number }) {
+  const isAnonymous = !user.display_name || user.display_name.trim() === "";
   const lightIcon = user.light_info?.icon || "🌱";
   const handleText = user.handle ? `@${user.handle}` : null;
 
@@ -45,10 +46,12 @@ function MemberCard({ user, index }: { user: LeaderboardUser; index: number }) {
             )}
           </div>
 
-          {/* Light Level Badge */}
-          <div className="flex-shrink-0">
-            <LightLevelBadge lightInfo={user.light_info} size="md" showTrend={false} />
-          </div>
+          {/* Light Level Badge - hide for anonymous */}
+          {!isAnonymous && (
+            <div className="flex-shrink-0">
+              <LightLevelBadge lightInfo={user.light_info} size="md" showTrend={false} />
+            </div>
+          )}
         </div>
       </Link>
     </motion.div>
