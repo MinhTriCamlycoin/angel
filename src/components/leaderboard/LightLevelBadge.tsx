@@ -26,7 +26,8 @@ const trendConfig = {
 export function LightLevelBadge({ lightInfo, size = "md", showTrend = true }: LightLevelBadgeProps) {
   const { currentLanguage } = useLanguage();
   
-  const info = lightInfo || { level: 1, name_vi: "Presence", name_en: "Presence", icon: "🌱", color: "#94a3b8", trend: "stable" };
+  if (!lightInfo) return null;
+  const info = lightInfo;
   const trend = trendConfig[info.trend as keyof typeof trendConfig] || trendConfig.stable;
   const TrendIcon = trend.icon;
   const levelName = currentLanguage === "vi" ? info.name_vi : info.name_en;

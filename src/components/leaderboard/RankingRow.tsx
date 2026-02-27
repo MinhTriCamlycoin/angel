@@ -10,6 +10,7 @@ interface RankingRowProps {
 }
 
 export function RankingRow({ user }: RankingRowProps) {
+  const isAnonymous = !user.display_name || user.display_name.trim() === "";
   const lightIcon = user.light_info?.icon || "🌱";
 
   return (
@@ -34,10 +35,12 @@ export function RankingRow({ user }: RankingRowProps) {
           {user.display_name || "Ẩn danh"}
         </p>
 
-        {/* Light Level Badge */}
-        <div className="flex-shrink-0">
-          <LightLevelBadge lightInfo={user.light_info} size="sm" showTrend={false} />
-        </div>
+        {/* Light Level Badge - hide for anonymous users */}
+        {!isAnonymous && (
+          <div className="flex-shrink-0">
+            <LightLevelBadge lightInfo={user.light_info} size="sm" showTrend={false} />
+          </div>
+        )}
       </div>
     </Link>
   );
