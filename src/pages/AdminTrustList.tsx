@@ -7,12 +7,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ShieldCheck, ShieldAlert, Loader2, ArrowRightLeft, CheckSquare } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Loader2, ArrowRightLeft, Clock, Ban } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
@@ -89,6 +90,15 @@ const AdminTrustList = () => {
   const [batchReason, setBatchReason] = useState("");
   const [batchProcessing, setBatchProcessing] = useState(false);
 
+  // Suspend/Ban state
+  const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
+  const [suspendType, setSuspendType] = useState<"temporary" | "permanent">("temporary");
+  const [suspendTarget, setSuspendTarget] = useState<{ id: string; name: string } | null>(null);
+  const [suspendReason, setSuspendReason] = useState("");
+  const [suspendDuration, setSuspendDuration] = useState(7);
+  const [suspendProcessing, setSuspendProcessing] = useState(false);
+  const [suspendBatch, setSuspendBatch] = useState(false); // true = batch mode
+
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
@@ -135,7 +145,6 @@ const AdminTrustList = () => {
       }
     }
     const actorIds = Array.from(grouped.keys());
-    // Loại trừ user đã bị cấm/đình chỉ (lifted_at IS NULL = còn hiệu lực)
     const { data: activeSuspensions } = await supabase.from("user_suspensions").select("user_id").in("user_id", actorIds).is("lifted_at", null);
     const suspendedIds = new Set(activeSuspensions?.map(s => s.user_id) || []);
     const { data: profiles } = await supabase.from("profiles").select("user_id, display_name, avatar_url, handle").in("user_id", actorIds);
@@ -143,7 +152,6 @@ const AdminTrustList = () => {
     setBlacklist(Array.from(grouped.values()).filter(g => !suspendedIds.has(g.actor_id)).map(g => ({ ...g, profile: profileMap.get(g.actor_id) || undefined })).sort((a, b) => b.signal_count - a.signal_count));
   };
 
-  // Single user dialog
   const openDialog = (action: "to_bl" | "to_wl", userId: string, userName: string) => {
     setDialogAction(action);
     setTargetUser({ id: userId, name: userName });
@@ -157,7 +165,6 @@ const AdminTrustList = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const adminId = user?.id;
-
       if (dialogAction === "to_bl") {
         await supabase.from("fraud_whitelist").delete().eq("user_id", targetUser.id);
         await supabase.from("pplp_fraud_signals").insert({
@@ -181,39 +188,18 @@ const AdminTrustList = () => {
     }
   };
 
-  // Batch operations
   const toggleWL = (userId: string) => {
-    setSelectedWL(prev => {
-      const next = new Set(prev);
-      next.has(userId) ? next.delete(userId) : next.add(userId);
-      return next;
-    });
+    setSelectedWL(prev => { const next = new Set(prev); next.has(userId) ? next.delete(userId) : next.add(userId); return next; });
   };
-
   const toggleBL = (actorId: string) => {
-    setSelectedBL(prev => {
-      const next = new Set(prev);
-      next.has(actorId) ? next.delete(actorId) : next.add(actorId);
-      return next;
-    });
+    setSelectedBL(prev => { const next = new Set(prev); next.has(actorId) ? next.delete(actorId) : next.add(actorId); return next; });
   };
-
   const toggleAllWL = () => {
-    if (selectedWL.size === whitelist.length) {
-      setSelectedWL(new Set());
-    } else {
-      setSelectedWL(new Set(whitelist.map(e => e.user_id)));
-    }
+    setSelectedWL(prev => prev.size === whitelist.length ? new Set() : new Set(whitelist.map(e => e.user_id)));
   };
-
   const toggleAllBL = () => {
-    if (selectedBL.size === blacklist.length) {
-      setSelectedBL(new Set());
-    } else {
-      setSelectedBL(new Set(blacklist.map(g => g.actor_id)));
-    }
+    setSelectedBL(prev => prev.size === blacklist.length ? new Set() : new Set(blacklist.map(g => g.actor_id)));
   };
-
   const openBatchDialog = (action: "to_bl" | "to_wl") => {
     setBatchAction(action);
     setBatchReason("");
@@ -227,9 +213,7 @@ const AdminTrustList = () => {
       const { data: { user } } = await supabase.auth.getUser();
       const adminId = user?.id;
       const userIds = Array.from(batchAction === "to_bl" ? selectedWL : selectedBL);
-
       if (batchAction === "to_bl") {
-        // WL → BL batch
         for (const uid of userIds) {
           await supabase.from("fraud_whitelist").delete().eq("user_id", uid);
           await supabase.from("pplp_fraud_signals").insert({
@@ -239,11 +223,8 @@ const AdminTrustList = () => {
         }
         toast.success(`Đã chuyển ${userIds.length} user sang Blacklist`);
       } else {
-        // BL → WL batch
         for (const uid of userIds) {
-          await supabase.from("fraud_whitelist").insert({
-            user_id: uid, reason: batchReason.trim(), whitelisted_by: adminId,
-          });
+          await supabase.from("fraud_whitelist").insert({ user_id: uid, reason: batchReason.trim(), whitelisted_by: adminId });
           await supabase.from("pplp_fraud_signals").update({ is_resolved: true }).eq("actor_id", uid).eq("is_resolved", false);
         }
         toast.success(`Đã chuyển ${userIds.length} user sang Whitelist`);
@@ -254,6 +235,53 @@ const AdminTrustList = () => {
       toast.error("Có lỗi xảy ra");
     } finally {
       setBatchProcessing(false);
+    }
+  };
+
+  // Suspend/Ban handlers
+  const openSuspendDialog = (type: "temporary" | "permanent", userId: string, userName: string, batch = false) => {
+    setSuspendType(type);
+    setSuspendTarget({ id: userId, name: userName });
+    setSuspendReason("");
+    setSuspendDuration(7);
+    setSuspendBatch(batch);
+    setSuspendDialogOpen(true);
+  };
+
+  const handleSuspend = async () => {
+    if (!suspendReason.trim()) { toast.error("Vui lòng nhập lý do"); return; }
+    setSuspendProcessing(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const adminId = user?.id;
+
+      const userIds = suspendBatch ? Array.from(selectedBL) : (suspendTarget ? [suspendTarget.id] : []);
+      if (userIds.length === 0) return;
+
+      const suspendedUntil = suspendType === "temporary"
+        ? new Date(Date.now() + suspendDuration * 24 * 60 * 60 * 1000).toISOString()
+        : null;
+
+      for (const uid of userIds) {
+        await supabase.from("user_suspensions").insert({
+          user_id: uid,
+          suspension_type: suspendType,
+          reason: suspendReason.trim(),
+          created_by: adminId,
+          suspended_until: suspendedUntil,
+        });
+        // Resolve all fraud signals
+        await supabase.from("pplp_fraud_signals").update({ is_resolved: true }).eq("actor_id", uid).eq("is_resolved", false);
+      }
+
+      const label = suspendType === "temporary" ? "đình chỉ" : "cấm vĩnh viễn";
+      toast.success(`Đã ${label} ${userIds.length} user`);
+      setSuspendDialogOpen(false);
+      await fetchData();
+    } catch (err) {
+      toast.error("Có lỗi xảy ra");
+    } finally {
+      setSuspendProcessing(false);
     }
   };
 
@@ -339,10 +367,16 @@ const AdminTrustList = () => {
 
               <TabsContent value="blacklist">
                 {selectedBL.size > 0 && (
-                  <div className="flex items-center gap-3 mb-3 p-3 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-3 mb-3 p-3 rounded-lg bg-muted/50 border flex-wrap">
                     <span className="text-sm font-medium">Đã chọn {selectedBL.size} user</span>
                     <Button variant="outline" size="sm" onClick={() => openBatchDialog("to_wl")}>
                       <ArrowRightLeft className="w-3.5 h-3.5 mr-1" />Chuyển tất cả sang WL
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => openSuspendDialog("temporary", "", "", true)}>
+                      <Clock className="w-3.5 h-3.5 mr-1" />Đình chỉ tất cả
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => openSuspendDialog("permanent", "", "", true)}>
+                      <Ban className="w-3.5 h-3.5 mr-1" />Cấm vĩnh viễn tất cả
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => setSelectedBL(new Set())}>Bỏ chọn</Button>
                   </div>
@@ -397,9 +431,17 @@ const AdminTrustList = () => {
                         </TableCell>
                         <TableCell className="text-xs whitespace-nowrap">{formatDate(group.first_detected)}</TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm" onClick={() => openDialog("to_wl", group.actor_id, group.profile?.display_name || group.actor_id.slice(0, 8))}>
-                            <ArrowRightLeft className="w-3.5 h-3.5 mr-1" />Chuyển WL
-                          </Button>
+                          <div className="flex flex-col gap-1.5">
+                            <Button variant="outline" size="sm" onClick={() => openDialog("to_wl", group.actor_id, group.profile?.display_name || group.actor_id.slice(0, 8))}>
+                              <ArrowRightLeft className="w-3.5 h-3.5 mr-1" />WL
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => openSuspendDialog("temporary", group.actor_id, group.profile?.display_name || group.actor_id.slice(0, 8))}>
+                              <Clock className="w-3.5 h-3.5 mr-1" />Đình chỉ
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => openSuspendDialog("permanent", group.actor_id, group.profile?.display_name || group.actor_id.slice(0, 8))}>
+                              <Ban className="w-3.5 h-3.5 mr-1" />Cấm
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -411,7 +453,7 @@ const AdminTrustList = () => {
         </Tabs>
       </div>
 
-      {/* Single user dialog */}
+      {/* Single user transfer dialog */}
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -420,22 +462,21 @@ const AdminTrustList = () => {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {dialogAction === "to_bl"
-                ? `Xác nhận chuyển "${targetUser?.name}" từ Whitelist sang Blacklist. User sẽ bị đánh dấu gian lận.`
-                : `Xác nhận chuyển "${targetUser?.name}" từ Blacklist sang Whitelist. Tất cả tín hiệu gian lận sẽ được giải quyết.`}
+                ? `Xác nhận chuyển "${targetUser?.name}" từ Whitelist sang Blacklist.`
+                : `Xác nhận chuyển "${targetUser?.name}" từ Blacklist sang Whitelist.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Textarea placeholder="Nhập lý do chuyển đổi..." value={reason} onChange={(e) => setReason(e.target.value)} className="min-h-[80px]" />
           <AlertDialogFooter>
             <AlertDialogCancel disabled={processing}>Hủy</AlertDialogCancel>
             <AlertDialogAction onClick={handleTransfer} disabled={processing || !reason.trim()}>
-              {processing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-              Xác nhận
+              {processing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}Xác nhận
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Batch dialog */}
+      {/* Batch transfer dialog */}
       <AlertDialog open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -444,8 +485,8 @@ const AdminTrustList = () => {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {batchAction === "to_bl"
-                ? `Xác nhận chuyển ${selectedWL.size} user đã chọn từ Whitelist sang Blacklist. Tất cả sẽ bị đánh dấu gian lận.`
-                : `Xác nhận chuyển ${selectedBL.size} user đã chọn từ Blacklist sang Whitelist. Tất cả tín hiệu gian lận sẽ được giải quyết.`}
+                ? `Xác nhận chuyển ${selectedWL.size} user đã chọn từ Whitelist sang Blacklist.`
+                : `Xác nhận chuyển ${selectedBL.size} user đã chọn từ Blacklist sang Whitelist.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Textarea placeholder="Nhập lý do chung cho tất cả..." value={batchReason} onChange={(e) => setBatchReason(e.target.value)} className="min-h-[80px]" />
@@ -454,6 +495,59 @@ const AdminTrustList = () => {
             <AlertDialogAction onClick={handleBatchTransfer} disabled={batchProcessing || !batchReason.trim()}>
               {batchProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
               Xác nhận ({batchAction === "to_bl" ? selectedWL.size : selectedBL.size} user)
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Suspend/Ban dialog */}
+      <AlertDialog open={suspendDialogOpen} onOpenChange={setSuspendDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {suspendType === "temporary"
+                ? (suspendBatch ? `Đình chỉ ${selectedBL.size} user` : `Đình chỉ tạm thời "${suspendTarget?.name}"`)
+                : (suspendBatch ? `Cấm vĩnh viễn ${selectedBL.size} user` : `Cấm vĩnh viễn "${suspendTarget?.name}"`)}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {suspendType === "temporary"
+                ? "Tài khoản sẽ bị đình chỉ trong thời gian quy định. Tất cả tín hiệu gian lận sẽ được đánh dấu đã xử lý."
+                : "Tài khoản sẽ bị cấm vĩnh viễn, không thể đăng nhập hay sử dụng hệ thống. Hành động này không thể hoàn tác dễ dàng."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3">
+            {suspendType === "temporary" && (
+              <div>
+                <label className="text-sm font-medium mb-1 block">Số ngày đình chỉ</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={suspendDuration}
+                  onChange={(e) => setSuspendDuration(Math.max(1, parseInt(e.target.value) || 7))}
+                />
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Lý do</label>
+              <Textarea
+                placeholder={suspendType === "temporary" ? "Nhập lý do đình chỉ..." : "Nhập lý do cấm vĩnh viễn..."}
+                value={suspendReason}
+                onChange={(e) => setSuspendReason(e.target.value)}
+                className="min-h-[80px]"
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={suspendProcessing}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSuspend}
+              disabled={suspendProcessing || !suspendReason.trim()}
+              className={suspendType === "permanent" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            >
+              {suspendProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+              {suspendType === "temporary" ? `Đình chỉ ${suspendDuration} ngày` : "Cấm vĩnh viễn"}
+              {suspendBatch ? ` (${selectedBL.size} user)` : ""}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
