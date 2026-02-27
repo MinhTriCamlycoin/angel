@@ -1,51 +1,47 @@
 
 
-## Redesign: Bảng Cộng Đồng Ánh Sáng theo hình mẫu
+## Kế hoạch: Edge Function tính daily_light_score + cron job tự động
 
-Dựa trên screenshot, cần chuyển từ layout **grid 3x3 avatars** sang layout **danh sách dọc (list rows)** đơn giản, sạch sẽ hơn.
+### Vấn đề hiện tại
+- Bảng `features_user_day` có đầy đủ activity counts (posts, comments, logins, streaks...) nhưng `daily_light_score` luôn = 0
+- Bảng `pplp_scores` có **17,925 scored actions** với avg light_score = 77.75 — dữ liệu thực tế đã có
+- RPC `get_community_light_summary` dùng `SUM(daily_light_score)` → tất cả user đều = 0 → cùng Level 1
+- Cần pipeline tính toán và ghi `daily_light_score` vào `features_user_day`, sau đó rollup vào `light_score_ledger`
 
-### Thay đổi chính
+### Giải pháp: 2 phần
 
-**1. `Leaderboard.tsx` — Đơn giản hóa hoàn toàn**
-- Bỏ stats bar (Members/Camly Coin)
-- Bỏ Angel logo header phức tạp
-- Bỏ `TopRankingHero` grid component
-- Thay bằng: Title "✨ LIGHT COMMUNITY" + danh sách `RankingRow` cho tất cả users
-- Hiển thị 5 user đầu, nút "Xem thêm" mở rộng toàn bộ
-- Card có gradient border (blue → purple → pink) như hình mẫu
-- Nút cuối: "Xem Light Community >"
+**1. Edge Function `pplp-compute-daily-scores`**
+- Lấy tất cả user có record trong `features_user_day` cho ngày hiện tại (hoặc ngày chỉ định)
+- Với mỗi user, tính:
+  - **base_action_score**: Dựa trên count_posts, count_comments, count_questions, count_journals, count_logins (mỗi loại có weight khác nhau)
+  - **content_score**: Lấy avg pillar scores từ `pplp_scores` cho actions trong ngày đó, áp dụng `normalizeContentScore` + type_multiplier
+  - **reputation_weight**: Dùng consistency_streak + pass_rate từ pplp_scores
+  - **consistency_multiplier**: Từ consistency_streak đã có sẵn
+  - **sequence_multiplier**: Từ sequence_count đã có sẵn
+  - **integrity_penalty**: Từ anti_farm_risk đã có sẵn (normalize 0-1)
+  - **daily_light_score**: `raw * consistency * sequence * integrity` theo LS-Math v1.0
+- Ghi lại tất cả components vào `features_user_day`
+- Upsert `light_score_ledger` cho period hiện tại (monthly) với SUM daily scores + determine level + trend
 
-**2. `RankingRow.tsx` — Cập nhật theo hình mẫu**
-- Thêm Light Level icon (emoji nhỏ) bên trái avatar
-- Avatar tròn nhỏ (w-9 h-9)
-- Tên hiển thị đầy đủ, font bold
-- Light Level badge bên phải (pill style: "Light Architect", "Light Seed")
-- Row có rounded-full, border nhẹ, padding đều
-- Bỏ highlight "isCurrentUser" ring
+**2. Cron job chạy mỗi giờ**
+- Gọi edge function `pplp-compute-daily-scores` tự động
+- Đảm bảo scores luôn cập nhật khi user hoạt động trong ngày
 
-**3. `LightLevelBadge.tsx` — Giữ nguyên** (đã đúng style pill)
-
-**4. Bỏ sử dụng `TopRankingHero.tsx`** — Không cần grid nữa
-
-**5. `LeaderboardEffects.tsx` — Bỏ floating coins/petals** trong Leaderboard chính (quá nặng, hình mẫu không có)
-
-### Layout mục tiêu
+### Công thức tính base_action_score (Enrichment strategy)
 
 ```text
-┌─────────────────────────────┐  ← gradient border
-│  ✨ LIGHT COMMUNITY         │
-│                             │
-│  🌿 [avatar] Vinh Nguyên   Light Architect │
-│  🌱 [avatar] Hồng Thien... Light Seed     │
-│  🌿 [avatar] Angel Hoàn... Light Architect │
-│  🌱 [avatar] Angel Quế A.. Light Seed     │
-│  🌱 [avatar] Trần Văn Lực  Light Seed     │
-│                             │
-│     Xem Light Community >   │
-└─────────────────────────────┘
+base = (count_posts × 15) + (count_comments × 8) + (count_questions × 10)
+     + (count_journals × 12) + (count_logins × 5) + (count_help × 20)
 ```
 
-### Tệp cần sửa
-- `src/components/Leaderboard.tsx` — Viết lại layout chính
-- `src/components/leaderboard/RankingRow.tsx` — Cập nhật style row theo hình mẫu
+### Tệp cần tạo/sửa
+- **Tạo** `supabase/functions/pplp-compute-daily-scores/index.ts` — Edge function chính
+- **Tạo** cron job (SQL) gọi function mỗi giờ
+- **Cập nhật** `supabase/config.toml` entry cho function mới (verify_jwt = false)
+
+### Chi tiết kỹ thuật
+- Sử dụng LS-Math v1.0 formulas từ `scoring-engine.ts` (reimplemented in Deno)
+- anti_farm_risk normalize: `risk / 10` (giá trị thực tế thấy 0-4)
+- Level determination: dựa trên cumulative SUM từ `pplp_light_levels`
+- Trend: so sánh 7 ngày gần nhất vs 7 ngày trước đó
 
