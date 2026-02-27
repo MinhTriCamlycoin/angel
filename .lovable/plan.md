@@ -1,74 +1,91 @@
 
-## Kế hoạch: Light Score Activity Framework & Behavior Sequence Engine
 
-Triển khai hệ thống phân loại hoạt động 6 nhóm và Chuỗi Hành Vi (Behavior Sequence Engine) để tính điểm Light Score theo tinh thần PPLP (Proof of Pure Love Protocol).
+## Kế hoạch: Bổ sung Cơ chế Tính Thưởng & Mint FUN Money (PPLP Bài 7 Bonus)
+
+Triển khai 4 lớp nhân mới trong công thức PPLP Score, cơ chế mint theo chu kỳ, và 3 lớp bảo vệ chống Ego.
 
 ---
 
-### Bước 1: Cơ sở dữ liệu (Migration)
+### Bước 1: Database Migration — Thêm cột & bảng mới
 
 | # | Đối tượng | Mô tả |
 |---|-----------|-------|
-| 1 | Bảng `pplp_behavior_sequences` | Theo dõi chuỗi hành vi của người dùng: `user_id`, `sequence_type`, `actions` (uuid[]), `stage`, `max_stage`, `sequence_multiplier`, `status` (active/completed/expired), `started_at`, `completed_at`, `expires_at` |
-| 2 | Bảng `pplp_activity_categories` | Ánh xạ loại hành động → 6 nhóm: self_light, community_interaction, content_value, web3_economic, ecosystem_contribution, behavior_sequence. Gồm `base_weight`, `description_vi`, `description_en` |
-| 3 | Bảng `pplp_light_levels` | 5 tầng Light Score: Light Presence, Light Contributor, Light Builder, Light Guardian, Light Architect. Gồm `level`, `name_vi`, `name_en`, `min_score`, `max_score`, `icon`, `perks` (jsonb) |
-| 4 | Bổ sung `pplp_action_caps` | Thêm các loại hành động mới: PROFILE_COMPLETE, KYC_VERIFY, VISION_CREATE, SHARE_CONTENT, CONFLICT_RESOLVE, REPORT_VALID, CAMPAIGN_SUPPORT, ECO_ACTION, REFERRAL_INVITE, GOV_VOTE, POLICY_REVIEW, CARBON_OFFSET |
+| 1 | Thêm cột `reputation_weight`, `consistency_multiplier`, `integrity_penalty` vào `pplp_scores` | Lưu 3 lớp nhân mới cho mỗi lần chấm điểm |
+| 2 | Thêm cột `contribution_days_30`, `contribution_days_90` vào `pplp_user_tiers` | Đếm ngày đóng góp liên tục (30/90 ngày) để tính Consistency Multiplier |
+| 3 | Tạo bảng `pplp_mint_cycles` | Chu kỳ mint theo tuần/tháng: `cycle_id`, `start_date`, `end_date`, `total_mint_pool`, `total_light_contribution`, `status` (open/closed/distributed) |
+| 4 | Tạo bảng `pplp_mint_allocations` | Phân bổ từng user trong chu kỳ: `cycle_id`, `user_id`, `user_light_contribution`, `allocation_ratio`, `fun_allocated`, `status` |
+| 5 | Hàm RPC `calculate_reputation_weight(_user_id)` | Tính Reputation Weight dựa trên: thời gian đóng góp, lịch sử không vi phạm, số chuỗi hoàn thành, cross-platform contribution |
+| 6 | Hàm RPC `calculate_consistency_multiplier(_user_id)` | Trả về hệ số: 1.0 (mặc định), 1.3 (30 ngày ổn định), 1.6 (90 ngày ổn định) |
 
-### Bước 2: Hàm cơ sở dữ liệu
+### Bước 2: Cập nhật Edge Function `pplp-score-action`
 
-| # | Hàm | Mô tả |
-|---|-----|-------|
-| 1 | `detect_behavior_sequences(user_id)` | Quét `pplp_actions` gần đây để phát hiện và cập nhật chuỗi hành vi phù hợp |
-| 2 | `get_user_light_level(user_id)` | Trả về cấp độ Light Level (1–5) dựa trên Light Score trung bình + số chuỗi đã hoàn thành |
+| # | Thay đổi | Mô tả |
+|---|----------|-------|
+| 1 | Gọi `calculate_reputation_weight()` | Sau bước 5 (threshold check), lấy reputation weight của actor |
+| 2 | Gọi `calculate_consistency_multiplier()` | Lấy consistency multiplier |
+| 3 | Tính `integrity_penalty` | Dựa trên fraud signals (spam, đánh giá chéo, tương tác giả) — giảm điểm chậm, bền, minh bạch |
+| 4 | Áp dụng công thức mới | `finalReward = baseReward × Q × I × K × reputationWeight × consistencyMultiplier × sequenceBonus − integrityPenalty` |
+| 5 | Lưu 3 giá trị mới vào `pplp_scores` | `reputation_weight`, `consistency_multiplier`, `integrity_penalty` |
 
-### Bước 3: Cập nhật hàm backend
+### Bước 3: Edge Function mới `process-mint-cycle`
 
-| # | Hàm | Mô tả |
-|---|-----|-------|
-| 1 | `pplp-score-action` | Sau khi chấm điểm, gọi `detect_behavior_sequences()` để kiểm tra chuỗi. Nếu hoàn thành chuỗi, áp dụng `sequence_multiplier` (1.5x–3.0x) làm thưởng bổ sung |
+| # | Chức năng |
+|---|-----------|
+| 1 | Tổng hợp tổng Light Value toàn hệ trong chu kỳ |
+| 2 | Xác định Mint Pool (giới hạn cung tăng từ từ — ví dụ 5M FUN/tuần max) |
+| 3 | Phân bổ theo tỷ lệ: `FUN = MintPool × (userContribution / totalContribution)` |
+| 4 | Ghi vào `pplp_mint_allocations` |
 
-### Bước 4: Giao diện (Frontend)
+### Bước 4: Lớp bảo vệ chống Ego (Frontend)
 
-| # | Thành phần | Mô tả |
-|---|------------|-------|
-| 1 | `LightActivityCategories` | Hiển thị 6 nhóm hoạt động với chỉ báo tiến trình từng nhóm |
-| 2 | `BehaviorSequenceTracker` | Hiển thị chuỗi hành vi đang hoạt động/đã hoàn thành dạng pipeline |
-| 3 | `LightLevelBadge` | Hiển thị cấp độ Light Level hiện tại (1–5) với tên tầng và biểu tượng |
-| 4 | Hook `useBehaviorSequences` | Lấy dữ liệu chuỗi hành vi từ `pplp_behavior_sequences` |
-| 5 | Hook `useLightLevel` | Lấy cấp độ Light Level qua hàm RPC `get_user_light_level` |
-| 6 | Cập nhật `Earn.tsx` | Thêm các thành phần mới vào trang Kiếm điểm |
+| # | Thay đổi | Mô tả |
+|---|----------|-------|
+| 1 | Cập nhật `LightLevelBadge` | Chỉ hiển thị tên tầng (Light Stable / Growing / Builder / Guardian) — không hiển thị số điểm chính xác công khai |
+| 2 | Cập nhật `Leaderboard` | Thay bảng xếp hạng cạnh tranh (Top 1–2) bằng xu hướng tăng trưởng cá nhân. Hiển thị Light Level thay vì điểm số |
+| 3 | Thêm `MintCycleStatus` component | Hiển thị chu kỳ mint hiện tại, thời gian còn lại, tỷ lệ phân bổ dự kiến — nhấn mạnh "mint không tức thì" |
+| 4 | Cập nhật trang `/mint` | Thêm section giải thích 3 lớp thưởng (Light Score / Mint Eligibility / FUN Money Flow) và thông tin chu kỳ mint |
 
-### Bước 5: Tài liệu
+### Bước 5: Cập nhật tài liệu
 
 | # | Tệp | Mô tả |
 |---|-----|-------|
-| 1 | `docs/LIGHT_SCORE_ACTIVITIES.md` | Tài liệu đầy đủ về phân loại hoạt động, định nghĩa chuỗi hành vi, và các tầng Light Level |
+| 1 | `docs/PPLP_REWARD_MECHANISM.md` | Tài liệu đầy đủ về công thức PPLP Score mới (4 lớp nhân), chu kỳ mint, 3 lớp bảo vệ chống Ego, và kết nối Camly Coin ↔ FUN Money |
 
 ---
 
-### Định nghĩa 5 chuỗi hành vi
+### Chi tiết kỹ thuật
 
+**Công thức PPLP Score hoàn chỉnh:**
+```text
+PPLP Score = (5 Pillars × Community Score)
+           × Reputation Weight      [0.5 – 1.5]
+           × Consistency Multiplier  [1.0 / 1.3 / 1.6]
+           × Sequence Multiplier     [1.0 – 3.0]
+           − Integrity Penalty       [0 – 50%]
 ```
-LIGHT_GROWTH:       Đăng bài → Cộng đồng tương tác (≥3) → Phản hồi xây dựng → Tạo nội dung nâng cao → Hệ số 2.0x
-MENTORSHIP:         Hướng dẫn thành viên mới → Hoàn thiện hồ sơ → Tạo nội dung đầu tiên → Hệ số 2.5x
-VALUE_CREATION:     Hoàn thành khóa học → Tạo nội dung → Tương tác (≥5) → Chia sẻ → Hệ số 2.0x
-CONFLICT_HARMONY:   Giải quyết tranh luận → Phản hồi bình tĩnh → Cộng đồng xác nhận → Hệ số 3.0x
-ECONOMIC_INTEGRITY: Hỏi đáp (≥5) → Quyên góp → Chia sẻ → Hệ số 1.5x
+
+**Reputation Weight tính theo:**
+- Thời gian đóng góp (ngày kể từ hành động đầu tiên)
+- Tỷ lệ pass/fail (lịch sử không vi phạm)
+- Số chuỗi hoàn thành (`completed_sequences`)
+- `trust_score` từ `pplp_user_tiers`
+
+**Consistency Multiplier:**
+```text
+< 30 ngày đóng góp  → x1.0
+≥ 30 ngày ổn định   → x1.3
+≥ 90 ngày ổn định   → x1.6
 ```
 
-### Quy tắc chống farm điểm
+**Integrity Penalty (giảm chậm, bền, minh bạch):**
+- Spam tinh vi: −10%
+- Đánh giá chéo: −15%
+- Tương tác giả: −20%
+- Lạm dụng cảm xúc: −10%
+- Tích lũy, không quá 50%
 
-- Chuỗi phải hoàn thành trong 7 ngày
-- Mỗi loại chuỗi tối đa 1 lần/tuần/người dùng
-- Giảm dần thưởng khi lặp lại chuỗi giống nhau
-- Kiểm tra cảm xúc AI cho tín hiệu chất lượng nội dung
+**Chu kỳ Mint:**
+```text
+FUN Minted(user) = MintPool(cycle) × (user_light_contribution / total_light_contribution)
+```
 
-### 5 tầng Light Level
-
-| Tầng | Tên tiếng Việt | Tên tiếng Anh | Điểm tối thiểu |
-|------|----------------|---------------|-----------------|
-| 1 | Hiện diện tích cực | Light Presence | 0 |
-| 2 | Người tạo giá trị | Light Contributor | 200 |
-| 3 | Người xây dựng | Light Builder | 500 |
-| 4 | Người bảo vệ | Light Guardian | 1000 |
-| 5 | Người thiết kế | Light Architect | 2000 |
