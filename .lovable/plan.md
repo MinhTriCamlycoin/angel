@@ -1,25 +1,23 @@
 
 
-## Kế hoạch: Thiết kế lại CelebrationPostCard
+## Báo cáo kiểm tra tài khoản Tú Nguyễn
 
-**Files cần sửa:**
-1. `src/components/community/CelebrationPostCard.tsx` - Thiết kế lại hoàn toàn
-2. `src/components/gifts/GiftCoinDialog.tsx` - Đổi text "Cùng chung tay xây dựng cộng đồng yêu thương" thành "ANGEL AI, LAN TOẢ YÊU THƯƠNG"
+### Tình trạng hiện tại
+- **Whitelist**: Đã có trong `fraud_whitelist` ✅
+- **Tín hiệu gian lận chưa xử lý**: **8 tín hiệu** (severity 3, tất cả do trùng device fingerprint) ❌
+- **Hệ quả**: Hàm `checkAntiSybil` đếm 8 >= 3 → **đóng băng phần thưởng** (reward_multiplier = 0)
 
-### Thay đổi chi tiết:
+### Nguyên nhân gốc
+Hàm `checkAntiSybil` trong `supabase/functions/_shared/anti-sybil.ts` **KHÔNG kiểm tra bảng `fraud_whitelist`** trước khi đếm fraud signals. Vì vậy dù Tú Nguyễn đã được whitelist, phần thưởng vẫn bị đóng băng.
 
-#### 1. CelebrationPostCard.tsx - Redesign
-- **Thêm hiệu ứng đồng tiền rơi (FallingCoin)** giống WithdrawalCelebration popup: đồng Camly Coin rơi từ trên xuống, xoay 360°, ~15-20 đồng
-- **Thêm hiệu ứng pháo bông (FireworkBurst)** mạnh hơn, giống popup thành công: nhiều tia pháo hoa hơn, nhiều màu sắc
-- **Tự động phát nhạc khi lướt qua**: Sử dụng IntersectionObserver để detect khi card xuất hiện trong viewport → tự động play `/audio/rich-1.mp3`, chỉ play 1 lần, tự tắt khi kết thúc (không loop)
-- **Đổi nội dung footer**: "🌟 Cùng chung tay xây dựng cộng đồng yêu thương!" → "✨ ANGEL AI, LAN TOẢ YÊU THƯƠNG ✨" hiển thị trong card với style nổi bật
+Ngoài ra, hàm `registerDeviceAndIp` cũng **không kiểm tra whitelist** trước khi tạo fraud signal mới → tín hiệu gian lận giả tiếp tục tích lũy.
 
-#### 2. GiftCoinDialog.tsx - Đổi nội dung bài đăng tự động
-- Dòng 261: Đổi `🌟 Cùng chung tay xây dựng cộng đồng yêu thương!` → `✨ ANGEL AI, LAN TOẢ YÊU THƯƠNG ✨`
+### Kế hoạch sửa (2 bước)
 
-#### Auto-play audio logic:
-- Dùng `useRef` + `IntersectionObserver` với threshold 0.5
-- Khi card hiện 50%+ trong viewport → play audio 1 lần
-- Track `hasPlayed` để không phát lại khi scroll qua lại
-- Audio ngắn (file rich-1.mp3 sẵn có), tự tắt khi hết
+#### Bước 1: Sửa `anti-sybil.ts` - Thêm kiểm tra whitelist
+- Trong `checkAntiSybil`: Sau bước kiểm tra đình chỉ, thêm bước kiểm tra `fraud_whitelist`. Nếu user nằm trong whitelist → bỏ qua hoàn toàn việc đếm fraud signals, trả về `risk_level: 'clear'`
+- Trong `registerDeviceAndIp`: Trước khi tạo fraud signal mới, kiểm tra whitelist. Nếu user đã whitelist → không tạo signal
+
+#### Bước 2: Giải quyết 8 tín hiệu chưa xử lý
+- UPDATE tất cả `pplp_fraud_signals` chưa resolved của Tú Nguyễn thành `is_resolved = true` với ghi chú "Whitelisted user - device fingerprint false positive"
 
