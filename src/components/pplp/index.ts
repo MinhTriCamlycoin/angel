@@ -3,3 +3,5 @@ export { PPLPActionCard } from "./PPLPActionCard";
 export { PPLPPolicyViewer } from "./PPLPPolicyViewer";
 export { PPLPRatingCard } from "./PPLPRatingCard";
 export { ScoreExplanationPanel } from "./ScoreExplanationPanel";
+export { TransparencyDashboard } from "./TransparencyDashboard";
+export { LightLevelBadge } from "./LightLevelBadge";

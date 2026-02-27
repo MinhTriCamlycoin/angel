@@ -322,7 +322,75 @@ serve(async (req) => {
       ? Math.floor(Math.max(0, weightedReward - penaltyAmount))
       : 0;
 
-    console.log(`[PPLP] New multipliers: repWeight=${reputationWeight}, consistency=${consistencyMultiplier}, integrityPenalty=${integrityPenalty}%`);
+    // ========== 7b. Determine reason codes ==========
+    const reasonCodes: string[] = [];
+    if (consistencyMultiplier >= 1.3) reasonCodes.push('CONSISTENCY_STRONG');
+    if (reputationWeight >= 1.3) reasonCodes.push('COMMUNITY_VALIDATED');
+    if (integrityPenalty === 0 && reputationWeight >= 1.0) reasonCodes.push('CROSS_PLATFORM_CONTRIBUTOR');
+
+    // Check for mentor chain completion
+    try {
+      const { count: mentorChains } = await supabase
+        .from('pplp_behavior_sequences')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', action.actor_id)
+        .eq('sequence_type', 'mentorship')
+        .eq('status', 'completed')
+        .gte('completed_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+      if (mentorChains && mentorChains > 0) reasonCodes.push('MENTOR_CHAIN_COMPLETED');
+    } catch (_) {}
+
+    // Check for value loop
+    try {
+      const { count: valueLoops } = await supabase
+        .from('pplp_behavior_sequences')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', action.actor_id)
+        .eq('sequence_type', 'value_creation')
+        .eq('status', 'completed')
+        .gte('completed_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+      if (valueLoops && valueLoops > 0) reasonCodes.push('VALUE_LOOP_ACTIVE');
+    } catch (_) {}
+
+    if (pillars.H >= 70) reasonCodes.push('HEALING_IMPACT_DETECTED');
+    if (integrityPenalty > 0) {
+      if (integrityPenalty <= 10) reasonCodes.push('QUALITY_SIGNAL_LOW');
+      else reasonCodes.push('TEMPORARY_WEIGHT_ADJUSTMENT');
+    }
+
+    // ========== 7c. Get active scoring rule version ==========
+    let activeRuleVersion = 'V1.0';
+    try {
+      const { data: activeRule } = await supabase
+        .from('scoring_rules')
+        .select('rule_version')
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle();
+      if (activeRule) activeRuleVersion = activeRule.rule_version;
+    } catch (_) {}
+
+    // ========== 7d. Calculate trend ==========
+    let trend = 'stable';
+    try {
+      const { data: prevLedger } = await supabase
+        .from('light_score_ledger')
+        .select('final_light_score')
+        .eq('user_id', action.actor_id)
+        .order('period_start', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (prevLedger) {
+        const prevScore = Number(prevLedger.final_light_score);
+        const currentScore = lightScore * reputationWeight * consistencyMultiplier * (1 - integrityPenalty / 100);
+        const diff = currentScore - prevScore;
+        if (diff > 5) trend = 'growing';
+        else if (diff < -5) trend = 'reflecting';
+        else if (integrityPenalty > 0) trend = 'rebalancing';
+      }
+    } catch (_) {}
+
+    console.log(`[PPLP] New multipliers: repWeight=${reputationWeight}, consistency=${consistencyMultiplier}, integrityPenalty=${integrityPenalty}%, reasonCodes=${reasonCodes.join(',')}, rule=${activeRuleVersion}, trend=${trend}`);
 
     // ========== 8. Insert score record ==========
     const { error: scoreError } = await supabase
@@ -344,7 +412,7 @@ serve(async (req) => {
         integrity_penalty: integrityPenalty,
         final_reward: finalReward,
         decision,
-        decision_reason: failReasons.length > 0 ? failReasons.join(', ') : null,
+        decision_reason: failReasons.length > 0 ? failReasons.join(', ') : (reasonCodes.length > 0 ? reasonCodes.join(', ') : null),
         scored_by: 'pplp_engine_v2',
         policy_version: action.policy_version,
       });
@@ -408,6 +476,25 @@ serve(async (req) => {
       if (explData) explainId = explData.id;
     } catch (explErr) {
       console.error('[PPLP] Explanation insert error:', explErr);
+    }
+
+    // ========== 8b2. Update ledger with reason_codes, rule_version, trend ==========
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const weekNum = `W${Math.ceil(new Date().getDate() / 7)}`;
+      const period = `${today.slice(0, 7)}-${weekNum}`;
+      
+      await supabase
+        .from('light_score_ledger')
+        .update({
+          reason_codes: reasonCodes,
+          rule_version: activeRuleVersion,
+          trend,
+        })
+        .eq('user_id', action.actor_id)
+        .eq('period', period);
+    } catch (ledgerErr) {
+      console.error('[PPLP] Ledger update error:', ledgerErr);
     }
 
     // ========== 8c. Build features for today ==========

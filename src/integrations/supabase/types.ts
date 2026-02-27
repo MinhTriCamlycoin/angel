@@ -2007,8 +2007,11 @@ export type Database = {
           period: string
           period_end: string
           period_start: string
+          reason_codes: string[] | null
           reputation_weight: number | null
+          rule_version: string | null
           sequence_multiplier: number | null
+          trend: string | null
           user_id: string
         }
         Insert: {
@@ -2023,8 +2026,11 @@ export type Database = {
           period?: string
           period_end: string
           period_start: string
+          reason_codes?: string[] | null
           reputation_weight?: number | null
+          rule_version?: string | null
           sequence_multiplier?: number | null
+          trend?: string | null
           user_id: string
         }
         Update: {
@@ -2039,8 +2045,11 @@ export type Database = {
           period?: string
           period_end?: string
           period_start?: string
+          reason_codes?: string[] | null
           reputation_weight?: number | null
+          rule_version?: string | null
           sequence_multiplier?: number | null
+          trend?: string | null
           user_id?: string
         }
         Relationships: []
@@ -2924,6 +2933,7 @@ export type Database = {
           cycle_type: string
           end_date: string
           id: string
+          max_share_per_user: number
           start_date: string
           status: string
           total_light_contribution: number
@@ -2936,6 +2946,7 @@ export type Database = {
           cycle_type?: string
           end_date: string
           id?: string
+          max_share_per_user?: number
           start_date: string
           status?: string
           total_light_contribution?: number
@@ -2948,6 +2959,7 @@ export type Database = {
           cycle_type?: string
           end_date?: string
           id?: string
+          max_share_per_user?: number
           start_date?: string
           status?: string
           total_light_contribution?: number
@@ -3751,6 +3763,48 @@ export type Database = {
         }
         Relationships: []
       }
+      scoring_rules: {
+        Row: {
+          created_at: string
+          description: string | null
+          effective_from: string
+          effective_to: string | null
+          formula_json: Json
+          multiplier_config_json: Json
+          name: string
+          penalty_config_json: Json
+          rule_version: string
+          status: string
+          weight_config_json: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          formula_json?: Json
+          multiplier_config_json?: Json
+          name: string
+          penalty_config_json?: Json
+          rule_version: string
+          status?: string
+          weight_config_json?: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          formula_json?: Json
+          multiplier_config_json?: Json
+          name?: string
+          penalty_config_json?: Json
+          rule_version?: string
+          status?: string
+          weight_config_json?: Json
+        }
+        Relationships: []
+      }
       slug_history: {
         Row: {
           content_id: string
@@ -3900,6 +3954,45 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
           value?: Json
+        }
+        Relationships: []
+      }
+      transparency_snapshots: {
+        Row: {
+          active_users: number
+          allocation_by_level: Json
+          created_at: string
+          epoch_id: string
+          id: string
+          mentor_chains_completed: number
+          rule_version: string | null
+          total_fun_minted: number
+          total_light_system: number
+          value_loops_completed: number
+        }
+        Insert: {
+          active_users?: number
+          allocation_by_level?: Json
+          created_at?: string
+          epoch_id: string
+          id?: string
+          mentor_chains_completed?: number
+          rule_version?: string | null
+          total_fun_minted?: number
+          total_light_system?: number
+          value_loops_completed?: number
+        }
+        Update: {
+          active_users?: number
+          allocation_by_level?: Json
+          created_at?: string
+          epoch_id?: string
+          id?: string
+          mentor_chains_completed?: number
+          rule_version?: string | null
+          total_fun_minted?: number
+          total_light_system?: number
+          value_loops_completed?: number
         }
         Relationships: []
       }
