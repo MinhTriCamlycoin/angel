@@ -1,32 +1,27 @@
 
 
-## Kế hoạch: Thêm chức năng chuyển WL ↔ BL và cải thiện hiển thị lý do
+## Kế hoạch: User WL không bị rà soát và không nằm trong BL
 
-### 1. Cập nhật `AdminTrustList.tsx`
+### Vấn đề hiện tại
+Dù `anti-sybil.ts` đã kiểm tra whitelist, còn **4 edge function khác** truy vấn `pplp_fraud_signals` trực tiếp mà **không kiểm tra whitelist**:
+1. `pplp-detect-fraud/index.ts` — vẫn tạo fraud signal mới cho user WL
+2. `pplp-authorize-mint/index.ts` — chặn mint nếu có fraud signal, không kiểm tra WL
+3. `pplp-batch-lock/index.ts` — chặn batch lock nếu có fraud signal, không kiểm tra WL
+4. `pplp-score-action/index.ts` — tính integrity penalty từ fraud signals, không kiểm tra WL
 
-**Thêm nút hành động cho mỗi tab:**
-- **Tab Whitelist**: Thêm cột "Thao tác" với nút "Chuyển sang BL" — khi bấm sẽ:
-  - Xóa user khỏi `fraud_whitelist`
-  - Tạo fraud signal mới trong `pplp_fraud_signals` với lý do admin nhập (dialog nhập lý do)
-  - Reload data
+### Sửa đổi
 
-- **Tab Blacklist**: Thêm cột "Thao tác" với nút "Chuyển sang WL" — khi bấm sẽ:
-  - Thêm user vào `fraud_whitelist` với lý do admin nhập
-  - Resolve tất cả fraud signals chưa xử lý của user đó
-  - Reload data
+**1. `pplp-detect-fraud/index.ts`** — Thêm kiểm tra whitelist ngay đầu. Nếu user đã WL → trả về `risk_score: 0`, không chạy fraud checks, không tạo signal mới.
 
-**Cải thiện cột "Lý do" trong Blacklist:**
-- Dịch `signal_type` sang tiếng Việt: `SYBIL` → "Nghi tài khoản giả", `BOT` → "Nghi bot tự động", `SPAM` → "Spam"
-- Parse `details` JSON để hiển thị rõ ràng bằng tiếng Việt (VD: "Trùng IP với 3 tài khoản khác", "Trùng device fingerprint")
+**2. `pplp-authorize-mint/index.ts`** — Thêm kiểm tra whitelist trước đoạn CHECK FRAUD SIGNALS. Nếu WL → bỏ qua fraud check.
 
-**Dialog xác nhận:**
-- Dùng `AlertDialog` với `Textarea` để admin nhập lý do trước khi chuyển
+**3. `pplp-batch-lock/index.ts`** — Tương tự, kiểm tra whitelist trước fraud check.
 
-### 2. Đảm bảo WL không tự động chuyển sang BL
-- Logic này đã được xử lý trong `anti-sybil.ts` (kiểm tra whitelist trước khi tạo signal) — không cần sửa thêm
+**4. `pplp-score-action/index.ts`** — 2 chỗ:
+  - Integrity penalty calculation (line ~322): Bỏ qua nếu WL
+  - Auto-mint fallback fraud check (line ~646): Bỏ qua nếu WL
 
-### Chi tiết kỹ thuật
-- Sử dụng các component có sẵn: `AlertDialog`, `Button`, `Textarea`
-- Lấy admin user ID từ session hiện tại để ghi `whitelisted_by` / `resolved_by`
-- Chỉ sửa file `src/pages/AdminTrustList.tsx`
+**5. Database cleanup** — Resolve tất cả `pplp_fraud_signals` chưa xử lý của các user đang trong `fraud_whitelist`, đảm bảo WL và BL không chồng chéo.
+
+**6. `run_cross_account_scan()` DB function** — Thêm loại trừ user WL khi tạo fraud signal tự động.
 
