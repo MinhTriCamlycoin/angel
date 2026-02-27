@@ -202,3 +202,6 @@ verify_jwt = false
 
 [functions.og-image-render]
 verify_jwt = false
+
+[functions.pplp-ai-pillar-analyzer]
+verify_jwt = false

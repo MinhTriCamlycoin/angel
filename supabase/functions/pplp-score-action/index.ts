@@ -357,7 +357,70 @@ serve(async (req) => {
       );
     }
 
-    // ========== 8. Update action status ==========
+    // ========== 8a. AI Pillar Analysis for content actions ==========
+    let aiAnalysis = null;
+    const contentActionTypes = ['POST_CREATE', 'COMMENT_CREATE', 'JOURNAL_WRITE', 'QUESTION_ASK', 'CONTENT_CREATE'];
+    if (decision === 'pass' && contentActionTypes.includes(action.action_type)) {
+      try {
+        const contentText = action.metadata?.content_text || action.metadata?.question_text || '';
+        if (typeof contentText === 'string' && contentText.length >= 10) {
+          const aiResponse = await fetch(`${supabaseUrl}/functions/v1/pplp-ai-pillar-analyzer`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${serviceRoleKey}`,
+            },
+            body: JSON.stringify({
+              content: contentText,
+              content_type: action.action_type,
+            }),
+          });
+          if (aiResponse.ok) {
+            aiAnalysis = await aiResponse.json();
+            console.log(`[PPLP] AI analysis: pillars=${JSON.stringify(aiAnalysis.pillars)}, ego=${aiAnalysis.ego_risk}`);
+          }
+        }
+      } catch (aiErr) {
+        console.error('[PPLP] AI analysis failed:', aiErr);
+      }
+    }
+
+    // ========== 8b. Insert score explanation ==========
+    let explainId = null;
+    try {
+      const { data: explData } = await supabase
+        .from('score_explanations')
+        .insert({
+          user_id: action.actor_id,
+          top_contributors_json: [{
+            action_type: action.action_type,
+            light_score: Math.round(lightScore * 100) / 100,
+            reward: finalReward,
+          }],
+          penalties_json: integrityPenalty > 0 ? [{ type: 'integrity', penalty_pct: integrityPenalty }] : [],
+          ai_pillar_scores: aiAnalysis?.pillars || null,
+          ai_ego_risk: aiAnalysis?.ego_risk || null,
+          ai_explanation: aiAnalysis?.explanation || null,
+          version: 'v2.0',
+        })
+        .select('id')
+        .single();
+      if (explData) explainId = explData.id;
+    } catch (explErr) {
+      console.error('[PPLP] Explanation insert error:', explErr);
+    }
+
+    // ========== 8c. Build features for today ==========
+    try {
+      await supabase.rpc('build_features_user_day', {
+        _user_id: action.actor_id,
+        _date: new Date().toISOString().split('T')[0],
+      });
+    } catch (featErr) {
+      console.error('[PPLP] Feature builder error:', featErr);
+    }
+
+    // ========== 8d. Update action status ==========
     await supabase
       .from('pplp_actions')
       .update({ 
