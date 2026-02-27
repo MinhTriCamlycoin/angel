@@ -229,6 +229,31 @@ serve(async (req) => {
       );
     }
 
+    // ============= WHITELIST CHECK: Skip all fraud checks for whitelisted users =============
+    const { data: wlEntry } = await supabase
+      .from('fraud_whitelist')
+      .select('id')
+      .eq('user_id', body.actor_id)
+      .maybeSingle();
+
+    if (wlEntry) {
+      console.log(`[PPLP Fraud] Actor ${body.actor_id} is whitelisted — skipping all fraud checks`);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          actor_id: body.actor_id,
+          signals_detected: 0,
+          signals: [],
+          risk_score: 0,
+          historical_unresolved_signals: 0,
+          auto_action: null,
+          recommendation: 'WHITELISTED',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    // ============= END WHITELIST CHECK =============
+
     const signals: FraudSignal[] = [];
     const metadata = body.metadata || {};
 

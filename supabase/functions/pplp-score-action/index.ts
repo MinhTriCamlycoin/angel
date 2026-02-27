@@ -319,27 +319,35 @@ serve(async (req) => {
         console.error('[PPLP] Reputation/Consistency calc error:', e);
       }
 
-      // Calculate Integrity Penalty from fraud signals (0-50%)
-      try {
-        const { data: signals } = await supabase
-          .from('pplp_fraud_signals')
-          .select('signal_type, severity')
-          .eq('actor_id', action.actor_id)
-          .eq('is_resolved', false);
+      // Calculate Integrity Penalty from fraud signals (0-50%) — skip for whitelisted users
+      const { data: wlEntryScore } = await supabase
+        .from('fraud_whitelist')
+        .select('id')
+        .eq('user_id', action.actor_id)
+        .maybeSingle();
 
-        if (signals && signals.length > 0) {
-          let penaltyPct = 0;
-          for (const sig of signals) {
-            const sevPenalty = sig.signal_type === 'cross_account' ? 15
-              : sig.signal_type === 'fake_engagement' ? 20
-              : sig.signal_type === 'emotional_abuse' ? 10
-              : 10; // spam etc
-            penaltyPct += sevPenalty;
+      if (!wlEntryScore) {
+        try {
+          const { data: signals } = await supabase
+            .from('pplp_fraud_signals')
+            .select('signal_type, severity')
+            .eq('actor_id', action.actor_id)
+            .eq('is_resolved', false);
+
+          if (signals && signals.length > 0) {
+            let penaltyPct = 0;
+            for (const sig of signals) {
+              const sevPenalty = sig.signal_type === 'cross_account' ? 15
+                : sig.signal_type === 'fake_engagement' ? 20
+                : sig.signal_type === 'emotional_abuse' ? 10
+                : 10; // spam etc
+              penaltyPct += sevPenalty;
+            }
+            integrityPenalty = Math.min(50, penaltyPct); // Cap at 50%
           }
-          integrityPenalty = Math.min(50, penaltyPct); // Cap at 50%
+        } catch (e) {
+          console.error('[PPLP] Integrity penalty calc error:', e);
         }
-      } catch (e) {
-        console.error('[PPLP] Integrity penalty calc error:', e);
       }
     }
 
@@ -633,8 +641,9 @@ serve(async (req) => {
     let mintResult = null;
     if (decision === 'pass' && finalReward > 0) {
       try {
-        // Block if high fraud risk
-        if (fraudResult && fraudResult.risk_score > 50) {
+        // Block if high fraud risk (skip for whitelisted users)
+        const isWLForMint = !!wlEntryScore;
+        if (!isWLForMint && fraudResult && fraudResult.risk_score > 50) {
           console.warn(`[PPLP Auto-Mint] Blocked for ${action.actor_id}: high fraud risk score ${fraudResult.risk_score}`);
           mintResult = { 
             auto_minted: false, 
@@ -642,7 +651,7 @@ serve(async (req) => {
             fraud_risk_score: fraudResult.risk_score,
             fraud_recommendation: fraudResult.recommendation,
           };
-        } else {
+        } else if (!isWLForMint) {
           // Check for unresolved high-severity fraud signals (fallback check)
           const { count: fraudSignals } = await supabase
             .from('pplp_fraud_signals')

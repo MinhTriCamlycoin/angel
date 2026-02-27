@@ -146,18 +146,27 @@ serve(async (req) => {
       );
     }
 
-    const { count: fraudCount } = await supabase
-      .from("pplp_fraud_signals")
-      .select("*", { count: "exact", head: true })
-      .eq("actor_id", actor_id)
-      .eq("is_resolved", false)
-      .gte("severity", 4);
+    // Check whitelist before fraud check
+    const { data: wlEntry } = await supabase
+      .from("fraud_whitelist")
+      .select("id")
+      .eq("user_id", actor_id)
+      .maybeSingle();
 
-    if (fraudCount && fraudCount > 0) {
-      return new Response(
-        JSON.stringify({ error: "Blocked due to unresolved fraud signals", count: fraudCount }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!wlEntry) {
+      const { count: fraudCount } = await supabase
+        .from("pplp_fraud_signals")
+        .select("*", { count: "exact", head: true })
+        .eq("actor_id", actor_id)
+        .eq("is_resolved", false)
+        .gte("severity", 4);
+
+      if (fraudCount && fraudCount > 0) {
+        return new Response(
+          JSON.stringify({ error: "Blocked due to unresolved fraud signals", count: fraudCount }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // ============================================
