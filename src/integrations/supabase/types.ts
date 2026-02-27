@@ -2723,6 +2723,89 @@ export type Database = {
         }
         Relationships: []
       }
+      pplp_mint_allocations: {
+        Row: {
+          allocation_ratio: number
+          created_at: string
+          cycle_id: string
+          fun_allocated: number
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+          user_light_contribution: number
+        }
+        Insert: {
+          allocation_ratio?: number
+          created_at?: string
+          cycle_id: string
+          fun_allocated?: number
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          user_light_contribution?: number
+        }
+        Update: {
+          allocation_ratio?: number
+          created_at?: string
+          cycle_id?: string
+          fun_allocated?: number
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          user_light_contribution?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pplp_mint_allocations_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "pplp_mint_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pplp_mint_cycles: {
+        Row: {
+          created_at: string
+          cycle_number: number
+          cycle_type: string
+          end_date: string
+          id: string
+          start_date: string
+          status: string
+          total_light_contribution: number
+          total_mint_pool: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cycle_number: number
+          cycle_type?: string
+          end_date: string
+          id?: string
+          start_date: string
+          status?: string
+          total_light_contribution?: number
+          total_mint_pool?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cycle_number?: number
+          cycle_type?: string
+          end_date?: string
+          id?: string
+          start_date?: string
+          status?: string
+          total_light_contribution?: number
+          total_mint_pool?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pplp_mint_requests: {
         Row: {
           action_hash: string
@@ -2951,11 +3034,13 @@ export type Database = {
         Row: {
           action_id: string
           base_reward: number
+          consistency_multiplier: number | null
           created_at: string
           decision: Database["public"]["Enums"]["pplp_decision"]
           decision_reason: string | null
           final_reward: number
           id: string
+          integrity_penalty: number | null
           light_score: number
           multiplier_i: number
           multiplier_k: number
@@ -2966,16 +3051,19 @@ export type Database = {
           pillar_t: number
           pillar_u: number
           policy_version: string
+          reputation_weight: number | null
           scored_by: string
         }
         Insert: {
           action_id: string
           base_reward?: number
+          consistency_multiplier?: number | null
           created_at?: string
           decision?: Database["public"]["Enums"]["pplp_decision"]
           decision_reason?: string | null
           final_reward?: number
           id?: string
+          integrity_penalty?: number | null
           light_score?: number
           multiplier_i?: number
           multiplier_k?: number
@@ -2986,16 +3074,19 @@ export type Database = {
           pillar_t?: number
           pillar_u?: number
           policy_version?: string
+          reputation_weight?: number | null
           scored_by?: string
         }
         Update: {
           action_id?: string
           base_reward?: number
+          consistency_multiplier?: number | null
           created_at?: string
           decision?: Database["public"]["Enums"]["pplp_decision"]
           decision_reason?: string | null
           final_reward?: number
           id?: string
+          integrity_penalty?: number | null
           light_score?: number
           multiplier_i?: number
           multiplier_k?: number
@@ -3006,6 +3097,7 @@ export type Database = {
           pillar_t?: number
           pillar_u?: number
           policy_version?: string
+          reputation_weight?: number | null
           scored_by?: string
         }
         Relationships: [
@@ -3106,6 +3198,8 @@ export type Database = {
         Row: {
           cap_multiplier: number
           community_vouches: number
+          contribution_days_30: number | null
+          contribution_days_90: number | null
           created_at: string
           failed_actions: number
           fraud_flags: number
@@ -3126,6 +3220,8 @@ export type Database = {
         Insert: {
           cap_multiplier?: number
           community_vouches?: number
+          contribution_days_30?: number | null
+          contribution_days_90?: number | null
           created_at?: string
           failed_actions?: number
           fraud_flags?: number
@@ -3146,6 +3242,8 @@ export type Database = {
         Update: {
           cap_multiplier?: number
           community_vouches?: number
+          contribution_days_30?: number | null
+          contribution_days_90?: number | null
           created_at?: string
           failed_actions?: number
           fraud_flags?: number
@@ -4175,12 +4273,20 @@ export type Database = {
         Args: { _risk_score: number; _signals?: Json; _user_id: string }
         Returns: Json
       }
+      calculate_consistency_multiplier: {
+        Args: { _user_id: string }
+        Returns: number
+      }
       calculate_light_score: {
         Args: { _c: number; _h: number; _s: number; _t: number; _u: number }
         Returns: number
       }
       calculate_pplp_reward: {
         Args: { _base_reward: number; _i: number; _k: number; _q: number }
+        Returns: number
+      }
+      calculate_reputation_weight: {
+        Args: { _user_id: string }
         Returns: number
       }
       check_ai_usage_only: {
@@ -4524,6 +4630,8 @@ export type Database = {
         Returns: {
           cap_multiplier: number
           community_vouches: number
+          contribution_days_30: number | null
+          contribution_days_90: number | null
           created_at: string
           failed_actions: number
           fraud_flags: number

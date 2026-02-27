@@ -4,7 +4,7 @@ import { getPolicyBaseReward } from "../_shared/pplp-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 interface ActionData {
@@ -271,15 +271,60 @@ serve(async (req) => {
     let decision: 'pass' | 'fail' = thresholdCheck.pass ? 'pass' : 'fail';
     const failReasons = thresholdCheck.reasons;
 
-    // ========== 6. Calculate base reward (Policy v1.0.1 FUN Money) ==========
-    // Priority: Policy v1.0.1 mapping > pplp_action_caps table > default 100
+    // ========== 6. Calculate Reputation Weight & Consistency Multiplier ==========
+    let reputationWeight = 1.0;
+    let consistencyMultiplier = 1.0;
+    let integrityPenalty = 0;
+
+    if (decision === 'pass') {
+      try {
+        const [repRes, conRes] = await Promise.all([
+          supabase.rpc('calculate_reputation_weight', { _user_id: action.actor_id }),
+          supabase.rpc('calculate_consistency_multiplier', { _user_id: action.actor_id }),
+        ]);
+        if (repRes.data) reputationWeight = Number(repRes.data);
+        if (conRes.data) consistencyMultiplier = Number(conRes.data);
+      } catch (e) {
+        console.error('[PPLP] Reputation/Consistency calc error:', e);
+      }
+
+      // Calculate Integrity Penalty from fraud signals (0-50%)
+      try {
+        const { data: signals } = await supabase
+          .from('pplp_fraud_signals')
+          .select('signal_type, severity')
+          .eq('actor_id', action.actor_id)
+          .eq('is_resolved', false);
+
+        if (signals && signals.length > 0) {
+          let penaltyPct = 0;
+          for (const sig of signals) {
+            const sevPenalty = sig.signal_type === 'cross_account' ? 15
+              : sig.signal_type === 'fake_engagement' ? 20
+              : sig.signal_type === 'emotional_abuse' ? 10
+              : 10; // spam etc
+            penaltyPct += sevPenalty;
+          }
+          integrityPenalty = Math.min(50, penaltyPct); // Cap at 50%
+        }
+      } catch (e) {
+        console.error('[PPLP] Integrity penalty calc error:', e);
+      }
+    }
+
+    // ========== 7. Calculate base reward (Policy v1.0.1 FUN Money) ==========
     const policyBaseReward = getPolicyBaseReward(action.action_type, action.platform_id);
     const baseReward = policyBaseReward ?? config.base_reward ?? 100;
+    const rawReward = baseReward * multipliers.Q * multipliers.I * multipliers.K;
+    const weightedReward = rawReward * reputationWeight * consistencyMultiplier;
+    const penaltyAmount = weightedReward * (integrityPenalty / 100);
     let finalReward = decision === 'pass' 
-      ? Math.floor(baseReward * multipliers.Q * multipliers.I * multipliers.K)
+      ? Math.floor(Math.max(0, weightedReward - penaltyAmount))
       : 0;
 
-    // ========== 7. Insert score record ==========
+    console.log(`[PPLP] New multipliers: repWeight=${reputationWeight}, consistency=${consistencyMultiplier}, integrityPenalty=${integrityPenalty}%`);
+
+    // ========== 8. Insert score record ==========
     const { error: scoreError } = await supabase
       .from('pplp_scores')
       .insert({
@@ -294,10 +339,13 @@ serve(async (req) => {
         multiplier_q: multipliers.Q,
         multiplier_i: multipliers.I,
         multiplier_k: multipliers.K,
+        reputation_weight: reputationWeight,
+        consistency_multiplier: consistencyMultiplier,
+        integrity_penalty: integrityPenalty,
         final_reward: finalReward,
         decision,
         decision_reason: failReasons.length > 0 ? failReasons.join(', ') : null,
-        scored_by: 'pplp_engine_v1',
+        scored_by: 'pplp_engine_v2',
         policy_version: action.policy_version,
       });
 
@@ -506,6 +554,9 @@ serve(async (req) => {
         pillars,
         light_score: Math.round(lightScore * 100) / 100,
         multipliers,
+        reputation_weight: reputationWeight,
+        consistency_multiplier: consistencyMultiplier,
+        integrity_penalty: integrityPenalty,
         base_reward: baseReward,
         final_reward: finalReward,
         decision,
