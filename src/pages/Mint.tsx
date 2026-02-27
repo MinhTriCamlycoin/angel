@@ -8,6 +8,8 @@ import { AddFUNToWalletButton } from "@/components/mint/AddFUNToWalletButton";
 import { MintCycleStatus } from "@/components/pplp/MintCycleStatus";
 import { ThreeLayerRewardExplainer } from "@/components/pplp/ThreeLayerRewardExplainer";
 import { TransparencyDashboard } from "@/components/pplp/TransparencyDashboard";
+import { PPLPPhilosophy } from "@/components/pplp/PPLPPhilosophy";
+import { CamlyFunRelationship } from "@/components/pplp/CamlyFunRelationship";
 import { LightLevelBadge } from "@/components/pplp/LightLevelBadge";
 import { ScoreExplanationPanel } from "@/components/pplp/ScoreExplanationPanel";
 import { useAuth } from "@/hooks/useAuth";
@@ -84,6 +86,12 @@ export default function Mint() {
             <div className="grid gap-6 md:grid-cols-2">
               <ThreeLayerRewardExplainer />
               <MintCycleStatus />
+            </div>
+
+            {/* Anti-Ego + Camly↔FUN */}
+            <div className="grid gap-6 md:grid-cols-2">
+              <PPLPPhilosophy />
+              <CamlyFunRelationship />
             </div>
 
             {/* Hướng dẫn Mint FUN Money từ A đến Z */}
