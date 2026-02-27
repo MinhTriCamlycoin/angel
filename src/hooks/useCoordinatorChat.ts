@@ -24,7 +24,6 @@ interface ProjectContext {
 // Detect corruption in Vietnamese text
 function hasTextCorruption(text: string): boolean {
   if (text.includes("\uFFFD")) return true;
-  // Pattern: letter + ?? + letter (catches "gi??á", "thc??ực")
   if (
     /[a-zàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]\?\?[a-zàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i.test(
       text
@@ -47,9 +46,9 @@ function hasTextCorruption(text: string): boolean {
 function tryExtractToolCall(text: string): null | { tool: string; args: any } {
   // Prefer fenced JSON block first
   const fence = text.match(/```json\s*([\s\S]*?)```/i);
-  const candidate = fence?.[1] ?? text;
+  const candidate = (fence?.[1] ?? text).trim();
 
-  // Try to find the first JSON object in the candidate string
+  // Try to find first JSON object region
   const start = candidate.indexOf("{");
   const end = candidate.lastIndexOf("}");
   if (start === -1 || end === -1 || end <= start) return null;
@@ -65,11 +64,15 @@ function tryExtractToolCall(text: string): null | { tool: string; args: any } {
 }
 
 /**
- * Calls Cloudflare Worker route: POST /api/evolve
- * Requires Supabase JWT in Authorization header.
+ * Calls Cloudflare Worker route:
+ * - Prefer VITE_EVOLVE_ENDPOINT (absolute) so it works on Lovable + Pages + custom domain.
+ * - Fallback "/api/evolve" for same-origin deployments.
  */
 async function callEvolveWorker(accessToken: string, args: any) {
-  const resp = await fetch("/api/evolve", {
+  const endpoint =
+    (import.meta.env.VITE_EVOLVE_ENDPOINT as string | undefined) || "/api/evolve";
+
+  const resp = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -86,7 +89,7 @@ async function callEvolveWorker(accessToken: string, args: any) {
   }
 
   if (!resp.ok) {
-    const msg = data?.error || `Evolve failed (${resp.status})`;
+    const msg = data?.error || data?.message || `Evolve failed (${resp.status})`;
     throw new Error(msg);
   }
 
@@ -114,6 +117,7 @@ export function useCoordinatorChat(projectId: string | undefined) {
         .select("*")
         .eq("project_id", projectId!)
         .order("created_at", { ascending: true });
+
       if (error) throw error;
       return data as unknown as ChatMessage[];
     },
@@ -174,6 +178,7 @@ export function useCoordinatorChat(projectId: string | undefined) {
 
         if (!resp.ok) {
           const errorData = await resp.json().catch(() => ({}));
+
           if (resp.status === 402) {
             toast.error(
               "⚡ AI credits đã hết. Vui lòng nạp thêm credits trong Settings → Workspace → Usage."
@@ -182,12 +187,14 @@ export function useCoordinatorChat(projectId: string | undefined) {
             setStreamingContent("");
             return;
           }
+
           if (resp.status === 429) {
             toast.error("⏳ Quá nhiều yêu cầu. Vui lòng thử lại sau vài giây.");
             setIsStreaming(false);
             setStreamingContent("");
             return;
           }
+
           throw new Error(errorData.error || `Error ${resp.status}`);
         }
 
@@ -198,16 +205,17 @@ export function useCoordinatorChat(projectId: string | undefined) {
         let buffer = "";
         let fullContent = "";
 
-        // eslint-disable-next-line no-constant-condition
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+
           buffer += decoder.decode(value, { stream: true });
 
           let newlineIndex: number;
           while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
             let line = buffer.slice(0, newlineIndex);
             buffer = buffer.slice(newlineIndex + 1);
+
             if (line.endsWith("\r")) line = line.slice(0, -1);
             if (line.startsWith(":") || line.trim() === "") continue;
             if (!line.startsWith("data: ")) continue;
@@ -223,7 +231,6 @@ export function useCoordinatorChat(projectId: string | undefined) {
                 setStreamingContent(fullContent);
               }
             } catch {
-              // Re-buffer incomplete JSON
               buffer = line + "\n" + buffer;
               break;
             }
@@ -234,9 +241,7 @@ export function useCoordinatorChat(projectId: string | undefined) {
 
         // Corruption detection: if stream has corruption, fallback to non-stream
         if (hasTextCorruption(fullContent)) {
-          console.warn(
-            "⚠️ Corruption detected in coordinator stream — falling back to non-stream"
-          );
+          console.warn("⚠️ Corruption detected — falling back to non-stream");
           try {
             const fallbackResp = await fetch(endpointUrl, {
               method: "POST",
@@ -281,9 +286,8 @@ export function useCoordinatorChat(projectId: string | undefined) {
         const toolCall = cleanContent ? tryExtractToolCall(cleanContent) : null;
         if (toolCall?.tool === "evolve_workspace") {
           try {
-            toast.message("⚙️ Angel đang tự sửa code trên GitHub…");
-
             const args = toolCall.args || {};
+
             const required = [
               "file_path",
               "branch_name",
@@ -297,10 +301,12 @@ export function useCoordinatorChat(projectId: string | undefined) {
               }
             }
 
+            toast.message("⚙️ Angel đang gửi lệnh evolve lên GitHub…");
+
             const result = await callEvolveWorker(session.access_token, args);
 
             toast.success(
-              `✅ Đã gửi lệnh evolve! GitHub status: ${
+              `✅ Evolve dispatched! GitHub status: ${
                 result?.github_status ?? "unknown"
               }`
             );
@@ -309,7 +315,9 @@ export function useCoordinatorChat(projectId: string | undefined) {
           }
         }
 
-        queryClient.invalidateQueries({ queryKey: ["coordinator-chat", projectId] });
+        queryClient.invalidateQueries({
+          queryKey: ["coordinator-chat", projectId],
+        });
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "AI error");
       } finally {
