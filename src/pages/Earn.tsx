@@ -9,6 +9,8 @@ import { FUNMoneyStatsBanner } from "@/components/earn/FUNMoneyStatsBanner";
 import { LightLevelBadge } from "@/components/pplp/LightLevelBadge";
 import { BehaviorSequenceTracker } from "@/components/pplp/BehaviorSequenceTracker";
 import { LightActivityCategories } from "@/components/pplp/LightActivityCategories";
+import { TransparencyDashboard } from "@/components/pplp/TransparencyDashboard";
+import { ScoreExplanationPanel } from "@/components/pplp/ScoreExplanationPanel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -206,6 +208,12 @@ export default function Earn() {
               <StreakCalendar />
             </div>
           </div>
+
+          {/* Transparency Dashboard */}
+          <TransparencyDashboard />
+
+          {/* Score Explanation */}
+          <ScoreExplanationPanel />
 
           {/* Coin Breakdown */}
           <EarnBreakdown />

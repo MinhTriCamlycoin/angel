@@ -7,6 +7,9 @@ import { MintGuideFullFlow } from "@/components/mint/MintGuideFullFlow";
 import { AddFUNToWalletButton } from "@/components/mint/AddFUNToWalletButton";
 import { MintCycleStatus } from "@/components/pplp/MintCycleStatus";
 import { ThreeLayerRewardExplainer } from "@/components/pplp/ThreeLayerRewardExplainer";
+import { TransparencyDashboard } from "@/components/pplp/TransparencyDashboard";
+import { LightLevelBadge } from "@/components/pplp/LightLevelBadge";
+import { ScoreExplanationPanel } from "@/components/pplp/ScoreExplanationPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnmintedCount } from "@/hooks/useUnmintedCount";
 import { Button } from "@/components/ui/button";
@@ -71,6 +74,12 @@ export default function Mint() {
               </Alert>
             )}
 
+            {/* Light Level + Transparency */}
+            <div className="grid gap-6 md:grid-cols-2">
+              <LightLevelBadge />
+              <TransparencyDashboard />
+            </div>
+
             {/* 3 Lớp Thưởng + Chu kỳ Mint */}
             <div className="grid gap-6 md:grid-cols-2">
               <ThreeLayerRewardExplainer />
@@ -93,6 +102,9 @@ export default function Mint() {
 
                     {/* Token Lifecycle Panel */}
                     <TokenLifecyclePanel />
+
+                    {/* Score Explanation */}
+                    <ScoreExplanationPanel />
 
                     {/* Quick Info */}
                     <Card>
