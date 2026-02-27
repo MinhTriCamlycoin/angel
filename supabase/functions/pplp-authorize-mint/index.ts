@@ -305,24 +305,32 @@ serve(async (req) => {
     }
 
     // ============================================
-    // CHECK FRAUD SIGNALS
+    // CHECK FRAUD SIGNALS (skip for whitelisted users)
     // ============================================
 
-    const { count: fraudSignals } = await supabase
-      .from("pplp_fraud_signals")
-      .select("*", { count: "exact", head: true })
-      .eq("actor_id", action.actor_id)
-      .eq("is_resolved", false)
-      .gte("severity", 4);
+    const { data: wlEntry } = await supabase
+      .from("fraud_whitelist")
+      .select("id")
+      .eq("user_id", action.actor_id)
+      .maybeSingle();
 
-    if (fraudSignals && fraudSignals > 0) {
-      return new Response(
-        JSON.stringify({
-          error: "Mint blocked due to unresolved fraud signals",
-          fraud_signal_count: fraudSignals,
-        }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!wlEntry) {
+      const { count: fraudSignals } = await supabase
+        .from("pplp_fraud_signals")
+        .select("*", { count: "exact", head: true })
+        .eq("actor_id", action.actor_id)
+        .eq("is_resolved", false)
+        .gte("severity", 4);
+
+      if (fraudSignals && fraudSignals > 0) {
+        return new Response(
+          JSON.stringify({
+            error: "Mint blocked due to unresolved fraud signals",
+            fraud_signal_count: fraudSignals,
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // ============================================
