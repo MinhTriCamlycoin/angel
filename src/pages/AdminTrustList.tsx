@@ -7,11 +7,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ShieldCheck, ShieldAlert, Loader2, ArrowRightLeft } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Loader2, ArrowRightLeft, CheckSquare } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
@@ -78,11 +79,21 @@ const AdminTrustList = () => {
   const [reason, setReason] = useState("");
   const [processing, setProcessing] = useState(false);
 
+  // Multi-select state
+  const [selectedWL, setSelectedWL] = useState<Set<string>>(new Set());
+  const [selectedBL, setSelectedBL] = useState<Set<string>>(new Set());
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [batchAction, setBatchAction] = useState<"to_bl" | "to_wl">("to_bl");
+  const [batchReason, setBatchReason] = useState("");
+  const [batchProcessing, setBatchProcessing] = useState(false);
+
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     setLoading(true);
     await Promise.all([fetchWhitelist(), fetchBlacklist()]);
+    setSelectedWL(new Set());
+    setSelectedBL(new Set());
     setLoading(false);
   };
 
@@ -127,6 +138,7 @@ const AdminTrustList = () => {
     setBlacklist(Array.from(grouped.values()).map(g => ({ ...g, profile: profileMap.get(g.actor_id) || undefined })).sort((a, b) => b.signal_count - a.signal_count));
   };
 
+  // Single user dialog
   const openDialog = (action: "to_bl" | "to_wl", userId: string, userName: string) => {
     setDialogAction(action);
     setTargetUser({ id: userId, name: userName });
@@ -142,7 +154,6 @@ const AdminTrustList = () => {
       const adminId = user?.id;
 
       if (dialogAction === "to_bl") {
-        // WL → BL: xóa khỏi whitelist, tạo fraud signal
         await supabase.from("fraud_whitelist").delete().eq("user_id", targetUser.id);
         await supabase.from("pplp_fraud_signals").insert({
           actor_id: targetUser.id, signal_type: "ADMIN_FLAG", severity: 5,
@@ -150,7 +161,6 @@ const AdminTrustList = () => {
         });
         toast.success(`Đã chuyển ${targetUser.name} sang Blacklist`);
       } else {
-        // BL → WL: thêm vào whitelist, resolve tất cả signals
         await supabase.from("fraud_whitelist").insert({
           user_id: targetUser.id, reason: reason.trim(), whitelisted_by: adminId,
         });
@@ -163,6 +173,82 @@ const AdminTrustList = () => {
       toast.error("Có lỗi xảy ra");
     } finally {
       setProcessing(false);
+    }
+  };
+
+  // Batch operations
+  const toggleWL = (userId: string) => {
+    setSelectedWL(prev => {
+      const next = new Set(prev);
+      next.has(userId) ? next.delete(userId) : next.add(userId);
+      return next;
+    });
+  };
+
+  const toggleBL = (actorId: string) => {
+    setSelectedBL(prev => {
+      const next = new Set(prev);
+      next.has(actorId) ? next.delete(actorId) : next.add(actorId);
+      return next;
+    });
+  };
+
+  const toggleAllWL = () => {
+    if (selectedWL.size === whitelist.length) {
+      setSelectedWL(new Set());
+    } else {
+      setSelectedWL(new Set(whitelist.map(e => e.user_id)));
+    }
+  };
+
+  const toggleAllBL = () => {
+    if (selectedBL.size === blacklist.length) {
+      setSelectedBL(new Set());
+    } else {
+      setSelectedBL(new Set(blacklist.map(g => g.actor_id)));
+    }
+  };
+
+  const openBatchDialog = (action: "to_bl" | "to_wl") => {
+    setBatchAction(action);
+    setBatchReason("");
+    setBatchDialogOpen(true);
+  };
+
+  const handleBatchTransfer = async () => {
+    if (!batchReason.trim()) { toast.error("Vui lòng nhập lý do"); return; }
+    setBatchProcessing(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const adminId = user?.id;
+      const userIds = Array.from(batchAction === "to_bl" ? selectedWL : selectedBL);
+
+      if (batchAction === "to_bl") {
+        // WL → BL batch
+        for (const uid of userIds) {
+          await supabase.from("fraud_whitelist").delete().eq("user_id", uid);
+          await supabase.from("pplp_fraud_signals").insert({
+            actor_id: uid, signal_type: "ADMIN_FLAG", severity: 5,
+            details: { reason: batchReason.trim(), flagged_by: adminId }, is_resolved: false,
+          });
+        }
+        toast.success(`Đã chuyển ${userIds.length} user sang Blacklist`);
+      } else {
+        // BL → WL batch
+        for (const uid of userIds) {
+          await supabase.from("fraud_whitelist").insert({
+            user_id: uid, reason: batchReason.trim(), whitelisted_by: adminId,
+          });
+          await supabase.from("pplp_fraud_signals").update({ is_resolved: true }).eq("actor_id", uid).eq("is_resolved", false);
+        }
+        toast.success(`Đã chuyển ${userIds.length} user sang Whitelist`);
+      }
+      setBatchDialogOpen(false);
+      await fetchData();
+    } catch (err) {
+      toast.error("Có lỗi xảy ra");
+    } finally {
+      setBatchProcessing(false);
     }
   };
 
@@ -193,9 +279,21 @@ const AdminTrustList = () => {
           ) : (
             <>
               <TabsContent value="whitelist">
+                {selectedWL.size > 0 && (
+                  <div className="flex items-center gap-3 mb-3 p-3 rounded-lg bg-muted/50 border">
+                    <span className="text-sm font-medium">Đã chọn {selectedWL.size} user</span>
+                    <Button variant="destructive" size="sm" onClick={() => openBatchDialog("to_bl")}>
+                      <ArrowRightLeft className="w-3.5 h-3.5 mr-1" />Chuyển tất cả sang BL
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedWL(new Set())}>Bỏ chọn</Button>
+                  </div>
+                )}
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox checked={whitelist.length > 0 && selectedWL.size === whitelist.length} onCheckedChange={toggleAllWL} />
+                      </TableHead>
                       <TableHead>User</TableHead>
                       <TableHead>Lý do</TableHead>
                       <TableHead>Người xác nhận</TableHead>
@@ -205,9 +303,12 @@ const AdminTrustList = () => {
                   </TableHeader>
                   <TableBody>
                     {whitelist.length === 0 ? (
-                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Chưa có user nào trong whitelist</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Chưa có user nào trong whitelist</TableCell></TableRow>
                     ) : whitelist.map((entry) => (
-                      <TableRow key={entry.id}>
+                      <TableRow key={entry.id} className={selectedWL.has(entry.user_id) ? "bg-muted/30" : ""}>
+                        <TableCell>
+                          <Checkbox checked={selectedWL.has(entry.user_id)} onCheckedChange={() => toggleWL(entry.user_id)} />
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Avatar className="w-8 h-8"><AvatarImage src={entry.profile?.avatar_url || ""} /><AvatarFallback>{(entry.profile?.display_name || "?")[0]}</AvatarFallback></Avatar>
@@ -229,9 +330,21 @@ const AdminTrustList = () => {
               </TabsContent>
 
               <TabsContent value="blacklist">
+                {selectedBL.size > 0 && (
+                  <div className="flex items-center gap-3 mb-3 p-3 rounded-lg bg-muted/50 border">
+                    <span className="text-sm font-medium">Đã chọn {selectedBL.size} user</span>
+                    <Button variant="outline" size="sm" onClick={() => openBatchDialog("to_wl")}>
+                      <ArrowRightLeft className="w-3.5 h-3.5 mr-1" />Chuyển tất cả sang WL
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedBL(new Set())}>Bỏ chọn</Button>
+                  </div>
+                )}
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox checked={blacklist.length > 0 && selectedBL.size === blacklist.length} onCheckedChange={toggleAllBL} />
+                      </TableHead>
                       <TableHead>User</TableHead>
                       <TableHead>Số tín hiệu</TableHead>
                       <TableHead>Loại</TableHead>
@@ -243,9 +356,12 @@ const AdminTrustList = () => {
                   </TableHeader>
                   <TableBody>
                     {blacklist.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Không có tín hiệu gian lận chưa xử lý</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Không có tín hiệu gian lận chưa xử lý</TableCell></TableRow>
                     ) : blacklist.map((group) => (
-                      <TableRow key={group.actor_id}>
+                      <TableRow key={group.actor_id} className={selectedBL.has(group.actor_id) ? "bg-muted/30" : ""}>
+                        <TableCell>
+                          <Checkbox checked={selectedBL.has(group.actor_id)} onCheckedChange={() => toggleBL(group.actor_id)} />
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Avatar className="w-8 h-8"><AvatarImage src={group.profile?.avatar_url || ""} /><AvatarFallback>{(group.profile?.display_name || "?")[0]}</AvatarFallback></Avatar>
@@ -284,6 +400,7 @@ const AdminTrustList = () => {
         </Tabs>
       </div>
 
+      {/* Single user dialog */}
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -296,17 +413,36 @@ const AdminTrustList = () => {
                 : `Xác nhận chuyển "${targetUser?.name}" từ Blacklist sang Whitelist. Tất cả tín hiệu gian lận sẽ được giải quyết.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <Textarea
-            placeholder="Nhập lý do chuyển đổi..."
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            className="min-h-[80px]"
-          />
+          <Textarea placeholder="Nhập lý do chuyển đổi..." value={reason} onChange={(e) => setReason(e.target.value)} className="min-h-[80px]" />
           <AlertDialogFooter>
             <AlertDialogCancel disabled={processing}>Hủy</AlertDialogCancel>
             <AlertDialogAction onClick={handleTransfer} disabled={processing || !reason.trim()}>
               {processing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
               Xác nhận
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Batch dialog */}
+      <AlertDialog open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {batchAction === "to_bl" ? `Chuyển ${selectedWL.size} user sang Blacklist` : `Chuyển ${selectedBL.size} user sang Whitelist`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {batchAction === "to_bl"
+                ? `Xác nhận chuyển ${selectedWL.size} user đã chọn từ Whitelist sang Blacklist. Tất cả sẽ bị đánh dấu gian lận.`
+                : `Xác nhận chuyển ${selectedBL.size} user đã chọn từ Blacklist sang Whitelist. Tất cả tín hiệu gian lận sẽ được giải quyết.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea placeholder="Nhập lý do chung cho tất cả..." value={batchReason} onChange={(e) => setBatchReason(e.target.value)} className="min-h-[80px]" />
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={batchProcessing}>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBatchTransfer} disabled={batchProcessing || !batchReason.trim()}>
+              {batchProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+              Xác nhận ({batchAction === "to_bl" ? selectedWL.size : selectedBL.size} user)
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
