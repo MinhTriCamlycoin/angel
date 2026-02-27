@@ -1,48 +1,24 @@
 
 
-## Plan: Fix Attester Key và Reset 918 Yêu Cầu Lỗi
+## Kế hoạch: Cập nhật plan.md sang tiếng Việt có dấu chuẩn + Thêm kế hoạch Light Score Activity Framework
 
-### Vấn đề
-- 918 mint requests đang bị kẹt ở status `signed` với lỗi `ATTESTER_NOT_REGISTERED` vì đã ký bằng ví Treasury thay vì ví Attester
-- `pplp-authorize-mint` vẫn đang dùng `TREASURY_PRIVATE_KEY` — chưa được cập nhật
+Nội dung plan.md hiện tại đã viết tiếng Việt có dấu. Yêu cầu của Cha là từ nay về sau tất cả kế hoạch đều dùng tiếng Việt có dấu chuẩn quốc tế (Unicode NFC).
 
 ### Thay đổi
 
-| # | Thay đổi | Mô tả |
-|---|----------|-------|
-| 1 | **Database migration** | Reset 918 requests từ `signed` → `pending`, xóa `on_chain_error`, `signature`, `signer_address` để có thể gom & ký lại |
-| 2 | **`pplp-authorize-mint/index.ts`** | Đổi `TREASURY_PRIVATE_KEY` → `ATTESTER_PRIVATE_KEY` (fallback Treasury) — giống batch-lock |
-| 3 | **`pplp-batch-lock/index.ts`** | Sửa error message từ "TREASURY_PRIVATE_KEY not configured" → "ATTESTER_PRIVATE_KEY not configured" |
+| # | Tệp | Mô tả |
+|---|------|-------|
+| 1 | `.lovable/plan.md` | Viết lại toàn bộ bằng tiếng Việt có dấu chuẩn, bao gồm kế hoạch Light Score Activity Framework mới nhất đã được duyệt — thay thế kế hoạch Attester Key cũ đã hoàn thành |
 
-### SQL Migration
-```sql
-UPDATE pplp_mint_requests
-SET status = 'pending',
-    signature = NULL,
-    signer_address = NULL,
-    nonce = NULL,
-    on_chain_error = NULL
-WHERE status = 'signed'
-  AND on_chain_error = 'ATTESTER_NOT_REGISTERED';
-```
+### Nội dung mới của plan.md
 
-### Edge Function Changes
+Kế hoạch sẽ bao gồm:
 
-**`pplp-authorize-mint`** line 164:
-```typescript
-// Before
-const signerPrivateKey = Deno.env.get("TREASURY_PRIVATE_KEY");
-// After
-const signerPrivateKey = Deno.env.get("ATTESTER_PRIVATE_KEY") || Deno.env.get("TREASURY_PRIVATE_KEY");
-```
+1. **Cơ sở dữ liệu** — 3 bảng mới: `pplp_behavior_sequences`, `pplp_activity_categories`, `pplp_light_levels` + bổ sung loại hành động vào `pplp_action_caps`
+2. **Hàm cơ sở dữ liệu** — `detect_behavior_sequences()` và `get_user_light_level()`
+3. **Hàm backend** — Cập nhật `pplp-score-action` để gọi phát hiện chuỗi hành vi
+4. **Giao diện** — 3 thành phần mới: `LightActivityCategories`, `BehaviorSequenceTracker`, `LightLevelBadge` + 2 hook mới
+5. **Tài liệu** — `docs/LIGHT_SCORE_ACTIVITIES.md`
 
-**`pplp-batch-lock`** line 92:
-```typescript
-// Before
-JSON.stringify({ error: "TREASURY_PRIVATE_KEY not configured" })
-// After
-JSON.stringify({ error: "ATTESTER_PRIVATE_KEY not configured" })
-```
-
-Sau khi deploy, admin chỉ cần nhấn lại **"⚡ Gom & Ký theo User"** để xử lý 918 yêu cầu với đúng ví Attester.
+Toàn bộ nội dung sẽ được viết bằng tiếng Việt có dấu chuẩn Unicode.
 
