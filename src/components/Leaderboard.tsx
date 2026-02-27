@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Trophy, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { RainbowTitle } from "@/components/leaderboard/RainbowTitle";
 import { Button } from "@/components/ui/button";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -43,9 +44,9 @@ export function Leaderboard() {
     <div className="rounded-2xl p-[2px] bg-gradient-to-br from-sky-400 via-purple-500 to-pink-500 shadow-lg">
       <div className="rounded-[14px] bg-background p-4">
         {/* Title */}
-        <h3 className="text-center text-sm font-bold text-foreground mb-3 tracking-wide">
-          ✨ {t("leaderboard.topRanking")}
-        </h3>
+        <div className="flex justify-center mb-3">
+          <RainbowTitle text={t("leaderboard.topRanking")} />
+        </div>
 
         {/* Member list */}
         {allUsers.length > 0 ? (
