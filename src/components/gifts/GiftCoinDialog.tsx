@@ -258,7 +258,7 @@ export function GiftCoinDialog({ open, onOpenChange, preselectedUser, contextTyp
         : tokenSymbol === "BNB" ? "BNB"
         : tokenSymbol === "BTC" ? "BTC"
         : "Token";
-      const content = `🎁 ${celData.sender_name} đã tặng ${celData.amount.toLocaleString()} ${tokenLabel} cho ${celData.receiver_name}! ✨${celData.message ? `\n💬 "${celData.message}"` : ""}\n🌟 Cùng chung tay xây dựng cộng đồng yêu thương!`;
+      const content = `🎁 ${celData.sender_name} đã tặng ${celData.amount.toLocaleString()} ${tokenLabel} cho ${celData.receiver_name}! ✨${celData.message ? `\n💬 "${celData.message}"` : ""}\n✨ ANGEL AI, LAN TOẢ YÊU THƯƠNG ✨`;
 
       const { error } = await supabase.from("community_posts").insert({
         user_id: user.id,
