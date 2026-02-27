@@ -1,9 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, ExternalLink, Sparkles, Volume2, VolumeX } from "lucide-react";
+import { ArrowRight, ExternalLink, Sparkles } from "lucide-react";
+import { FireworkBurst } from "@/components/lixi/FireworkBurst";
 import angelAvatar from "@/assets/angel-avatar.png";
 import camlyCoinLogo from "@/assets/camly-coin-logo.png";
 import funMoneyLogo from "@/assets/fun-money-logo.png";
@@ -23,36 +24,33 @@ function getTokenDisplay(tokenType?: string) {
   }
 }
 
-// Mini firework for celebration post
-const MiniFirework = ({ delay, x, y }: { delay: number; x: number; y: number }) => {
-  const colors = ["#FFD700", "#FF6B6B", "#FF69B4", "#FFA500", "#4ECDC4"];
-  return (
-    <>
-      {Array.from({ length: 6 }).map((_, i) => {
-        const angle = (i / 6) * Math.PI * 2;
-        const dist = 18 + Math.random() * 12;
-        return (
-          <motion.div
-            key={i}
-            className="absolute rounded-full"
-            style={{
-              left: `${x}%`, top: `${y}%`, width: 3, height: 3,
-              backgroundColor: colors[i % colors.length],
-              boxShadow: `0 0 4px ${colors[i % colors.length]}`,
-            }}
-            initial={{ scale: 0, x: 0, y: 0, opacity: 0 }}
-            animate={{ scale: [0, 1.2, 0], x: [0, Math.cos(angle) * dist], y: [0, Math.sin(angle) * dist], opacity: [0, 1, 0] }}
-            transition={{ duration: 1, delay: delay + i * 0.03, ease: "easeOut", repeat: Infinity, repeatDelay: 3 }}
-          />
-        );
-      })}
-    </>
-  );
-};
+// Falling coin animation (matches WithdrawalCelebration)
+const FallingCoin = ({ delay, left }: { delay: number; left: number }) => (
+  <motion.div
+    className="absolute w-5 h-5 z-10"
+    style={{ left: `${left}%` }}
+    initial={{ y: -30, opacity: 0, rotate: 0 }}
+    animate={{
+      y: ['0%', '120%'],
+      opacity: [0, 1, 1, 0],
+      rotate: [0, 360, 720],
+    }}
+    transition={{ duration: 2.5, delay, ease: 'easeIn' }}
+  >
+    <img src={camlyCoinLogo} alt="" className="w-full h-full rounded-full" />
+  </motion.div>
+);
 
+// Sparkle effect
 const MiniSparkle = ({ delay, x, y }: { delay: number; x: number; y: number }) => (
-  <motion.div className="absolute" style={{ left: `${x}%`, top: `${y}%` }} initial={{ scale: 0, opacity: 0 }} animate={{ scale: [0, 1.3, 0], opacity: [0, 1, 0] }} transition={{ duration: 1.2, delay, repeat: Infinity, repeatDelay: 2 }}>
-    <Sparkles className="w-3 h-3 text-yellow-400 drop-shadow-md" />
+  <motion.div
+    className="absolute"
+    style={{ left: `${x}%`, top: `${y}%` }}
+    initial={{ scale: 0, opacity: 0 }}
+    animate={{ scale: [0, 1.5, 0], opacity: [0, 1, 0] }}
+    transition={{ duration: 1.5, delay, repeat: Infinity, repeatDelay: 1.5 }}
+  >
+    <Sparkles className="w-3 h-3 text-yellow-300 drop-shadow-md" />
   </motion.div>
 );
 
@@ -74,54 +72,93 @@ interface CelebrationPostCardProps {
   };
 }
 
-const fireworks = [
-  { id: 0, delay: 0, x: 10, y: 20 },
-  { id: 1, delay: 0.9, x: 90, y: 15 },
-  { id: 2, delay: 1.8, x: 50, y: 8 },
+// Generate falling coins
+const fallingCoins = Array.from({ length: 18 }, (_, i) => ({
+  id: i,
+  delay: Math.random() * 1.5,
+  left: Math.random() * 100,
+}));
+
+// Firework positions
+const fireworkPositions = [
+  { id: 0, delay: 0, x: 12, y: 15 },
+  { id: 1, delay: 0.6, x: 88, y: 12 },
+  { id: 2, delay: 1.2, x: 50, y: 8 },
 ];
-const sparkles = [
-  { id: 0, delay: 0.3, x: 5, y: 50 },
-  { id: 1, delay: 1.0, x: 95, y: 40 },
-  { id: 2, delay: 1.5, x: 15, y: 85 },
-  { id: 3, delay: 0.7, x: 80, y: 80 },
-  { id: 4, delay: 2.0, x: 50, y: 60 },
+
+// Sparkle positions
+const sparklePositions = [
+  { id: 0, delay: 0.3, x: 5, y: 45 },
+  { id: 1, delay: 0.8, x: 95, y: 35 },
+  { id: 2, delay: 1.3, x: 15, y: 80 },
+  { id: 3, delay: 0.5, x: 85, y: 75 },
+  { id: 4, delay: 1.8, x: 50, y: 55 },
+  { id: 5, delay: 1.0, x: 30, y: 20 },
+  { id: 6, delay: 2.0, x: 70, y: 65 },
 ];
 
 export function CelebrationPostCard({ meta }: CelebrationPostCardProps) {
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const hasPlayedRef = useRef(false);
 
   const token = getTokenDisplay(meta.token_type);
   const formatAmount = (n: number) => new Intl.NumberFormat("vi-VN").format(n);
   const explorerBase = meta.explorer_url || "https://bscscan.com";
 
-  const toggleAudio = () => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio("/audio/rich-1.mp3");
-      audioRef.current.loop = false;
-      audioRef.current.onended = () => setIsPlayingAudio(false);
-    }
-    if (isPlayingAudio) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setIsPlayingAudio(false);
-    } else {
-      audioRef.current.play().catch(() => {});
-      setIsPlayingAudio(true);
-    }
-  };
+  // Auto-play audio when card enters viewport
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasPlayedRef.current) {
+          hasPlayedRef.current = true;
+          const audio = new Audio("/audio/rich-1.mp3");
+          audio.volume = 0.7;
+          audioRef.current = audio;
+          audio.play().catch(() => {});
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <div className="mb-3 relative rounded-2xl overflow-hidden p-4 space-y-3"
+    <div
+      ref={cardRef}
+      className="mb-3 relative rounded-2xl overflow-hidden p-4 space-y-3"
       style={{
         backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.25) 30%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.2) 70%, rgba(255,255,255,0) 100%), linear-gradient(135deg, #b8860b 0%, #daa520 15%, #ffd700 35%, #ffec8b 50%, #ffd700 65%, #daa520 85%, #b8860b 100%)`,
       }}
     >
-      {/* Effects */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        {fireworks.map(fw => <MiniFirework key={`fw-${fw.id}`} delay={fw.delay} x={fw.x} y={fw.y} />)}
-        {sparkles.map(s => <MiniSparkle key={`sp-${s.id}`} delay={s.delay} x={s.x} y={s.y} />)}
+      {/* Falling coins */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        {fallingCoins.map((coin) => (
+          <FallingCoin key={coin.id} delay={coin.delay} left={coin.left} />
+        ))}
       </div>
+
+      {/* Firework bursts */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        {fireworkPositions.map((fw) => (
+          <FireworkBurst key={fw.id} delay={fw.delay} x={fw.x} y={fw.y} />
+        ))}
+      </div>
+
+      {/* Sparkles */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        {sparklePositions.map((s) => (
+          <MiniSparkle key={s.id} delay={s.delay} x={s.x} y={s.y} />
+        ))}
+      </div>
+
+      {/* Glow effect */}
+      <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/15 to-white/30 pointer-events-none" />
 
       {/* Spinning coin header */}
       <div className="flex items-center justify-center gap-2 relative z-10">
@@ -129,9 +166,6 @@ export function CelebrationPostCard({ meta }: CelebrationPostCardProps) {
           <img src={token.logo} alt={token.label} className="w-10 h-10 drop-shadow-lg rounded-full" />
         </motion.div>
         <span className="text-sm font-bold text-amber-900 drop-shadow-sm">🎉 Chúc mừng! 🎉</span>
-        <button onClick={toggleAudio} className="p-1.5 rounded-full bg-amber-900/15 hover:bg-amber-900/25 transition-colors">
-          {isPlayingAudio ? <VolumeX className="w-4 h-4 text-amber-900" /> : <Volume2 className="w-4 h-4 text-amber-900" />}
-        </button>
       </div>
 
       {/* Receipt card content */}
@@ -162,13 +196,20 @@ export function CelebrationPostCard({ meta }: CelebrationPostCardProps) {
         </div>
 
         {/* Amount */}
-        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg p-2.5 text-center border border-amber-200">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', delay: 0.3 }}
+          className="bg-gradient-to-r from-yellow-200 via-yellow-300 to-amber-300 rounded-lg p-2.5 text-center border border-amber-200"
+        >
           <div className="flex items-center justify-center gap-2">
             <img src={token.logo} alt="coin" className="w-5 h-5 rounded-full" />
-            <span className="text-xl font-bold text-amber-700">{formatAmount(meta.amount || 0)}</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-amber-700 via-orange-600 to-amber-700 bg-clip-text text-transparent">
+              {formatAmount(meta.amount || 0)}
+            </span>
             <span className="text-xs text-amber-600 font-medium">{meta.token_symbol || token.label}</span>
           </div>
-        </div>
+        </motion.div>
 
         {/* Message */}
         {meta.message && (
@@ -176,6 +217,18 @@ export function CelebrationPostCard({ meta }: CelebrationPostCardProps) {
             <p className="text-xs text-gray-700 italic">"{meta.message}"</p>
           </div>
         )}
+
+        {/* ANGEL AI slogan */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="text-center"
+        >
+          <p className="text-xs font-bold bg-gradient-to-r from-amber-600 via-orange-500 to-amber-600 bg-clip-text text-transparent tracking-wider">
+            ✨ ANGEL AI, LAN TOẢ YÊU THƯƠNG ✨
+          </p>
+        </motion.div>
 
         {/* Actions */}
         <div className="flex gap-2">
