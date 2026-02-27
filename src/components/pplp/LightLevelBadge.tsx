@@ -42,9 +42,6 @@ export function LightLevelBadge() {
                   style={{ width: `${Math.min(100, progress)}%`, backgroundColor: lightLevel.color }}
                 />
               </div>
-              <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">
-                {Math.round(lightLevel.total_score)} pts
-              </span>
             </div>
           </div>
         </div>

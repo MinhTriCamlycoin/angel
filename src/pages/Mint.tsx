@@ -5,6 +5,8 @@ import { MintActionsList } from "@/components/mint/MintActionsList";
 import { TokenLifecyclePanel } from "@/components/mint/TokenLifecyclePanel";
 import { MintGuideFullFlow } from "@/components/mint/MintGuideFullFlow";
 import { AddFUNToWalletButton } from "@/components/mint/AddFUNToWalletButton";
+import { MintCycleStatus } from "@/components/pplp/MintCycleStatus";
+import { ThreeLayerRewardExplainer } from "@/components/pplp/ThreeLayerRewardExplainer";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnmintedCount } from "@/hooks/useUnmintedCount";
 import { Button } from "@/components/ui/button";
@@ -69,9 +71,14 @@ export default function Mint() {
               </Alert>
             )}
 
+            {/* 3 Lớp Thưởng + Chu kỳ Mint */}
+            <div className="grid gap-6 md:grid-cols-2">
+              <ThreeLayerRewardExplainer />
+              <MintCycleStatus />
+            </div>
+
             {/* Hướng dẫn Mint FUN Money từ A đến Z */}
             <MintGuideFullFlow />
-
               {/* Main Layout */}
               <div className="grid gap-6 lg:grid-cols-3">
                 {/* Balance Card + Lifecycle - Sticky on desktop */}
