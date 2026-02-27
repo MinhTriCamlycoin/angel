@@ -135,9 +135,12 @@ const AdminTrustList = () => {
       }
     }
     const actorIds = Array.from(grouped.keys());
+    // Loại trừ user đã bị cấm/đình chỉ (lifted_at IS NULL = còn hiệu lực)
+    const { data: activeSuspensions } = await supabase.from("user_suspensions").select("user_id").in("user_id", actorIds).is("lifted_at", null);
+    const suspendedIds = new Set(activeSuspensions?.map(s => s.user_id) || []);
     const { data: profiles } = await supabase.from("profiles").select("user_id, display_name, avatar_url, handle").in("user_id", actorIds);
     const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-    setBlacklist(Array.from(grouped.values()).map(g => ({ ...g, profile: profileMap.get(g.actor_id) || undefined })).sort((a, b) => b.signal_count - a.signal_count));
+    setBlacklist(Array.from(grouped.values()).filter(g => !suspendedIds.has(g.actor_id)).map(g => ({ ...g, profile: profileMap.get(g.actor_id) || undefined })).sort((a, b) => b.signal_count - a.signal_count));
   };
 
   // Single user dialog
