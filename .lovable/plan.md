@@ -1,91 +1,112 @@
 
 
-## Kế hoạch: Bổ sung Cơ chế Tính Thưởng & Mint FUN Money (PPLP Bài 7 Bonus)
+## Kế hoạch: Event-based Scoring Model + AI Light Score Architecture
 
-Triển khai 4 lớp nhân mới trong công thức PPLP Score, cơ chế mint theo chu kỳ, và 3 lớp bảo vệ chống Ego.
+Yêu cầu này bổ sung 7 bảng mới và 3 RPC/trigger để chuyển hệ thống PPLP sang mô hình Event-sourcing hoàn chỉnh. Nhiều bảng đã tồn tại (pplp_actions, pplp_scores, pplp_behavior_sequences, pplp_fraud_signals, pplp_mint_cycles, pplp_mint_allocations) nên chỉ cần tạo các bảng còn thiếu và cập nhật logic.
+
+### Ánh xạ: Bản thiết kế → Hệ thống hiện tại
+
+| Bản thiết kế | Đã có? | Hành động |
+|---|---|---|
+| `users` | ✅ `auth.users` + `user_light_agreements` | Không cần |
+| `profiles` | ✅ `profiles` (thiếu `pplp_accepted_at`, `reputation_level`) | **Thêm cột** |
+| `content` | ❌ (dữ liệu rải ở `community_posts`, `gratitude_journal`) | **Tạo view** `content_unified` |
+| `events` | ❌ (dùng `pplp_actions` nhưng thiếu chuẩn event-sourcing) | **Tạo bảng** `pplp_events` |
+| `pplp_ratings` | ❌ | **Tạo bảng** |
+| `signals_anti_farm` | ✅ `pplp_fraud_signals` | Không cần |
+| `features_user_day` | ❌ | **Tạo bảng** |
+| `light_score_ledger` | ❌ (chỉ có `pplp_scores` per-action) | **Tạo bảng** |
+| `score_explanations` | ❌ | **Tạo bảng** |
+| `mint_epochs` | ✅ `pplp_mint_cycles` | Không cần |
+| `mint_allocations` | ✅ `pplp_mint_allocations` | Không cần |
+| `sequences` | ✅ `pplp_behavior_sequences` | Không cần |
 
 ---
 
-### Bước 1: Database Migration — Thêm cột & bảng mới
+### Bước 1: Database Migration — 5 bảng mới + cập nhật profiles
 
-| # | Đối tượng | Mô tả |
-|---|-----------|-------|
-| 1 | Thêm cột `reputation_weight`, `consistency_multiplier`, `integrity_penalty` vào `pplp_scores` | Lưu 3 lớp nhân mới cho mỗi lần chấm điểm |
-| 2 | Thêm cột `contribution_days_30`, `contribution_days_90` vào `pplp_user_tiers` | Đếm ngày đóng góp liên tục (30/90 ngày) để tính Consistency Multiplier |
-| 3 | Tạo bảng `pplp_mint_cycles` | Chu kỳ mint theo tuần/tháng: `cycle_id`, `start_date`, `end_date`, `total_mint_pool`, `total_light_contribution`, `status` (open/closed/distributed) |
-| 4 | Tạo bảng `pplp_mint_allocations` | Phân bổ từng user trong chu kỳ: `cycle_id`, `user_id`, `user_light_contribution`, `allocation_ratio`, `fun_allocated`, `status` |
-| 5 | Hàm RPC `calculate_reputation_weight(_user_id)` | Tính Reputation Weight dựa trên: thời gian đóng góp, lịch sử không vi phạm, số chuỗi hoàn thành, cross-platform contribution |
-| 6 | Hàm RPC `calculate_consistency_multiplier(_user_id)` | Trả về hệ số: 1.0 (mặc định), 1.3 (30 ngày ổn định), 1.6 (90 ngày ổn định) |
+| # | Đối tượng | Chi tiết |
+|---|-----------|---------|
+| 1 | Thêm cột vào `profiles` | `pplp_accepted_at`, `pplp_version`, `mantra_ack_at`, `reputation_level` (enum: seed/sprout/builder/guardian/architect), `reputation_score` |
+| 2 | Tạo `pplp_events` (append-only) | `event_id`, `event_type`, `actor_user_id`, `target_type`, `target_id`, `context_id`, `occurred_at`, `source`, `payload_json`, `ingest_hash`, `scoring_tags` |
+| 3 | Tạo `pplp_ratings` | `rating_id`, `content_id`, `rater_user_id`, 5 cột trụ (0/1/2), `comment`, `weight_applied` |
+| 4 | Tạo `features_user_day` | PK `(user_id, date)`, count_posts, count_comments, count_help, avg_rating_weighted, consistency_streak, sequence_count, anti_farm_risk |
+| 5 | Tạo `light_score_ledger` | `user_id`, `period`, `period_start/end`, base_score, 4 multipliers, final_light_score, `level`, `explain_ref` |
+| 6 | Tạo `score_explanations` | `explain_ref` (PK), `top_contributors_json`, `penalties_json`, `version` |
+| 7 | Tạo view `content_unified` | Union từ `community_posts`, `gratitude_journal`, `chat_history` |
+| 8 | RPC `build_features_user_day(_user_id, _date)` | Aggregate events → ghi vào `features_user_day` |
+| 9 | RPC `compute_light_score_ledger(_user_id, _period, _start, _end)` | Tính điểm tổng hợp theo chu kỳ → ghi `light_score_ledger` + `score_explanations` |
+| 10 | Trigger trên `pplp_actions` | Auto-insert vào `pplp_events` khi action mới được tạo (bridge event-sourcing) |
 
 ### Bước 2: Cập nhật Edge Function `pplp-score-action`
 
-| # | Thay đổi | Mô tả |
-|---|----------|-------|
-| 1 | Gọi `calculate_reputation_weight()` | Sau bước 5 (threshold check), lấy reputation weight của actor |
-| 2 | Gọi `calculate_consistency_multiplier()` | Lấy consistency multiplier |
-| 3 | Tính `integrity_penalty` | Dựa trên fraud signals (spam, đánh giá chéo, tương tác giả) — giảm điểm chậm, bền, minh bạch |
-| 4 | Áp dụng công thức mới | `finalReward = baseReward × Q × I × K × reputationWeight × consistencyMultiplier × sequenceBonus − integrityPenalty` |
-| 5 | Lưu 3 giá trị mới vào `pplp_scores` | `reputation_weight`, `consistency_multiplier`, `integrity_penalty` |
+| # | Thay đổi |
+|---|----------|
+| 1 | Sau khi insert `pplp_scores`, auto-insert `pplp_events` record với đầy đủ schema chuẩn |
+| 2 | Gọi `build_features_user_day` để cập nhật materialized features |
+| 3 | Insert `score_explanations` kèm chi tiết top contributors & penalties |
 
-### Bước 3: Edge Function mới `process-mint-cycle`
+### Bước 3: Edge Function mới `pplp-ai-pillar-analyzer`
 
 | # | Chức năng |
 |---|-----------|
-| 1 | Tổng hợp tổng Light Value toàn hệ trong chu kỳ |
-| 2 | Xác định Mint Pool (giới hạn cung tăng từ từ — ví dụ 5M FUN/tuần max) |
-| 3 | Phân bổ theo tỷ lệ: `FUN = MintPool × (userContribution / totalContribution)` |
-| 4 | Ghi vào `pplp_mint_allocations` |
+| 1 | Nhận content (post/journal/comment) → gọi Lovable AI (gemini-3-flash-preview) |
+| 2 | Phân tích 5 cột trụ (0/1/2 cho mỗi trụ) + Ego Risk Score (0–1) |
+| 3 | Trả về `ai_pillar_scores`, `ai_ego_risk`, `ai_explanations` |
+| 4 | Được gọi bởi `pplp-score-action` khi action có content để phân tích |
 
-### Bước 4: Lớp bảo vệ chống Ego (Frontend)
+### Bước 4: Frontend — Thêm PPLP Rating UI + Score Explanation
 
-| # | Thay đổi | Mô tả |
-|---|----------|-------|
-| 1 | Cập nhật `LightLevelBadge` | Chỉ hiển thị tên tầng (Light Stable / Growing / Builder / Guardian) — không hiển thị số điểm chính xác công khai |
-| 2 | Cập nhật `Leaderboard` | Thay bảng xếp hạng cạnh tranh (Top 1–2) bằng xu hướng tăng trưởng cá nhân. Hiển thị Light Level thay vì điểm số |
-| 3 | Thêm `MintCycleStatus` component | Hiển thị chu kỳ mint hiện tại, thời gian còn lại, tỷ lệ phân bổ dự kiến — nhấn mạnh "mint không tức thì" |
-| 4 | Cập nhật trang `/mint` | Thêm section giải thích 3 lớp thưởng (Light Score / Mint Eligibility / FUN Money Flow) và thông tin chu kỳ mint |
+| # | Component | Mô tả |
+|---|-----------|-------|
+| 1 | `PPLPRatingCard` | Form cho user chấm điểm 5 trụ (0/1/2) cho bài viết cộng đồng |
+| 2 | `PPLPScoreRadar` cập nhật | Hiển thị dữ liệu từ `light_score_ledger` thay vì per-action scores |
+| 3 | `ScoreExplanationPanel` | Hiển thị lý do điểm (audit trail) — chỉ cho chính user xem |
 
-### Bước 5: Cập nhật tài liệu
+### Bước 5: Tài liệu
 
-| # | Tệp | Mô tả |
-|---|-----|-------|
-| 1 | `docs/PPLP_REWARD_MECHANISM.md` | Tài liệu đầy đủ về công thức PPLP Score mới (4 lớp nhân), chu kỳ mint, 3 lớp bảo vệ chống Ego, và kết nối Camly Coin ↔ FUN Money |
+| # | Tệp |
+|---|-----|
+| 1 | Cập nhật `docs/PPLP_REWARD_MECHANISM.md` với Event-based Scoring Model schema và AI Architecture diagram |
 
 ---
 
 ### Chi tiết kỹ thuật
 
-**Công thức PPLP Score hoàn chỉnh:**
+**Event Schema chuẩn (`pplp_events`):**
 ```text
-PPLP Score = (5 Pillars × Community Score)
-           × Reputation Weight      [0.5 – 1.5]
-           × Consistency Multiplier  [1.0 / 1.3 / 1.6]
-           × Sequence Multiplier     [1.0 – 3.0]
-           − Integrity Penalty       [0 – 50%]
+event_id       UUID PK
+event_type     TEXT (LOGIN, POST_CREATED, PPLP_RATING_SUBMITTED, ...)
+actor_user_id  UUID FK
+target_type    TEXT (user/content/wallet/system)
+target_id      UUID nullable
+context_id     UUID nullable (session/thread/group)
+occurred_at    TIMESTAMPTZ
+source         TEXT (web/mobile/api)
+payload_json   JSONB
+ingest_hash    TEXT (keccak256 of payload for tamper detection)
+scoring_tags   TEXT[] (pplp_pillar_candidate, sequence_candidate)
 ```
 
-**Reputation Weight tính theo:**
-- Thời gian đóng góp (ngày kể từ hành động đầu tiên)
-- Tỷ lệ pass/fail (lịch sử không vi phạm)
-- Số chuỗi hoàn thành (`completed_sequences`)
-- `trust_score` từ `pplp_user_tiers`
-
-**Consistency Multiplier:**
+**AI Pillar Analyzer prompt flow:**
 ```text
-< 30 ngày đóng góp  → x1.0
-≥ 30 ngày ổn định   → x1.3
-≥ 90 ngày ổn định   → x1.6
+Content → Lovable AI (gemini-3-flash-preview)
+  → Tool call: analyze_pplp_pillars
+  → Returns: {
+      pillars: { truth: 0-2, sustain: 0-2, heal: 0-2, service: 0-2, unity: 0-2 },
+      ego_risk: 0.0-1.0,
+      explanation: "..."
+    }
 ```
 
-**Integrity Penalty (giảm chậm, bền, minh bạch):**
-- Spam tinh vi: −10%
-- Đánh giá chéo: −15%
-- Tương tác giả: −20%
-- Lạm dụng cảm xúc: −10%
-- Tích lũy, không quá 50%
-
-**Chu kỳ Mint:**
+**Pipeline hoàn chỉnh:**
 ```text
-FUN Minted(user) = MintPool(cycle) × (user_light_contribution / total_light_contribution)
+Event Ingest → pplp_events (append-only)
+  → Validate (dedupe via ingest_hash, policy check)
+  → Feature Builder (build_features_user_day)
+  → Scoring Engine (pplp-score-action + AI analyzer)
+  → light_score_ledger + score_explanations
+  → Mint Engine (process-mint-cycle, epoch-based)
+  → On-chain Execution
 ```
 
