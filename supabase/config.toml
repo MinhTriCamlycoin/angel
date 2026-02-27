@@ -205,3 +205,6 @@ verify_jwt = false
 
 [functions.pplp-ai-pillar-analyzer]
 verify_jwt = false
+
+[functions.pplp-compute-daily-scores]
+verify_jwt = false
