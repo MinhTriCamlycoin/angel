@@ -2322,6 +2322,39 @@ export type Database = {
         }
         Relationships: []
       }
+      pplp_activity_categories: {
+        Row: {
+          action_type: string
+          base_weight: number
+          category: string
+          created_at: string
+          description_en: string | null
+          description_vi: string | null
+          is_active: boolean
+          subcategory: string | null
+        }
+        Insert: {
+          action_type: string
+          base_weight?: number
+          category: string
+          created_at?: string
+          description_en?: string | null
+          description_vi?: string | null
+          is_active?: boolean
+          subcategory?: string | null
+        }
+        Update: {
+          action_type?: string
+          base_weight?: number
+          category?: string
+          created_at?: string
+          description_en?: string | null
+          description_vi?: string | null
+          is_active?: boolean
+          subcategory?: string | null
+        }
+        Relationships: []
+      }
       pplp_audits: {
         Row: {
           action_id: string | null
@@ -2377,6 +2410,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pplp_behavior_sequences: {
+        Row: {
+          actions: string[] | null
+          completed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          max_stage: number
+          sequence_multiplier: number
+          sequence_type: string
+          stage: number
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actions?: string[] | null
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          max_stage?: number
+          sequence_multiplier?: number
+          sequence_type: string
+          stage?: number
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actions?: string[] | null
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          max_stage?: number
+          sequence_multiplier?: number
+          sequence_type?: string
+          stage?: number
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       pplp_device_registry: {
         Row: {
@@ -2605,6 +2686,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pplp_light_levels: {
+        Row: {
+          color: string | null
+          created_at: string
+          icon: string | null
+          level: number
+          max_score: number | null
+          min_score: number
+          name_en: string
+          name_vi: string
+          perks: Json | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          level: number
+          max_score?: number | null
+          min_score?: number
+          name_en: string
+          name_vi: string
+          perks?: Json | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          level?: number
+          max_score?: number | null
+          min_score?: number
+          name_en?: string
+          name_vi?: string
+          perks?: Json | null
+        }
+        Relationships: []
       }
       pplp_mint_requests: {
         Row: {
