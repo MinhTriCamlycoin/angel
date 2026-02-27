@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Trophy, ChevronDown, Sparkles } from "lucide-react";
+import { Trophy, ChevronDown, Sparkles, Users } from "lucide-react";
 import { RainbowTitle } from "@/components/leaderboard/RainbowTitle";
 import { Button } from "@/components/ui/button";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { RankingRow } from "@/components/leaderboard/RankingRow";
 
 export function Leaderboard() {
-  const { allUsers, isLoading } = useLeaderboard();
+  const { allUsers, isLoading, stats } = useLeaderboard();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -22,16 +22,18 @@ export function Leaderboard() {
     };
     getUser();
   }, []);
+
   const displayUsers = allUsers.slice(0, 5);
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl p-[2px] bg-gradient-to-br from-sky-400 via-purple-500 to-pink-500 shadow-lg">
-        <div className="rounded-[14px] bg-background p-4 animate-pulse">
-          <div className="h-6 bg-muted rounded w-2/3 mx-auto mb-4" />
-          <div className="space-y-2.5">
+      <div className="rounded-2xl overflow-hidden shadow-[var(--shadow-divine)]">
+        <div className="h-1.5 bg-gradient-to-r from-primary/60 via-primary to-primary/60" />
+        <div className="bg-card p-5 animate-pulse">
+          <div className="h-8 bg-muted rounded-lg w-2/3 mx-auto mb-5" />
+          <div className="space-y-3">
             {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="h-11 bg-muted rounded-full" />
+              <div key={i} className="h-14 bg-muted/60 rounded-2xl" />
             ))}
           </div>
         </div>
@@ -40,11 +42,25 @@ export function Leaderboard() {
   }
 
   return (
-    <div className="rounded-2xl p-[2px] bg-gradient-to-br from-sky-400 via-purple-500 to-pink-500 shadow-lg">
-      <div className="rounded-[14px] bg-background p-4">
-        {/* Title */}
-        <div className="flex justify-center items-center mb-4 py-1">
-          <RainbowTitle text={t("leaderboard.topRanking")} className="text-2xl md:text-3xl tracking-[3px]" />
+    <div className="rounded-2xl overflow-hidden shadow-[var(--shadow-divine)] border border-border/30">
+      {/* Premium gold accent bar */}
+      <div className="h-1.5 bg-[image:var(--gradient-sapphire)]" />
+
+      <div className="bg-card p-5">
+        {/* Header */}
+        <div className="text-center mb-5">
+          <div className="flex justify-center items-center gap-2 mb-2">
+            <span className="text-lg">✨</span>
+            <RainbowTitle text={t("leaderboard.topRanking")} className="text-2xl md:text-3xl tracking-[3px]" />
+            <span className="text-lg">✨</span>
+          </div>
+          {/* Member count */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-pale/60 border border-primary/15">
+            <Users className="w-3.5 h-3.5 text-primary" />
+            <span className="text-xs font-medium text-primary-deep">
+              {stats.total_users} {t("leaderboard.members") || "thành viên"}
+            </span>
+          </div>
         </div>
 
         {/* Member list */}
@@ -56,20 +72,20 @@ export function Leaderboard() {
                   key={user.user_id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.04 }}
+                  transition={{ delay: i * 0.05, duration: 0.3 }}
                 >
                   <RankingRow user={user} />
                 </motion.div>
               ))}
             </div>
 
-            {/* Show more → navigate to full page */}
+            {/* Show more */}
             {allUsers.length > 5 && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate("/light-community")}
-                className="w-full mt-2.5 text-xs text-muted-foreground hover:text-primary"
+                className="w-full mt-3 text-xs text-muted-foreground hover:text-primary hover:bg-primary-pale/40 rounded-xl"
               >
                 <ChevronDown className="w-3.5 h-3.5 mr-1" />
                 {t("common.showMore") || "Xem thêm"} ({allUsers.length - 5})
@@ -77,23 +93,25 @@ export function Leaderboard() {
             )}
           </>
         ) : (
-          <div className="text-center py-6 text-muted-foreground">
-            <Sparkles className="w-8 h-8 mx-auto mb-2 text-amber-300" />
+          <div className="text-center py-8 text-muted-foreground">
+            <Sparkles className="w-8 h-8 mx-auto mb-2 text-primary/40" />
             <p className="text-sm">{t("common.noData")}</p>
           </div>
         )}
 
         {/* CTA */}
-        <Link to="/community" className="block mt-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full text-xs text-primary hover:text-primary/80 font-semibold"
-          >
-            <Trophy className="w-3.5 h-3.5 mr-1.5" />
-            {t("leaderboard.viewCommunity")} →
-          </Button>
-        </Link>
+        <div className="mt-4 pt-3 border-t border-border/30">
+          <Link to="/community" className="block">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs font-semibold text-primary hover:text-primary-deep hover:bg-primary-pale/40 rounded-xl"
+            >
+              <Trophy className="w-3.5 h-3.5 mr-1.5 text-primary" />
+              {t("leaderboard.viewCommunity") || "Xem Cộng Đồng"} →
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   );
