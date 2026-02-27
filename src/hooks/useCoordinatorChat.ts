@@ -23,10 +23,81 @@ interface ProjectContext {
 
 // Detect corruption in Vietnamese text
 function hasTextCorruption(text: string): boolean {
-  if (text.includes('\uFFFD')) return true;
+  if (text.includes("\uFFFD")) return true;
   // Pattern: letter + ?? + letter (catches "gi??á", "thc??ực")
-  if (/[a-zàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]\?\?[a-zàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i.test(text)) return true;
+  if (
+    /[a-zàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]\?\?[a-zàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i.test(
+      text
+    )
+  )
+    return true;
   return false;
+}
+
+/**
+ * Try to extract a JSON tool-call from assistant text.
+ * Expected shape:
+ * {
+ *   "tool": "evolve_workspace",
+ *   "args": { ... }
+ * }
+ *
+ * Prefer ```json ...``` fenced block if present.
+ */
+function tryExtractToolCall(text: string): null | { tool: string; args: any } {
+  // Prefer fenced JSON block first
+  const fence = text.match(/```json\s*([\s\S]*?)```/i);
+  const candidate = fence?.[1] ?? text;
+
+  // Try to find the first JSON object in the candidate string
+  const start = candidate.indexOf("{");
+  const end = candidate.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+
+  const jsonStr = candidate.slice(start, end + 1).trim();
+  try {
+    const obj = JSON.parse(jsonStr);
+    if (obj && typeof obj === "object" && obj.tool && obj.args) return obj;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Calls Cloudflare Worker route: POST /api/evolve
+ * Requires Supabase JWT in Authorization header.
+ */
+async function callEvolveWorker(accessToken: string, args: any) {
+  const resp = await fetch("/api/evolve", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(args),
+  });
+
+  let data: any = null;
+  try {
+    data = await resp.json();
+  } catch {
+    // ignore parse errors
+  }
+
+  if (!resp.ok) {
+    const msg = data?.error || `Evolve failed (${resp.status})`;
+    throw new Error(msg);
+  }
+
+  // Worker often returns: { ok, github_status, github_response, request_id }
+  if (data?.github_status && Number(data.github_status) >= 400) {
+    throw new Error(
+      data?.github_response || `GitHub dispatch failed (${data.github_status})`
+    );
+  }
+
+  return data;
 }
 
 export function useCoordinatorChat(projectId: string | undefined) {
@@ -44,7 +115,7 @@ export function useCoordinatorChat(projectId: string | undefined) {
         .eq("project_id", projectId!)
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return (data as unknown as ChatMessage[]);
+      return data as unknown as ChatMessage[];
     },
     enabled: !!projectId,
   });
@@ -70,6 +141,7 @@ export function useCoordinatorChat(projectId: string | undefined) {
           mode,
           ai_role: aiRole,
         });
+
       if (insertError) {
         toast.error("Failed to save message");
         return;
@@ -103,7 +175,9 @@ export function useCoordinatorChat(projectId: string | undefined) {
         if (!resp.ok) {
           const errorData = await resp.json().catch(() => ({}));
           if (resp.status === 402) {
-            toast.error("⚡ AI credits đã hết. Vui lòng nạp thêm credits trong Settings → Workspace → Usage.");
+            toast.error(
+              "⚡ AI credits đã hết. Vui lòng nạp thêm credits trong Settings → Workspace → Usage."
+            );
             setIsStreaming(false);
             setStreamingContent("");
             return;
@@ -137,8 +211,10 @@ export function useCoordinatorChat(projectId: string | undefined) {
             if (line.endsWith("\r")) line = line.slice(0, -1);
             if (line.startsWith(":") || line.trim() === "") continue;
             if (!line.startsWith("data: ")) continue;
+
             const jsonStr = line.slice(6).trim();
             if (jsonStr === "[DONE]") break;
+
             try {
               const parsed = JSON.parse(jsonStr);
               const delta = parsed.choices?.[0]?.delta?.content;
@@ -158,7 +234,9 @@ export function useCoordinatorChat(projectId: string | undefined) {
 
         // Corruption detection: if stream has corruption, fallback to non-stream
         if (hasTextCorruption(fullContent)) {
-          console.warn("⚠️ Corruption detected in coordinator stream — falling back to non-stream");
+          console.warn(
+            "⚠️ Corruption detected in coordinator stream — falling back to non-stream"
+          );
           try {
             const fallbackResp = await fetch(endpointUrl, {
               method: "POST",
@@ -174,6 +252,7 @@ export function useCoordinatorChat(projectId: string | undefined) {
                 stream: false,
               }),
             });
+
             if (fallbackResp.ok) {
               const fallbackData = await fallbackResp.json();
               if (fallbackData.content) {
@@ -196,6 +275,38 @@ export function useCoordinatorChat(projectId: string | undefined) {
             mode,
             ai_role: aiRole,
           });
+        }
+
+        // ✅ Auto-run evolve tool-call if present
+        const toolCall = cleanContent ? tryExtractToolCall(cleanContent) : null;
+        if (toolCall?.tool === "evolve_workspace") {
+          try {
+            toast.message("⚙️ Angel đang tự sửa code trên GitHub…");
+
+            const args = toolCall.args || {};
+            const required = [
+              "file_path",
+              "branch_name",
+              "commit_message",
+              "code_content",
+            ] as const;
+
+            for (const k of required) {
+              if (!args[k] || typeof args[k] !== "string") {
+                throw new Error(`Tool args missing/invalid: ${k}`);
+              }
+            }
+
+            const result = await callEvolveWorker(session.access_token, args);
+
+            toast.success(
+              `✅ Đã gửi lệnh evolve! GitHub status: ${
+                result?.github_status ?? "unknown"
+              }`
+            );
+          } catch (err: any) {
+            toast.error(err?.message || "Evolve tool failed");
+          }
         }
 
         queryClient.invalidateQueries({ queryKey: ["coordinator-chat", projectId] });
