@@ -114,6 +114,48 @@ const ROLE_PROMPTS: Record<string, string> = {
   pplp_guardian: `You are acting as a **PPLP Guardian**. You are the authority on the Proof of Positive Life Protocol. You validate everything against the 5D framework (S, T, H, C, U). You ensure Light Score integrity and anti-fraud compliance.`,
 };
 
+/**
+ * ✅ Tool Contract: evolve_workspace
+ * IMPORTANT: This is not "function calling" at API level — we enforce a strict output format
+ * so frontend can parse and auto-call Cloudflare Worker /api/evolve.
+ */
+const EVOLVE_TOOL_CONTRACT = `
+## Automation Bridge: Tool Contract (IMPORTANT)
+
+When the user asks to:
+- change UI/UX, fix bugs, refactor code, add features
+- create/edit files in the repo
+- “tự sửa code”, “tạo PR”, “update component”, “chỉnh CoordinatorGate/CoordinatorChat/useCoordinatorChat”
+=> You MUST respond with a TOOL CALL, not normal text.
+
+### TOOL NAME
+evolve_workspace
+
+### OUTPUT FORMAT (STRICT)
+Return ONLY a single JSON object wrapped in a fenced code block:
+
+\`\`\`json
+{
+  "tool": "evolve_workspace",
+  "args": {
+    "file_path": "src/path/to/file.tsx",
+    "branch_name": "angel/<short-kebab>",
+    "commit_message": "short imperative commit message",
+    "code_content": "<FULL file content to write>",
+    "pr_title": "Angel: <short title>",
+    "pr_body": "<what changed + how to test>"
+  }
+}
+\`\`\`
+
+### HARD RULES
+- DO NOT include ANY text outside the \`\`\`json block.
+- file_path must be a repo-relative path.
+- code_content must contain the FULL new content of the file (not diff).
+- branch_name should be unique per request.
+- If user request is unclear, ask 1 short question IN NORMAL TEXT (no tool call). Otherwise, output tool call immediately.
+`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -135,14 +177,17 @@ serve(async (req) => {
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
+
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+
     if (claimsError || !claimsData?.claims) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
     const userId = claimsData.claims.sub;
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
@@ -186,16 +231,19 @@ ${ECOSYSTEM_CONTEXT}
 
 ${projectContextStr}
 
+${EVOLVE_TOOL_CONTRACT}
+
 ## Response Guidelines
 - Always respond in the same language as the user's message (Vietnamese or English)
-- Use structured Markdown formatting
+- Use structured Markdown formatting (when NOT using tool call)
 - Be specific and actionable
 - Reference ecosystem rules when relevant
 - Flag any conflicts with PPLP or ecosystem architecture
 `;
 
     // --- AI Gateway Config: Cloudflare BYOK primary (uses GOOGLE_AI_API_KEY) ---
-    const CF_GATEWAY_URL = "https://gateway.ai.cloudflare.com/v1/6083e34ad429331916b93ba8a5ede81d/angel-ai/compat/chat/completions";
+    const CF_GATEWAY_URL =
+      "https://gateway.ai.cloudflare.com/v1/6083e34ad429331916b93ba8a5ede81d/angel-ai/compat/chat/completions";
     const LOVABLE_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
     const CF_API_TOKEN = Deno.env.get("CF_API_TOKEN");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -209,18 +257,20 @@ ${projectContextStr}
 
     console.log(`[coordinator-chat] Using gateway: Cloudflare BYOK (primary), stream=${shouldStream}`);
 
-    const aiMessages = [
-      { role: "system", content: systemPrompt },
-      ...messages,
-    ];
+    const aiMessages = [{ role: "system", content: systemPrompt }, ...messages];
 
     let response = await fetch(CF_GATEWAY_URL, {
       method: "POST",
-      headers: { Authorization: `Bearer ${CF_API_TOKEN}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${CF_API_TOKEN}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         model: "google-ai-studio/gemini-3-flash-preview",
         messages: aiMessages,
         stream: shouldStream,
+        // optional knobs:
+        // temperature: 0.2,
       }),
     });
 
@@ -229,11 +279,15 @@ ${projectContextStr}
       console.log(`[coordinator-chat] Cloudflare error ${response.status}, falling back to Lovable`);
       response = await fetch(LOVABLE_GATEWAY_URL, {
         method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           model: "google/gemini-3-flash-preview",
           messages: aiMessages,
           stream: shouldStream,
+          // temperature: 0.2,
         }),
       });
     }
@@ -274,9 +328,9 @@ ${projectContextStr}
     });
   } catch (e) {
     console.error("coordinator-chat error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
