@@ -42,9 +42,9 @@ export function Leaderboard() {
   }
 
   return (
-    <div className="rounded-2xl overflow-hidden shadow-[var(--shadow-divine)] border border-border/30">
+    <div className="rounded-2xl overflow-hidden shadow-[0_4px_30px_rgba(218,165,32,0.15)] border border-[#daa520]/30">
       {/* Premium gold accent bar */}
-      <div className="h-1.5 bg-[image:var(--gradient-sapphire)]" />
+      <div className="h-1.5 bg-gradient-to-r from-[#b8860b] via-[#ffd700] to-[#b8860b]" />
 
       <div className="bg-card p-5">
         {/* Header */}
@@ -55,9 +55,9 @@ export function Leaderboard() {
             <span className="text-lg">✨</span>
           </div>
           {/* Member count */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-pale/60 border border-primary/15">
-            <Users className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs font-medium text-primary-deep">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-[#ffd700]/10 via-[#ffec8b]/15 to-[#ffd700]/10 border border-[#daa520]/25">
+            <Users className="w-3.5 h-3.5 text-[#b8860b]" />
+            <span className="text-xs font-semibold text-[#b8860b]">
               {stats.total_users} {t("leaderboard.members") || "thành viên"}
             </span>
           </div>
@@ -100,14 +100,14 @@ export function Leaderboard() {
         )}
 
         {/* CTA */}
-        <div className="mt-4 pt-3 border-t border-border/30">
+        <div className="mt-4 pt-3 border-t border-[#daa520]/15">
           <Link to="/community" className="block">
             <Button
               variant="ghost"
               size="sm"
-              className="w-full text-xs font-semibold text-primary hover:text-primary-deep hover:bg-primary-pale/40 rounded-xl"
+              className="w-full text-xs font-semibold text-[#b8860b] hover:text-[#daa520] hover:bg-[#ffd700]/10 rounded-xl"
             >
-              <Trophy className="w-3.5 h-3.5 mr-1.5 text-primary" />
+              <Trophy className="w-3.5 h-3.5 mr-1.5 text-[#daa520]" />
               {t("leaderboard.viewCommunity") || "Xem Cộng Đồng"} →
             </Button>
           </Link>
