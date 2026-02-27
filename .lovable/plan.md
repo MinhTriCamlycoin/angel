@@ -1,23 +1,17 @@
 
 
 ## Vấn đề
-
-Edge function `global-search` đã có logic tìm kiếm user theo `display_name`, `handle`, và `wallet_address` — nhưng đang truy vấn bảng `saved_wallet_addresses` (không tồn tại). Bảng thực tế là `user_wallet_addresses`.
-
-Ngoài ra, community variant (search trực tiếp từ frontend) chỉ tìm theo `display_name`, chưa tìm theo `handle` hay `wallet_address`.
+Tài khoản Tú Nguyễn có 12+ tín hiệu SYBIL (severity 3, device fingerprint match) chưa được giải quyết. Hệ thống anti-sybil đóng băng phần thưởng khi >= 3 signals chưa resolve.
 
 ## Giải pháp
 
-### Bước 1: Sửa edge function `global-search/index.ts`
-- Đổi `saved_wallet_addresses` → `user_wallet_addresses` (dòng 113)
-- Giữ nguyên logic tìm theo `display_name`, `handle`, `wallet_address`
+### Bước 1: Resolve tất cả fraud signals của Tú Nguyễn
+- UPDATE `pplp_fraud_signals` SET `is_resolved = true`, `resolution_notes = 'Device fingerprint false positive - verified real user'` cho tất cả signals chưa resolve của user này.
 
-### Bước 2: Cập nhật frontend `GlobalSearch.tsx` (community variant)
-- Mở rộng search community để tìm theo cả `handle` và `wallet_address`:
-  - Query profiles với `.or('display_name.ilike.%query%,handle.ilike.%query%')`
-  - Thêm query song song vào `user_wallet_addresses` để tìm theo ví
-  - Merge kết quả, loại trùng
+### Bước 2: Thêm vào fraud_whitelist
+- INSERT vào `fraud_whitelist` để tài khoản này bypass các kiểm tra gian lận trong tương lai, tương tự như đã làm với các tài khoản tin cậy khác (ANGEL ÁNH NGUYỆT, Hoàng Tỷ Đô).
 
-### Bước 3: Cập nhật URL user trong edge function
-- Sửa URL từ `/user/${id}` thành sử dụng handle nếu có: `/u/${handle}` hoặc `/user/${id}`
+### Kết quả
+- Sau khi resolve signals, `checkAntiSybil()` sẽ trả `risk_level = 'clear'` và `reward_multiplier` bình thường theo account age gate.
+- User sẽ nhận thưởng câu hỏi, đăng bài, nhật ký như bình thường.
 
