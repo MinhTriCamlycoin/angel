@@ -1,41 +1,26 @@
 
 
-## Kết quả rà soát Chống Sybil toàn diện
+## Kế hoạch: Thêm nút Đình chỉ & Cấm vĩnh viễn vào tab Blacklist
 
-### Phát hiện 3 nguồn dấu hiệu bất thường
+### Sửa `src/pages/AdminTrustList.tsx`
 
-**1. Cụm dấu vân tay thiết bị (Device Fingerprint Clusters)**
+**1. Thêm state cho dialog đình chỉ/cấm**
+- `suspendDialogOpen`, `suspendType` (`temporary` | `permanent`), `suspendTarget` (user info), `suspendReason`, `suspendDuration` (cho temporary — số ngày)
 
-| Cluster | Số user | Fingerprint |
-|---------|---------|-------------|
-| #1 | **36 tài khoản** | `700ee64c...` |
-| #2 | **22 tài khoản** | `0272a01a...` |
-| #3 | 3 tài khoản | `2d28ba21...` |
+**2. Thêm 2 nút mới trong mỗi row Blacklist**
+- Nút **"Đình chỉ"** (variant outline, icon `Clock`) → mở dialog với `suspension_type = 'temporary'`, cho nhập số ngày + lý do
+- Nút **"Cấm vĩnh viễn"** (variant destructive, icon `Ban`) → mở dialog với `suspension_type = 'permanent'`, chỉ cần lý do
 
-Đây là dấu hiệu nghiêm trọng nhất — 36 tài khoản dùng chung 1 thiết bị là mô hình Sybil farming rõ ràng.
+**3. Dialog xử lý đình chỉ/cấm**
+- Nhập lý do (bắt buộc)
+- Nếu đình chỉ tạm: thêm input số ngày (mặc định 7)
+- Xác nhận → INSERT vào `user_suspensions` với:
+  - `user_id`, `suspension_type`, `reason`, `created_by` (admin)
+  - `suspended_until` = now + N ngày (nếu temporary), NULL (nếu permanent)
+- Đồng thời resolve tất cả fraud signals (`is_resolved = true`)
+- Sau khi xong → refresh data (user sẽ tự động biến mất khỏi BL vì đã bị filter)
 
-**2. Nội dung trùng lặp (Content Similarity)**
-- 5 bài viết giống hệt nhau được đăng bởi 3+ tài khoản khác nhau
-- Users: Angel Kim Ngân, Angle ThanhThuy, ANGEL GIÀU, LƯU THỊ LIÊN, Angel Nguyễn Hoa
+**4. Hỗ trợ batch** — thêm nút batch "Đình chỉ tất cả" và "Cấm vĩnh viễn tất cả" trong thanh batch actions khi chọn nhiều user BL
 
-**3. Hoạt động phối hợp thời gian (Coordinated Timing)**
-- **ĐINH THỊ CHUNG**: xuất hiện trong **27/20 khung giờ** phối hợp — dấu hiệu điều phối nhóm
-- 15+ user khác xuất hiện 3-9 lần trong các khung giờ phối hợp lặp lại 8+ ngày
-
-### Tổng hợp user cần đưa vào Blacklist
-
-Sau khi loại trừ user đã WL và đã bị đình chỉ, còn **~55 user** cần tạo fraud signal mới. Trong đó ~23 user đã có signal chưa xử lý (đã nằm trong BL), còn **~32 user mới** chưa có signal nào.
-
-### Kế hoạch thực hiện
-
-**1. Tạo migration SQL** — INSERT fraud signals loại `CROSS_ACCOUNT_SCAN` severity 4 cho tất cả ~32 user mới phát hiện, ghi rõ lý do:
-- Cluster #1: "Cùng dấu vân tay thiết bị với 35 tài khoản khác"
-- Cluster #2: "Cùng dấu vân tay thiết bị với 21 tài khoản khác"
-- Cluster #3: "Cùng dấu vân tay thiết bị với 2 tài khoản khác"
-- Content similarity: "Nội dung bài viết trùng lặp với nhiều tài khoản khác"
-- Coordinated timing: "Hoạt động phối hợp thời gian bất thường (N lần)"
-
-**2. Tự động loại trừ** — Query sẽ bỏ qua user đã có trong `fraud_whitelist` và user đã bị `user_suspensions` (lifted_at IS NULL).
-
-Sau khi chạy migration, tất cả user này sẽ tự động hiển thị trong tab **Blacklist** của trang Quản lý Tin cậy để Admin duyệt và xử lý.
+Chỉ sửa 1 file: `src/pages/AdminTrustList.tsx`. Không cần migration vì bảng `user_suspensions` đã có đủ cấu trúc.
 
