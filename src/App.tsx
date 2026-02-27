@@ -68,6 +68,7 @@ import CoordinatorGate from "./pages/CoordinatorGate";
 import CoordinatorProject from "./pages/CoordinatorProject";
 import DynamicRoute from "./pages/DynamicRoute";
 import PostDetail from "./pages/PostDetail";
+import LightCommunity from "./pages/LightCommunity";
 // Note: Global error handling is in main.tsx (registered before React renders)
 
 const queryClient = new QueryClient();
@@ -129,6 +130,7 @@ const App = () => (
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/community-questions" element={<CommunityQuestions />} />
               <Route path="/community" element={<Community />} />
+              <Route path="/light-community" element={<LightCommunity />} />
               <Route path="/user/:userId" element={<UserProfile />} />
               <Route path="/@:handle" element={<HandleProfile />} />
               <Route path="/messages" element={<Messages />} />

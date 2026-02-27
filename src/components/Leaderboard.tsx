@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Trophy, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Trophy, ChevronDown, Sparkles } from "lucide-react";
 import { RainbowTitle } from "@/components/leaderboard/RainbowTitle";
 import { Button } from "@/components/ui/button";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
@@ -12,8 +12,8 @@ import { RankingRow } from "@/components/leaderboard/RankingRow";
 export function Leaderboard() {
   const { allUsers, isLoading } = useLeaderboard();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [showMore, setShowMore] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -22,8 +22,7 @@ export function Leaderboard() {
     };
     getUser();
   }, []);
-
-  const displayUsers = showMore ? allUsers : allUsers.slice(0, 5);
+  const displayUsers = allUsers.slice(0, 5);
 
   if (isLoading) {
     return (
@@ -64,25 +63,16 @@ export function Leaderboard() {
               ))}
             </div>
 
-            {/* Show more / less */}
+            {/* Show more → navigate to full page */}
             {allUsers.length > 5 && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowMore(!showMore)}
+                onClick={() => navigate("/light-community")}
                 className="w-full mt-2.5 text-xs text-muted-foreground hover:text-primary"
               >
-                {showMore ? (
-                  <>
-                    <ChevronUp className="w-3.5 h-3.5 mr-1" />
-                    {t("common.showLess") || "Thu gọn"}
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="w-3.5 h-3.5 mr-1" />
-                    {t("common.showMore") || "Xem thêm"} ({allUsers.length - 5})
-                  </>
-                )}
+                <ChevronDown className="w-3.5 h-3.5 mr-1" />
+                {t("common.showMore") || "Xem thêm"} ({allUsers.length - 5})
               </Button>
             )}
           </>
