@@ -1256,6 +1256,44 @@ export type Database = {
         }
         Relationships: []
       }
+      did_events: {
+        Row: {
+          created_at: string
+          did_id: string
+          event_data: Json | null
+          event_type: string
+          id: string
+          on_chain_hash: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          did_id: string
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          on_chain_hash?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          did_id?: string
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          on_chain_hash?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "did_events_did_id_fkey"
+            columns: ["did_id"]
+            isOneToOne: false
+            referencedRelation: "user_dids"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       direct_messages: {
         Row: {
           content: string
@@ -1668,6 +1706,59 @@ export type Database = {
           },
         ]
       }
+      identity_metadata: {
+        Row: {
+          created_at: string
+          data_hash: string
+          data_type: string
+          did_id: string
+          encrypted_data: string | null
+          expires_at: string | null
+          id: string
+          is_current: boolean
+          on_chain_hash: string | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          data_hash: string
+          data_type: string
+          did_id: string
+          encrypted_data?: string | null
+          expires_at?: string | null
+          id?: string
+          is_current?: boolean
+          on_chain_hash?: string | null
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          data_hash?: string
+          data_type?: string
+          did_id?: string
+          encrypted_data?: string | null
+          expires_at?: string | null
+          id?: string
+          is_current?: boolean
+          on_chain_hash?: string | null
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "identity_metadata_did_id_fkey"
+            columns: ["did_id"]
+            isOneToOne: false
+            referencedRelation: "user_dids"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       image_history: {
         Row: {
           created_at: string
@@ -1848,6 +1939,74 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      light_score_snapshots: {
+        Row: {
+          created_at: string
+          did_id: string | null
+          id: string
+          light_score: number
+          on_chain_anchor_block: number | null
+          on_chain_anchor_hash: string | null
+          pillar_c: number
+          pillar_h: number
+          pillar_s: number
+          pillar_t: number
+          pillar_u: number
+          snapshot_epoch: string
+          snapshot_hash: string
+          time_decay_factor: number
+          total_actions: number
+          trust_multiplier: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          did_id?: string | null
+          id?: string
+          light_score: number
+          on_chain_anchor_block?: number | null
+          on_chain_anchor_hash?: string | null
+          pillar_c?: number
+          pillar_h?: number
+          pillar_s?: number
+          pillar_t?: number
+          pillar_u?: number
+          snapshot_epoch: string
+          snapshot_hash: string
+          time_decay_factor?: number
+          total_actions?: number
+          trust_multiplier?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          did_id?: string | null
+          id?: string
+          light_score?: number
+          on_chain_anchor_block?: number | null
+          on_chain_anchor_hash?: string | null
+          pillar_c?: number
+          pillar_h?: number
+          pillar_s?: number
+          pillar_t?: number
+          pillar_u?: number
+          snapshot_epoch?: string
+          snapshot_hash?: string
+          time_decay_factor?: number
+          total_actions?: number
+          trust_multiplier?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "light_score_snapshots_did_id_fkey"
+            columns: ["did_id"]
+            isOneToOne: false
+            referencedRelation: "user_dids"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lixi_claims: {
         Row: {
@@ -3164,6 +3323,71 @@ export type Database = {
         }
         Relationships: []
       }
+      soulbound_nfts: {
+        Row: {
+          contract_address: string | null
+          created_at: string
+          creation_timestamp: string
+          did_hash: string
+          did_id: string
+          id: string
+          is_active: boolean
+          metadata_hash: string | null
+          metadata_uri: string | null
+          mint_block: number | null
+          mint_status: string
+          mint_tx_hash: string | null
+          token_id: number | null
+          trust_seed: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contract_address?: string | null
+          created_at?: string
+          creation_timestamp?: string
+          did_hash: string
+          did_id: string
+          id?: string
+          is_active?: boolean
+          metadata_hash?: string | null
+          metadata_uri?: string | null
+          mint_block?: number | null
+          mint_status?: string
+          mint_tx_hash?: string | null
+          token_id?: number | null
+          trust_seed: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contract_address?: string | null
+          created_at?: string
+          creation_timestamp?: string
+          did_hash?: string
+          did_id?: string
+          id?: string
+          is_active?: boolean
+          metadata_hash?: string | null
+          metadata_uri?: string | null
+          mint_block?: number | null
+          mint_status?: string
+          mint_tx_hash?: string | null
+          token_id?: number | null
+          trust_seed?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soulbound_nfts_did_id_fkey"
+            columns: ["did_id"]
+            isOneToOne: false
+            referencedRelation: "user_dids"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sybil_pattern_registry: {
         Row: {
           created_at: string | null
@@ -3317,6 +3541,54 @@ export type Database = {
           name?: string
           total_requests?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_dids: {
+        Row: {
+          created_at: string
+          did: string
+          did_hash: string
+          id: string
+          metadata: Json | null
+          on_chain_anchor_block: number | null
+          on_chain_anchor_hash: string | null
+          secondary_wallets: string[] | null
+          status: string
+          trust_seed: string | null
+          updated_at: string
+          user_id: string
+          wallet_address: string | null
+        }
+        Insert: {
+          created_at?: string
+          did: string
+          did_hash: string
+          id?: string
+          metadata?: Json | null
+          on_chain_anchor_block?: number | null
+          on_chain_anchor_hash?: string | null
+          secondary_wallets?: string[] | null
+          status?: string
+          trust_seed?: string | null
+          updated_at?: string
+          user_id: string
+          wallet_address?: string | null
+        }
+        Update: {
+          created_at?: string
+          did?: string
+          did_hash?: string
+          id?: string
+          metadata?: Json | null
+          on_chain_anchor_block?: number | null
+          on_chain_anchor_hash?: string | null
+          secondary_wallets?: string[] | null
+          status?: string
+          trust_seed?: string | null
+          updated_at?: string
+          user_id?: string
+          wallet_address?: string | null
         }
         Relationships: []
       }
