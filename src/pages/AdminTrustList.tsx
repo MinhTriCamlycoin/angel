@@ -13,7 +13,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ShieldCheck, ShieldAlert, Loader2, ArrowRightLeft, Clock, Ban } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Loader2, ArrowRightLeft, Clock, Ban, Search, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
@@ -97,7 +98,16 @@ const AdminTrustList = () => {
   const [suspendReason, setSuspendReason] = useState("");
   const [suspendDuration, setSuspendDuration] = useState(7);
   const [suspendProcessing, setSuspendProcessing] = useState(false);
-  const [suspendBatch, setSuspendBatch] = useState(false); // true = batch mode
+  const [suspendBatch, setSuspendBatch] = useState(false);
+
+  // Filter states — WL
+  const [wlSearch, setWlSearch] = useState("");
+  const [wlReasonFilter, setWlReasonFilter] = useState("");
+
+  // Filter states — BL
+  const [blSearch, setBlSearch] = useState("");
+  const [blTypeFilter, setBlTypeFilter] = useState("all");
+  const [blSeverityFilter, setBlSeverityFilter] = useState("all");
 
   useEffect(() => { fetchData(); }, []);
 
@@ -295,6 +305,30 @@ const AdminTrustList = () => {
     try { return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: vi }); } catch { return dateStr; }
   };
 
+  // Filtered data
+  const filteredWL = whitelist.filter(entry => {
+    const name = (entry.profile?.display_name || entry.user_id).toLowerCase();
+    const handle = (entry.profile?.handle || "").toLowerCase();
+    const search = wlSearch.toLowerCase();
+    if (wlSearch && !name.includes(search) && !handle.includes(search)) return false;
+    if (wlReasonFilter && !entry.reason.toLowerCase().includes(wlReasonFilter.toLowerCase())) return false;
+    return true;
+  });
+
+  const allBLSignalTypes = [...new Set(blacklist.flatMap(g => g.signal_types))];
+
+  const filteredBL = blacklist.filter(group => {
+    const name = (group.profile?.display_name || group.actor_id).toLowerCase();
+    const handle = (group.profile?.handle || "").toLowerCase();
+    const search = blSearch.toLowerCase();
+    if (blSearch && !name.includes(search) && !handle.includes(search)) return false;
+    if (blTypeFilter !== "all" && !group.signal_types.includes(blTypeFilter)) return false;
+    if (blSeverityFilter === "high" && group.max_severity < 5) return false;
+    if (blSeverityFilter === "medium" && (group.max_severity < 3 || group.max_severity >= 5)) return false;
+    if (blSeverityFilter === "low" && group.max_severity >= 3) return false;
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-background">
       <AdminNavToolbar />
@@ -312,6 +346,21 @@ const AdminTrustList = () => {
           ) : (
             <>
               <TabsContent value="whitelist">
+                {/* WL Filters */}
+                <div className="flex items-center gap-3 mb-3 flex-wrap">
+                  <div className="relative flex-1 min-w-[200px] max-w-xs">
+                    <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
+                    <Input placeholder="Tìm user..." value={wlSearch} onChange={e => setWlSearch(e.target.value)} className="pl-9 h-9" />
+                    {wlSearch && <button onClick={() => setWlSearch("")} className="absolute right-2.5 top-2.5"><X className="w-4 h-4 text-muted-foreground hover:text-foreground" /></button>}
+                  </div>
+                  <div className="relative min-w-[180px] max-w-xs">
+                    <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
+                    <Input placeholder="Lọc theo lý do..." value={wlReasonFilter} onChange={e => setWlReasonFilter(e.target.value)} className="pl-9 h-9" />
+                    {wlReasonFilter && <button onClick={() => setWlReasonFilter("")} className="absolute right-2.5 top-2.5"><X className="w-4 h-4 text-muted-foreground hover:text-foreground" /></button>}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{filteredWL.length}/{whitelist.length} kết quả</span>
+                </div>
+
                 {selectedWL.size > 0 && (
                   <div className="flex items-center gap-3 mb-3 p-3 rounded-lg bg-muted/50 border">
                     <span className="text-sm font-medium">Đã chọn {selectedWL.size} user</span>
@@ -335,9 +384,9 @@ const AdminTrustList = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {whitelist.length === 0 ? (
-                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Chưa có user nào trong whitelist</TableCell></TableRow>
-                    ) : whitelist.map((entry) => (
+                    {filteredWL.length === 0 ? (
+                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">{whitelist.length === 0 ? "Chưa có user nào trong whitelist" : "Không có kết quả phù hợp"}</TableCell></TableRow>
+                    ) : filteredWL.map((entry) => (
                       <TableRow key={entry.id} className={selectedWL.has(entry.user_id) ? "bg-muted/30" : ""}>
                         <TableCell>
                           <Checkbox checked={selectedWL.has(entry.user_id)} onCheckedChange={() => toggleWL(entry.user_id)} />
@@ -366,6 +415,38 @@ const AdminTrustList = () => {
               </TabsContent>
 
               <TabsContent value="blacklist">
+                {/* BL Filters */}
+                <div className="flex items-center gap-3 mb-3 flex-wrap">
+                  <div className="relative flex-1 min-w-[200px] max-w-xs">
+                    <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
+                    <Input placeholder="Tìm user..." value={blSearch} onChange={e => setBlSearch(e.target.value)} className="pl-9 h-9" />
+                    {blSearch && <button onClick={() => setBlSearch("")} className="absolute right-2.5 top-2.5"><X className="w-4 h-4 text-muted-foreground hover:text-foreground" /></button>}
+                  </div>
+                  <Select value={blTypeFilter} onValueChange={setBlTypeFilter}>
+                    <SelectTrigger className="w-[180px] h-9">
+                      <SelectValue placeholder="Loại tín hiệu" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tất cả loại</SelectItem>
+                      {allBLSignalTypes.map(t => (
+                        <SelectItem key={t} value={t}>{SIGNAL_TYPE_VI[t] || t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={blSeverityFilter} onValueChange={setBlSeverityFilter}>
+                    <SelectTrigger className="w-[160px] h-9">
+                      <SelectValue placeholder="Mức nghiêm trọng" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tất cả mức</SelectItem>
+                      <SelectItem value="high">Nghiêm trọng (≥5)</SelectItem>
+                      <SelectItem value="medium">Trung bình (3-4)</SelectItem>
+                      <SelectItem value="low">Thấp (&lt;3)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-xs text-muted-foreground">{filteredBL.length}/{blacklist.length} kết quả</span>
+                </div>
+
                 {selectedBL.size > 0 && (
                   <div className="flex items-center gap-3 mb-3 p-3 rounded-lg bg-muted/50 border flex-wrap">
                     <span className="text-sm font-medium">Đã chọn {selectedBL.size} user</span>
@@ -397,9 +478,9 @@ const AdminTrustList = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {blacklist.length === 0 ? (
-                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Không có tín hiệu gian lận chưa xử lý</TableCell></TableRow>
-                    ) : blacklist.map((group) => (
+                    {filteredBL.length === 0 ? (
+                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">{blacklist.length === 0 ? "Không có tín hiệu gian lận chưa xử lý" : "Không có kết quả phù hợp"}</TableCell></TableRow>
+                    ) : filteredBL.map((group) => (
                       <TableRow key={group.actor_id} className={selectedBL.has(group.actor_id) ? "bg-muted/30" : ""}>
                         <TableCell>
                           <Checkbox checked={selectedBL.has(group.actor_id)} onCheckedChange={() => toggleBL(group.actor_id)} />
