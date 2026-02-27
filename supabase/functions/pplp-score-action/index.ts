@@ -34,9 +34,37 @@ interface ActionCapsConfig {
   is_active: boolean;
 }
 
-// ========== 5 PILLARS WEIGHTS (固定) ==========
-const PILLAR_WEIGHTS = { S: 0.25, T: 0.20, H: 0.20, C: 0.20, U: 0.15 };
-const MIN_LIGHT_SCORE = 50; // Lowered from 60 to allow more actions to pass during initial testing
+// ========== 5 PILLARS WEIGHTS (loaded from scoring_rules) ==========
+let PILLAR_WEIGHTS = { S: 0.25, T: 0.20, H: 0.20, C: 0.20, U: 0.15 };
+let MIN_LIGHT_SCORE = 50;
+let MATH_PARAMS: Record<string, number> = {};
+
+async function loadScoringParams(supabase: ReturnType<typeof createClient>) {
+  try {
+    const { data: rule } = await supabase
+      .from('scoring_rules')
+      .select('formula_json')
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle();
+    if (rule?.formula_json) {
+      const f = rule.formula_json as Record<string, unknown>;
+      if (f.pillar_weights) {
+        PILLAR_WEIGHTS = f.pillar_weights as typeof PILLAR_WEIGHTS;
+      }
+      if (f.min_light_score) MIN_LIGHT_SCORE = Number(f.min_light_score);
+      // Store all math params for later use
+      MATH_PARAMS = {
+        gamma: Number(f.gamma ?? 1.3),
+        omega_B: Number(f.omega_B ?? 0.4),
+        omega_C: Number(f.omega_C ?? 0.6),
+        min_ratings: Number(f.min_ratings ?? 3),
+      };
+    }
+  } catch (e) {
+    console.error('[PPLP] Failed to load scoring params:', e);
+  }
+}
 
 // ========== Calculate 5-pillar scores ==========
 function calculatePillarScores(action: ActionData): { S: number; T: number; H: number; C: number; U: number } {
@@ -194,6 +222,9 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // Load math params from scoring_rules
+    await loadScoringParams(supabase);
 
     const { action_id } = await req.json();
 
@@ -497,14 +528,43 @@ serve(async (req) => {
       console.error('[PPLP] Ledger update error:', ledgerErr);
     }
 
-    // ========== 8c. Build features for today ==========
+    // ========== 8c. Build features + compute daily light score ==========
     try {
       await supabase.rpc('build_features_user_day', {
         _user_id: action.actor_id,
         _date: new Date().toISOString().split('T')[0],
       });
+      // Compute daily L_u(t) using LS-Math v1.0
+      await supabase.rpc('compute_daily_light_score', {
+        _user_id: action.actor_id,
+        _date: new Date().toISOString().split('T')[0],
+      });
     } catch (featErr) {
-      console.error('[PPLP] Feature builder error:', featErr);
+      console.error('[PPLP] Feature builder / daily score error:', featErr);
+    }
+
+    // ========== 8c2. Update rater weights using reputation ==========
+    try {
+      const contentActionTypes2 = ['POST_CREATE', 'ANALYSIS_POST', 'COMMENT_CREATE', 'CONTENT_CREATE'];
+      if (contentActionTypes2.includes(action.action_type)) {
+        // Update weight_applied on any existing ratings for this content
+        const { data: ratings } = await supabase
+          .from('pplp_ratings')
+          .select('id, rater_user_id')
+          .eq('content_id', action.id);
+        if (ratings && ratings.length > 0) {
+          for (const rating of ratings) {
+            const { data: w } = await supabase.rpc('compute_reputation_weight_v2', {
+              _user_id: rating.rater_user_id,
+            });
+            if (w) {
+              await supabase.from('pplp_ratings').update({ weight_applied: w }).eq('id', rating.id);
+            }
+          }
+        }
+      }
+    } catch (raterErr) {
+      console.error('[PPLP] Rater weight update error:', raterErr);
     }
 
     // ========== 8d. Update action status ==========

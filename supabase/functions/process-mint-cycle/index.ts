@@ -88,7 +88,8 @@ async function processCycle(
 ) {
   const maxSharePerUser = Number(cycle.max_share_per_user) || DEFAULT_MAX_SHARE;
 
-  // Aggregate contributions
+  // ========== ELIGIBILITY GATE (§13) ==========
+  // Get all users who contributed in this cycle
   const { data: contributions } = await supabase
     .from('pplp_scores')
     .select('action_id, final_reward')
@@ -119,16 +120,58 @@ async function processCycle(
     totalContribution += reward;
   }
 
-  const mintPool = Math.min(MAX_WEEKLY_MINT_POOL, totalContribution);
+  // Check eligibility for each user
+  const epochStart = (cycle.start_date as string).split('T')[0];
+  const epochEnd = (cycle.end_date as string).split('T')[0];
+  const eligibleUsers = new Map<string, number>();
+  const ineligibleUsers: Array<{ user_id: string; reason: string }> = [];
 
-  // ========== ANTI-WHALE: Two-pass allocation ==========
-  const allocations = applyAntiWhaleCap(userContributions, totalContribution, mintPool, maxSharePerUser, cycle.id as string);
+  for (const [userId, contribution] of userContributions) {
+    const { data: eligibility } = await supabase.rpc('check_mint_eligibility', {
+      _user_id: userId,
+      _epoch_start: epochStart,
+      _epoch_end: epochEnd,
+    });
 
-  // Insert allocations
-  if (allocations.length > 0) {
+    if (eligibility && eligibility.eligible) {
+      eligibleUsers.set(userId, contribution);
+    } else {
+      ineligibleUsers.push({
+        user_id: userId,
+        reason: eligibility?.reason || 'UNKNOWN',
+      });
+    }
+  }
+
+  // Recalculate total with only eligible users
+  let eligibleTotal = 0;
+  for (const [, contribution] of eligibleUsers) {
+    eligibleTotal += contribution;
+  }
+
+  const mintPool = Math.min(MAX_WEEKLY_MINT_POOL, eligibleTotal);
+
+  // ========== ANTI-WHALE: Iterative redistribution ==========
+  const allocations = applyAntiWhaleCapIterative(eligibleUsers, eligibleTotal, mintPool, maxSharePerUser, cycle.id as string);
+
+  // Add ineligible entries with eligible=false
+  const ineligibleAllocations = ineligibleUsers.map(u => ({
+    cycle_id: cycle.id as string,
+    user_id: u.user_id,
+    user_light_contribution: userContributions.get(u.user_id) || 0,
+    allocation_ratio: 0,
+    fun_allocated: 0,
+    status: 'ineligible',
+    eligible: false,
+    ineligibility_reason: u.reason,
+  }));
+
+  // Insert all allocations
+  const allAllocations = [...allocations, ...ineligibleAllocations];
+  if (allAllocations.length > 0) {
     const { error: allocError } = await supabase
       .from('pplp_mint_allocations')
-      .upsert(allocations, { onConflict: 'cycle_id,user_id' });
+      .upsert(allAllocations, { onConflict: 'cycle_id,user_id' });
     if (allocError) console.error('[MintCycle] Allocation insert error:', allocError);
   }
 
@@ -145,76 +188,97 @@ async function processCycle(
   await supabase.from('pplp_mint_cycles').update({
     status: 'distributed',
     total_mint_pool: mintPool,
-    total_light_contribution: totalContribution,
+    total_light_contribution: eligibleTotal,
     updated_at: now.toISOString(),
   }).eq('id', cycle.id);
 
   // ========== TRANSPARENCY SNAPSHOT ==========
-  await createTransparencySnapshot(supabase, cycle, mintPool, totalContribution, allocations.length, ruleVersion);
+  await createTransparencySnapshot(supabase, cycle, mintPool, eligibleTotal, allocations.length, ruleVersion);
 
   // Create next cycle
   await createNewCycle(supabase, cycleType, weekEnd, new Date(weekEnd.getTime() + 7 * 24 * 60 * 60 * 1000));
 
-  console.log(`[MintCycle] Distributed ${mintPool} FUN to ${allocations.length} users (anti-whale cap: ${maxSharePerUser * 100}%)`);
+  console.log(`[MintCycle] Distributed ${mintPool} FUN to ${allocations.length} eligible users (${ineligibleUsers.length} ineligible, anti-whale cap: ${maxSharePerUser * 100}%)`);
 
   return {
     success: true,
     processed_cycle: cycle.id,
-    total_contribution: totalContribution,
+    total_contribution: eligibleTotal,
     mint_pool: mintPool,
     users_allocated: allocations.length,
+    users_ineligible: ineligibleUsers.length,
     anti_whale_cap: maxSharePerUser,
     rule_version: ruleVersion,
   };
 }
 
-function applyAntiWhaleCap(
+// ========== ITERATIVE Anti-Whale Cap (loops until no excess) ==========
+function applyAntiWhaleCapIterative(
   userContributions: Map<string, number>,
   totalContribution: number,
   mintPool: number,
   maxShare: number,
   cycleId: string,
 ) {
-  // Pass 1: Identify capped users and excess
-  let excess = 0;
-  let uncappedTotal = 0;
-  const capped = new Map<string, boolean>();
-
-  for (const [userId, contribution] of userContributions) {
-    const rawShare = totalContribution > 0 ? contribution / totalContribution : 0;
-    if (rawShare > maxShare) {
-      capped.set(userId, true);
-      excess += (rawShare - maxShare) * mintPool;
-    } else {
-      uncappedTotal += contribution;
-    }
-  }
-
-  // Pass 2: Allocate with redistribution
   const allocations: Array<{
     cycle_id: string; user_id: string; user_light_contribution: number;
     allocation_ratio: number; fun_allocated: number; status: string;
+    eligible: boolean; ineligibility_reason: string | null;
   }> = [];
 
+  if (totalContribution <= 0 || mintPool <= 0) return allocations;
+
+  // Iterative redistribution
+  const shares = new Map<string, number>();
+  const capped = new Set<string>();
+  let remaining = mintPool;
+  let uncappedTotal = totalContribution;
+  const maxIterations = 10;
+
+  // Initialize shares proportionally
   for (const [userId, contribution] of userContributions) {
-    let share: number;
-    if (capped.get(userId)) {
-      share = maxShare;
-    } else {
-      const baseShare = totalContribution > 0 ? contribution / totalContribution : 0;
-      const redistributedBonus = uncappedTotal > 0 ? (contribution / uncappedTotal) * excess / mintPool : 0;
-      share = baseShare + redistributedBonus;
+    shares.set(userId, contribution / totalContribution);
+  }
+
+  for (let iter = 0; iter < maxIterations; iter++) {
+    let excess = 0;
+    let newUncappedTotal = 0;
+
+    for (const [userId, share] of shares) {
+      if (capped.has(userId)) continue;
+      if (share > maxShare) {
+        excess += (share - maxShare) * mintPool;
+        shares.set(userId, maxShare);
+        capped.set(userId, true);
+      } else {
+        newUncappedTotal += userContributions.get(userId) || 0;
+      }
     }
 
+    if (excess <= 0) break;
+
+    // Redistribute excess proportionally among uncapped users
+    for (const [userId] of shares) {
+      if (capped.has(userId)) continue;
+      const contribution = userContributions.get(userId) || 0;
+      const bonus = newUncappedTotal > 0 ? (contribution / newUncappedTotal) * excess / mintPool : 0;
+      shares.set(userId, (shares.get(userId) || 0) + bonus);
+    }
+    uncappedTotal = newUncappedTotal;
+  }
+
+  for (const [userId, share] of shares) {
     const allocated = Math.floor(mintPool * share);
     if (allocated > 0) {
       allocations.push({
         cycle_id: cycleId,
         user_id: userId,
-        user_light_contribution: contribution,
+        user_light_contribution: userContributions.get(userId) || 0,
         allocation_ratio: Math.round(share * 10000) / 10000,
         fun_allocated: allocated,
         status: 'pending',
+        eligible: true,
+        ineligibility_reason: null,
       });
     }
   }
