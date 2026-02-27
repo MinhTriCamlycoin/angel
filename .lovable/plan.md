@@ -1,22 +1,32 @@
 
 
-## Kế hoạch: Thêm trang Admin Whitelist & Blacklist
+## Kế hoạch: Thêm chức năng chuyển WL ↔ BL và cải thiện hiển thị lý do
 
-### Trang mới: `/admin/trust-list`
-Tạo trang `AdminTrustList.tsx` với 2 tab:
+### 1. Cập nhật `AdminTrustList.tsx`
 
-**Tab 1 - Whitelist (Danh sách trắng)**
-- Hiển thị dữ liệu từ bảng `fraud_whitelist`
-- Cột: Tên user, Lý do whitelist, Người xác nhận, Ngày thêm
-- Join với `profiles` để lấy display_name, avatar
+**Thêm nút hành động cho mỗi tab:**
+- **Tab Whitelist**: Thêm cột "Thao tác" với nút "Chuyển sang BL" — khi bấm sẽ:
+  - Xóa user khỏi `fraud_whitelist`
+  - Tạo fraud signal mới trong `pplp_fraud_signals` với lý do admin nhập (dialog nhập lý do)
+  - Reload data
 
-**Tab 2 - Blacklist (Nghi gian lận)**
-- Hiển thị dữ liệu từ bảng `pplp_fraud_signals` WHERE `is_resolved = false`
-- Group theo `actor_id`, đếm số signals
-- Cột: Tên user, Loại tín hiệu, Mức nghiêm trọng, Lý do chi tiết (từ `details`), Ngày phát hiện
-- Join với `profiles` để lấy display_name, avatar
+- **Tab Blacklist**: Thêm cột "Thao tác" với nút "Chuyển sang WL" — khi bấm sẽ:
+  - Thêm user vào `fraud_whitelist` với lý do admin nhập
+  - Resolve tất cả fraud signals chưa xử lý của user đó
+  - Reload data
 
-### Cập nhật routing & navigation
-1. **App.tsx**: Thêm route `/admin/trust-list` → `AdminTrustList`
-2. **AdminNavToolbar.tsx**: Thêm link "Whitelist/Blacklist" vào nhóm "Quản lý" với icon `ShieldCheck`
+**Cải thiện cột "Lý do" trong Blacklist:**
+- Dịch `signal_type` sang tiếng Việt: `SYBIL` → "Nghi tài khoản giả", `BOT` → "Nghi bot tự động", `SPAM` → "Spam"
+- Parse `details` JSON để hiển thị rõ ràng bằng tiếng Việt (VD: "Trùng IP với 3 tài khoản khác", "Trùng device fingerprint")
+
+**Dialog xác nhận:**
+- Dùng `AlertDialog` với `Textarea` để admin nhập lý do trước khi chuyển
+
+### 2. Đảm bảo WL không tự động chuyển sang BL
+- Logic này đã được xử lý trong `anti-sybil.ts` (kiểm tra whitelist trước khi tạo signal) — không cần sửa thêm
+
+### Chi tiết kỹ thuật
+- Sử dụng các component có sẵn: `AlertDialog`, `Button`, `Textarea`
+- Lấy admin user ID từ session hiện tại để ghi `whitelisted_by` / `resolved_by`
+- Chỉ sửa file `src/pages/AdminTrustList.tsx`
 
