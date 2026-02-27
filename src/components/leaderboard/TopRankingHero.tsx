@@ -79,7 +79,7 @@ export function TopRankingHero({ topUsers }: TopRankingHeroProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState({ url: "", name: "" });
   
-  const displayUsers = topUsers.slice(0, 6);
+  const displayUsers = topUsers.slice(0, 9);
 
   const handleAvatarClick = (imageUrl: string, userName: string) => {
     setSelectedImage({ url: imageUrl, name: userName });
