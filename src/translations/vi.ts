@@ -310,9 +310,9 @@ const translations: Record<string, string> = {
   "common.collapse": "Thu gọn",
   "common.change": "Thay đổi",
 
-  // Leaderboard
-  "leaderboard.title": "Bảng Xếp Hạng",
-  "leaderboard.topRanking": "TOP XẾP HẠNG",
+  // Leaderboard / Light Community
+  "leaderboard.title": "Cộng Đồng Ánh Sáng",
+  "leaderboard.topRanking": "CỘNG ĐỒNG ÁNH SÁNG",
   "leaderboard.topCamlyCoin": "Top Camly Coin",
   "leaderboard.topQuestions": "Câu Hỏi Hay",
   "leaderboard.noQuestions": "Chưa có câu hỏi nào được yêu thích",

@@ -4909,6 +4909,18 @@ export type Database = {
           withdrawal_count: number
         }[]
       }
+      get_community_light_summary: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          color: string
+          icon: string
+          level: number
+          name_en: string
+          name_vi: string
+          trend: string
+          user_id: string
+        }[]
+      }
       get_daily_ai_usage: {
         Args: { _user_id: string }
         Returns: {

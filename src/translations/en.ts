@@ -310,9 +310,9 @@ const translations: Record<string, string> = {
   "common.collapse": "Collapse",
   "common.change": "Change",
 
-  // Leaderboard
-  "leaderboard.title": "Leaderboard",
-  "leaderboard.topRanking": "TOP RANKING",
+  // Leaderboard / Light Community
+  "leaderboard.title": "Light Community",
+  "leaderboard.topRanking": "LIGHT COMMUNITY",
   "leaderboard.topCamlyCoin": "Top Camly Coin",
   "leaderboard.topQuestions": "Top Questions",
   "leaderboard.noQuestions": "No liked questions yet",

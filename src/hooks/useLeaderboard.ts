@@ -1,6 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+export interface CommunityLightInfo {
+  level: number;
+  name_vi: string;
+  name_en: string;
+  icon: string;
+  color: string;
+  trend: string;
+}
+
 export interface LeaderboardUser {
   user_id: string;
   display_name: string | null;
@@ -8,6 +17,7 @@ export interface LeaderboardUser {
   balance: number;
   lifetime_earned: number;
   rank: number;
+  light_info?: CommunityLightInfo;
 }
 
 export interface TopQuestion {
@@ -40,7 +50,6 @@ export function useLeaderboard() {
   const fetchLeaderboard = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Fetch all data in parallel — including suspended users
       const [balancesResult, profilesResult, suspensionsResult] = await Promise.all([
         supabase
           .from("camly_coin_balances")
@@ -52,7 +61,7 @@ export function useLeaderboard() {
         supabase
           .from("user_suspensions")
           .select("user_id")
-          .is("lifted_at", null), // Only active bans
+          .is("lifted_at", null),
       ]);
 
       const { data: balances, error: balancesError } = balancesResult;
@@ -61,22 +70,18 @@ export function useLeaderboard() {
       const { data: allProfiles, error: profilesError } = profilesResult;
       if (profilesError) throw profilesError;
 
-      // Build a Set of banned user IDs for fast O(1) lookup
       const suspendedUserIds = new Set(
         suspensionsResult.data?.map(s => s.user_id) || []
       );
 
-      // Create a map of profiles
       const profileMap = new Map(
         allProfiles?.map(p => [p.user_id, { display_name: p.display_name, avatar_url: p.avatar_url }]) || []
       );
 
-      // Combine all users — EXCLUDE banned users
       const combinedUsers: LeaderboardUser[] = [];
       
-      // First add all users from balances — skip banned
       balances?.forEach(balance => {
-        if (suspendedUserIds.has(balance.user_id)) return; // Skip banned users
+        if (suspendedUserIds.has(balance.user_id)) return;
         const profile = profileMap.get(balance.user_id);
         combinedUsers.push({
           user_id: balance.user_id,
@@ -88,9 +93,8 @@ export function useLeaderboard() {
         });
       });
 
-      // Add profiles that don't have balance records — skip banned
       allProfiles?.forEach(profile => {
-        if (suspendedUserIds.has(profile.user_id)) return; // Skip banned users
+        if (suspendedUserIds.has(profile.user_id)) return;
         const hasBalance = balances?.some(b => b.user_id === profile.user_id);
         if (!hasBalance) {
           combinedUsers.push({
@@ -104,23 +108,53 @@ export function useLeaderboard() {
         }
       });
 
-      // Sort by lifetime_earned
-      combinedUsers.sort((a, b) => b.lifetime_earned - a.lifetime_earned);
+      // Shuffle users randomly instead of sorting by coins (No Ego)
+      for (let i = combinedUsers.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [combinedUsers[i], combinedUsers[j]] = [combinedUsers[j], combinedUsers[i]];
+      }
 
-      // Assign ranks
       combinedUsers.forEach((user, index) => {
         user.rank = index + 1;
       });
 
+      // Fetch light levels for displayed users (top 10)
+      const displayUserIds = combinedUsers.slice(0, 10).map(u => u.user_id);
+      if (displayUserIds.length > 0) {
+        try {
+          const { data: lightData } = await supabase.rpc("get_community_light_summary", {
+            _user_ids: displayUserIds,
+          });
+
+          if (lightData && Array.isArray(lightData)) {
+            const lightMap = new Map(
+              lightData.map((l: any) => [l.user_id, {
+                level: l.level,
+                name_vi: l.name_vi,
+                name_en: l.name_en,
+                icon: l.icon,
+                color: l.color,
+                trend: l.trend,
+              }])
+            );
+
+            combinedUsers.forEach(user => {
+              const info = lightMap.get(user.user_id);
+              if (info) user.light_info = info;
+            });
+          }
+        } catch (e) {
+          console.warn("Could not fetch light levels:", e);
+        }
+      }
+
       setAllUsers(combinedUsers);
       setTopUsers(combinedUsers.slice(0, 10));
 
-      // Calculate stats - use profiles count as the source of truth for total members
-      // Total coins includes ALL users (including suspended) for transparency
+      // Stats
       const totalCoins = (balances || []).reduce((sum, b) => sum + (b.lifetime_earned || 0), 0);
       const activeUsers = combinedUsers.filter(u => u.lifetime_earned > 0).length;
 
-      // Count non-suspended profiles only
       let profilesCount: number | null = null;
       if (suspendedUserIds.size > 0) {
         const { count } = await supabase
@@ -141,7 +175,7 @@ export function useLeaderboard() {
         total_coins_distributed: totalCoins,
       });
 
-      // Fetch top questions by likes
+      // Fetch top questions
       const { data: questions, error: questionsError } = await supabase
         .from("chat_questions")
         .select("id, question_text, likes_count, user_id, created_at")
@@ -154,14 +188,13 @@ export function useLeaderboard() {
       if (questionsError) throw questionsError;
 
       if (questions && questions.length > 0) {
-        // Get profiles for question authors
         const questionUserIds = [...new Set(questions.map(q => q.user_id))];
         const { data: questionProfiles } = await supabase
           .from("profiles")
           .select("user_id, display_name, avatar_url")
           .in("user_id", questionUserIds);
 
-        const profileMap = new Map(
+        const qProfileMap = new Map(
           questionProfiles?.map(p => [p.user_id, p]) || []
         );
 
@@ -170,8 +203,8 @@ export function useLeaderboard() {
           question_text: q.question_text,
           likes_count: q.likes_count || 0,
           user_id: q.user_id,
-          user_display_name: profileMap.get(q.user_id)?.display_name || "Ẩn danh",
-          user_avatar_url: profileMap.get(q.user_id)?.avatar_url || null,
+          user_display_name: qProfileMap.get(q.user_id)?.display_name || "Ẩn danh",
+          user_avatar_url: qProfileMap.get(q.user_id)?.avatar_url || null,
           created_at: q.created_at,
         }));
 
@@ -188,59 +221,16 @@ export function useLeaderboard() {
     fetchLeaderboard();
   }, [fetchLeaderboard]);
 
-  // Subscribe to realtime updates
   useEffect(() => {
     const channel = supabase
       .channel("leaderboard_updates")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "camly_coin_balances",
-        },
-        () => {
-          fetchLeaderboard();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "chat_questions",
-        },
-        () => {
-          fetchLeaderboard();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "profiles",
-        },
-        () => {
-          fetchLeaderboard();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "user_suspensions",
-        },
-        () => {
-          fetchLeaderboard();
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "camly_coin_balances" }, () => fetchLeaderboard())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_questions" }, () => fetchLeaderboard())
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => fetchLeaderboard())
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_suspensions" }, () => fetchLeaderboard())
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [fetchLeaderboard]);
 
   return {
