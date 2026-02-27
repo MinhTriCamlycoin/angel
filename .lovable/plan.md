@@ -1,17 +1,21 @@
 
 
-## Vấn đề
-Tài khoản Tú Nguyễn có 12+ tín hiệu SYBIL (severity 3, device fingerprint match) chưa được giải quyết. Hệ thống anti-sybil đóng băng phần thưởng khi >= 3 signals chưa resolve.
+## Kế hoạch: Di chuyển bảng Cộng Đồng Ánh Sáng lên dưới Bảng Danh Dự
 
-## Giải pháp
+**File cần sửa:** `src/pages/Community.tsx`
 
-### Bước 1: Resolve tất cả fraud signals của Tú Nguyễn
-- UPDATE `pplp_fraud_signals` SET `is_resolved = true`, `resolution_notes = 'Device fingerprint false positive - verified real user'` cho tất cả signals chưa resolve của user này.
+### Thay đổi:
+Trong right sidebar, di chuyển component `<Leaderboard />` từ vị trí gần cuối lên ngay sau `<HonorBoard />` (trước `<CommunityGuidelinesCard />`).
 
-### Bước 2: Thêm vào fraud_whitelist
-- INSERT vào `fraud_whitelist` để tài khoản này bypass các kiểm tra gian lận trong tương lai, tương tự như đã làm với các tài khoản tin cậy khác (ANGEL ÁNH NGUYỆT, Hoàng Tỷ Đô).
-
-### Kết quả
-- Sau khi resolve signals, `checkAntiSybil()` sẽ trả `risk_level = 'clear'` và `reward_multiplier` bình thường theo account age gate.
-- User sẽ nhận thưởng câu hỏi, đăng bài, nhật ký như bình thường.
+**Thứ tự mới của right sidebar:**
+1. HonorBoard (Bảng Danh Dự)
+2. **Leaderboard (Cộng Đồng Ánh Sáng)** ← di chuyển lên đây
+3. CommunityGuidelinesCard (Nội Quy)
+4. GiftHonorBoard
+5. DonationHonorBoard
+6. GiftTransactionHistory
+7. Web3TransactionHistory
+8. CirclesSidebar
+9. SuggestedFriendsCard
+10. RewardRulesCard
 
