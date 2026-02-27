@@ -53,7 +53,16 @@ export async function checkAntiSybil(
     };
   }
 
-  // 2. Kiểm tra cổng thời gian tài khoản
+  // 2. Kiểm tra whitelist - nếu user đã whitelist thì bỏ qua fraud signals
+  const { data: whitelistEntry } = await supabase
+    .from('fraud_whitelist')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  const isWhitelisted = !!whitelistEntry;
+
+  // 3. Kiểm tra cổng thời gian tài khoản
   const { data: ageGate, error: ageError } = await supabase
     .rpc('get_account_age_gate', { _user_id: userId });
 
@@ -77,23 +86,25 @@ export async function checkAntiSybil(
     gate_level: 'new',
   };
 
-  // 3. Kiểm tra số fraud signals chưa xử lý gần đây
-  const { count: unresolvedSignals } = await supabase
-    .from('pplp_fraud_signals')
-    .select('*', { count: 'exact', head: true })
-    .eq('actor_id', userId)
-    .eq('is_resolved', false)
-    .gte('severity', 3);
-
+  // 4. Kiểm tra số fraud signals chưa xử lý gần đây (bỏ qua nếu whitelist)
   let riskLevel: 'clear' | 'monitoring' | 'frozen' | 'suspended' = 'clear';
   let rewardMultiplier = gate.reward_multiplier;
 
-  if (unresolvedSignals && unresolvedSignals >= 3) {
-    riskLevel = 'frozen';
-    rewardMultiplier = 0; // Đóng băng phần thưởng
-  } else if (unresolvedSignals && unresolvedSignals >= 1) {
-    riskLevel = 'monitoring';
-    rewardMultiplier = Math.min(rewardMultiplier, 0.5); // Giảm tối đa 50%
+  if (!isWhitelisted) {
+    const { count: unresolvedSignals } = await supabase
+      .from('pplp_fraud_signals')
+      .select('*', { count: 'exact', head: true })
+      .eq('actor_id', userId)
+      .eq('is_resolved', false)
+      .gte('severity', 3);
+
+    if (unresolvedSignals && unresolvedSignals >= 3) {
+      riskLevel = 'frozen';
+      rewardMultiplier = 0;
+    } else if (unresolvedSignals && unresolvedSignals >= 1) {
+      riskLevel = 'monitoring';
+      rewardMultiplier = Math.min(rewardMultiplier, 0.5);
+    }
   }
 
   console.log(`[AntiSybil] User ${userId.slice(0, 8)}...: age=${gate.account_age_days}d, gate=${gate.gate_level}, risk=${riskLevel}, multiplier=${rewardMultiplier}`);
@@ -152,6 +163,14 @@ export async function registerDeviceAndIp(
   ipHash: string | null
 ): Promise<void> {
   try {
+    // Kiểm tra whitelist trước - nếu user đã whitelist thì không tạo fraud signal
+    const { data: wlEntry } = await supabase
+      .from('fraud_whitelist')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    const isWhitelisted = !!wlEntry;
+
     // Register device fingerprint if provided
     if (deviceHash) {
       await supabase.rpc("register_device_fingerprint", {
@@ -182,8 +201,8 @@ export async function registerDeviceAndIp(
           { onConflict: "device_hash,user_id" }
         );
 
-      // If same IP used by 2+ other users, create fraud signal
-      if (ipUsers && ipUsers.length >= 2) {
+      // If same IP used by 2+ other users AND user is not whitelisted, create fraud signal
+      if (ipUsers && ipUsers.length >= 2 && !isWhitelisted) {
         await supabase.from("pplp_fraud_signals").insert({
           actor_id: userId,
           signal_type: "SYBIL",
