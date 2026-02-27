@@ -16,6 +16,8 @@ import { ShieldCheck, ShieldAlert, Loader2, ArrowRightLeft, CheckSquare } from "
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
+import { getProfilePath } from "@/lib/profileUrl";
 
 interface WhitelistEntry {
   id: string;
@@ -23,7 +25,7 @@ interface WhitelistEntry {
   reason: string;
   whitelisted_by: string | null;
   created_at: string;
-  profile?: { display_name: string | null; avatar_url: string | null };
+  profile?: { display_name: string | null; avatar_url: string | null; handle?: string | null };
   confirmer?: { display_name: string | null };
 }
 
@@ -35,7 +37,7 @@ interface BlacklistGroup {
   details: string[];
   first_detected: string;
   last_detected: string;
-  profile?: { display_name: string | null; avatar_url: string | null };
+  profile?: { display_name: string | null; avatar_url: string | null; handle?: string | null };
 }
 
 const SIGNAL_TYPE_VI: Record<string, string> = {
@@ -101,7 +103,7 @@ const AdminTrustList = () => {
     const { data } = await supabase.from("fraud_whitelist").select("*").order("created_at", { ascending: false });
     if (!data) return;
     const userIds = [...new Set([...data.map(d => d.user_id), ...data.filter(d => d.whitelisted_by).map(d => d.whitelisted_by!)])];
-    const { data: profiles } = await supabase.from("profiles").select("user_id, display_name, avatar_url").in("user_id", userIds);
+    const { data: profiles } = await supabase.from("profiles").select("user_id, display_name, avatar_url, handle").in("user_id", userIds);
     const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
     setWhitelist(data.map(entry => ({
       ...entry,
@@ -133,7 +135,7 @@ const AdminTrustList = () => {
       }
     }
     const actorIds = Array.from(grouped.keys());
-    const { data: profiles } = await supabase.from("profiles").select("user_id, display_name, avatar_url").in("user_id", actorIds);
+    const { data: profiles } = await supabase.from("profiles").select("user_id, display_name, avatar_url, handle").in("user_id", actorIds);
     const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
     setBlacklist(Array.from(grouped.values()).map(g => ({ ...g, profile: profileMap.get(g.actor_id) || undefined })).sort((a, b) => b.signal_count - a.signal_count));
   };
@@ -310,10 +312,13 @@ const AdminTrustList = () => {
                           <Checkbox checked={selectedWL.has(entry.user_id)} onCheckedChange={() => toggleWL(entry.user_id)} />
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
+                          <Link to={getProfilePath(entry.user_id, entry.profile?.handle)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                             <Avatar className="w-8 h-8"><AvatarImage src={entry.profile?.avatar_url || ""} /><AvatarFallback>{(entry.profile?.display_name || "?")[0]}</AvatarFallback></Avatar>
-                            <span className="font-medium">{entry.profile?.display_name || entry.user_id.slice(0, 8)}</span>
-                          </div>
+                            <div>
+                              <div className="font-medium">{entry.profile?.display_name || entry.user_id.slice(0, 8)}</div>
+                              <div className="text-xs text-muted-foreground">{entry.profile?.handle ? `@${entry.profile.handle}` : entry.user_id.slice(0, 8)}</div>
+                            </div>
+                          </Link>
                         </TableCell>
                         <TableCell className="max-w-xs truncate">{entry.reason}</TableCell>
                         <TableCell>{entry.confirmer?.display_name || entry.whitelisted_by?.slice(0, 8) || "—"}</TableCell>
@@ -363,10 +368,13 @@ const AdminTrustList = () => {
                           <Checkbox checked={selectedBL.has(group.actor_id)} onCheckedChange={() => toggleBL(group.actor_id)} />
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
+                          <Link to={getProfilePath(group.actor_id, group.profile?.handle)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                             <Avatar className="w-8 h-8"><AvatarImage src={group.profile?.avatar_url || ""} /><AvatarFallback>{(group.profile?.display_name || "?")[0]}</AvatarFallback></Avatar>
-                            <span className="font-medium">{group.profile?.display_name || group.actor_id.slice(0, 8)}</span>
-                          </div>
+                            <div>
+                              <div className="font-medium">{group.profile?.display_name || group.actor_id.slice(0, 8)}</div>
+                              <div className="text-xs text-muted-foreground">{group.profile?.handle ? `@${group.profile.handle}` : group.actor_id.slice(0, 8)}</div>
+                            </div>
+                          </Link>
                         </TableCell>
                         <TableCell><Badge variant="destructive">{group.signal_count}</Badge></TableCell>
                         <TableCell>
