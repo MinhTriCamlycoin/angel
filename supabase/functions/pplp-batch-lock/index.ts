@@ -181,8 +181,8 @@ serve(async (req) => {
 
     if (!pendingRequests || pendingRequests.length === 0) {
       return new Response(
-        JSON.stringify({ error: "No pending mint requests found", actor_id, wallet_address }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: true, skipped: true, message: "No pending mint requests found", actor_id, wallet_address, actions_count: 0 }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

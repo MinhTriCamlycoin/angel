@@ -391,14 +391,10 @@ export default function AdminMintApproval() {
         });
 
         if (error) {
-          // Check if it's a 404 "no pending requests" — means already processed, skip gracefully
-          const errMsg = await extractErrorBody(error);
-          if (errMsg.includes("No pending mint requests found")) {
-            console.log(`[Batch] ⏭ ${group.display_name}: đã xử lý trước đó, bỏ qua`);
-            successCount++;
-          } else {
-            throw error;
-          }
+          throw error;
+        } else if (data?.skipped) {
+          console.log(`[Batch] ⏭ ${group.display_name}: đã xử lý trước đó, bỏ qua`);
+          successCount++;
         } else if (data?.success) {
           successCount++;
           totalMinted += data.user_amount || 0;
