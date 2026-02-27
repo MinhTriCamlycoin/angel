@@ -390,9 +390,16 @@ export default function AdminMintApproval() {
           body: { actor_id: group.actor_id, wallet_address: group.wallet },
         });
 
-        if (error) throw error;
-
-        if (data?.success) {
+        if (error) {
+          // Check if it's a 404 "no pending requests" — means already processed, skip gracefully
+          const errMsg = await extractErrorBody(error);
+          if (errMsg.includes("No pending mint requests found")) {
+            console.log(`[Batch] ⏭ ${group.display_name}: đã xử lý trước đó, bỏ qua`);
+            successCount++;
+          } else {
+            throw error;
+          }
+        } else if (data?.success) {
           successCount++;
           totalMinted += data.user_amount || 0;
           console.log(`[Batch] ✓ ${group.display_name}: ${group.requests.length} actions → TX: ${data.tx_hash}`);
