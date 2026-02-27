@@ -1403,7 +1403,10 @@ export type Database = {
         Row: {
           anti_farm_risk: number | null
           avg_rating_weighted: number | null
+          base_action_score: number | null
+          consistency_multiplier: number | null
           consistency_streak: number | null
+          content_score: number | null
           count_comments: number | null
           count_help: number | null
           count_journals: number | null
@@ -1411,16 +1414,23 @@ export type Database = {
           count_posts: number | null
           count_questions: number | null
           count_reports_valid: number | null
+          daily_light_score: number | null
           date: string
+          integrity_penalty: number | null
           onchain_value_score: number | null
+          reputation_weight: number | null
           sequence_count: number | null
+          sequence_multiplier: number | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           anti_farm_risk?: number | null
           avg_rating_weighted?: number | null
+          base_action_score?: number | null
+          consistency_multiplier?: number | null
           consistency_streak?: number | null
+          content_score?: number | null
           count_comments?: number | null
           count_help?: number | null
           count_journals?: number | null
@@ -1428,16 +1438,23 @@ export type Database = {
           count_posts?: number | null
           count_questions?: number | null
           count_reports_valid?: number | null
+          daily_light_score?: number | null
           date: string
+          integrity_penalty?: number | null
           onchain_value_score?: number | null
+          reputation_weight?: number | null
           sequence_count?: number | null
+          sequence_multiplier?: number | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           anti_farm_risk?: number | null
           avg_rating_weighted?: number | null
+          base_action_score?: number | null
+          consistency_multiplier?: number | null
           consistency_streak?: number | null
+          content_score?: number | null
           count_comments?: number | null
           count_help?: number | null
           count_journals?: number | null
@@ -1445,9 +1462,13 @@ export type Database = {
           count_posts?: number | null
           count_questions?: number | null
           count_reports_valid?: number | null
+          daily_light_score?: number | null
           date?: string
+          integrity_penalty?: number | null
           onchain_value_score?: number | null
+          reputation_weight?: number | null
           sequence_count?: number | null
+          sequence_multiplier?: number | null
           updated_at?: string | null
           user_id?: string
         }
@@ -2887,8 +2908,10 @@ export type Database = {
           allocation_ratio: number
           created_at: string
           cycle_id: string
+          eligible: boolean | null
           fun_allocated: number
           id: string
+          ineligibility_reason: string | null
           status: string
           updated_at: string
           user_id: string
@@ -2898,8 +2921,10 @@ export type Database = {
           allocation_ratio?: number
           created_at?: string
           cycle_id: string
+          eligible?: boolean | null
           fun_allocated?: number
           id?: string
+          ineligibility_reason?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -2909,8 +2934,10 @@ export type Database = {
           allocation_ratio?: number
           created_at?: string
           cycle_id?: string
+          eligible?: boolean | null
           fun_allocated?: number
           id?: string
+          ineligibility_reason?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -4659,6 +4686,17 @@ export type Database = {
           message: string
         }[]
       }
+      check_mint_eligibility: {
+        Args: { _epoch_end: string; _epoch_start: string; _user_id: string }
+        Returns: {
+          avg_risk: number
+          eligible: boolean
+          epoch_score: number
+          has_cluster_review: boolean
+          pplp_accepted: boolean
+          reason: string
+        }[]
+      }
       check_user_cap_and_update: {
         Args: { _action_type: string; _reward_amount: number; _user_id: string }
         Returns: Json
@@ -4674,6 +4712,23 @@ export type Database = {
       }
       cleanup_expired_posts: { Args: never; Returns: undefined }
       cleanup_expired_stories: { Args: never; Returns: undefined }
+      compute_content_pillar_score: {
+        Args: { _content_id: string; _gamma?: number; _min_ratings?: number }
+        Returns: {
+          is_fallback: boolean
+          pillar_scores: number[]
+          rating_count: number
+          total_score: number
+        }[]
+      }
+      compute_daily_light_score: {
+        Args: { _date?: string; _user_id: string }
+        Returns: number
+      }
+      compute_epoch_light_score: {
+        Args: { _epoch_end: string; _epoch_start: string; _user_id: string }
+        Returns: number
+      }
       compute_light_score_ledger: {
         Args: {
           _end: string
@@ -4684,6 +4739,15 @@ export type Database = {
         Returns: string
       }
       compute_policy_hash: { Args: { _policy_json: Json }; Returns: string }
+      compute_reputation_weight_v2: {
+        Args: {
+          _alpha?: number
+          _user_id: string
+          _w_max?: number
+          _w_min?: number
+        }
+        Returns: number
+      }
       detect_behavior_sequences: {
         Args: { _action_id: string; _action_type: string; _user_id: string }
         Returns: Json
