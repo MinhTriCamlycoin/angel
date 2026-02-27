@@ -75,7 +75,7 @@ const LightCommunity = () => {
 
           <div className="flex items-center gap-2">
             <span className="text-xl">✨</span>
-            <RainbowTitle text="LIGHT COMMUNITY" className="text-xl md:text-2xl" />
+            <RainbowTitle text="LIGHT COMMUNITY" className="text-3xl md:text-4xl" />
             <Users className="w-6 h-6 text-muted-foreground" />
           </div>
 
