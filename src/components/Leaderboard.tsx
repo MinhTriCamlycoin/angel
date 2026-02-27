@@ -1,21 +1,23 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Trophy, Sparkles, Coins, Users } from "lucide-react";
+import { Trophy, Sparkles, Coins, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import angelLogo from "@/assets/angel-ai-logo.png";
 import { TopRankingHero } from "@/components/leaderboard/TopRankingHero";
+import { RankingRow } from "@/components/leaderboard/RankingRow";
 import { RainbowTitle } from "@/components/leaderboard/RainbowTitle";
 import { LeaderboardFloatingEffects } from "@/components/leaderboard/LeaderboardEffects";
 
 export function Leaderboard() {
-  const { topUsers, stats, isLoading } = useLeaderboard();
+  const { topUsers, allUsers, stats, isLoading } = useLeaderboard();
   const { t } = useLanguage();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showMore, setShowMore] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -108,7 +110,53 @@ export function Leaderboard() {
 
         {/* Community Members - No ranking */}
         {topUsers.length > 0 ? (
-          <TopRankingHero topUsers={topUsers} />
+          <>
+            <TopRankingHero topUsers={topUsers} />
+            
+            {/* Expandable member list */}
+            {allUsers.length > 6 && (
+              <>
+                <AnimatePresence>
+                  {showMore && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="mt-2 space-y-1.5 overflow-hidden"
+                    >
+                      {allUsers.slice(6, 20).map((user) => (
+                        <RankingRow
+                          key={user.user_id}
+                          user={user}
+                          isCurrentUser={user.user_id === currentUserId}
+                        />
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowMore(!showMore)}
+                  className="w-full mt-2 text-xs text-muted-foreground hover:text-primary"
+                >
+                  {showMore ? (
+                    <>
+                      <ChevronUp className="w-3.5 h-3.5 mr-1" />
+                      {t("common.showLess") || "Thu gọn"}
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-3.5 h-3.5 mr-1" />
+                      {t("common.showMore") || "Xem thêm"} ({allUsers.length - 6})
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </>
         ) : (
           <div className="text-center py-6 text-foreground-muted">
             <Sparkles className="w-8 h-8 mx-auto mb-2 text-amber-300" />
