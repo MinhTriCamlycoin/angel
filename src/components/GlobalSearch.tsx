@@ -168,14 +168,49 @@ export function GlobalSearch({
     try {
       // Community variant: search users only
       if (variant === "community") {
-        const { data, error: dbError } = await supabase
+        const trimmed = searchQuery.trim();
+        
+        // Search by display_name and handle
+        const profilesPromise = supabase
           .from("profiles")
           .select("user_id, display_name, avatar_url, bio, handle")
-          .ilike("display_name", `%${searchQuery.trim()}%`)
+          .or(`display_name.ilike.%${trimmed}%,handle.ilike.%${trimmed}%`)
           .limit(15);
 
-        if (dbError) throw dbError;
-        setUserResults(data || []);
+        // Search by wallet address
+        const walletsPromise = supabase
+          .from("user_wallet_addresses")
+          .select("user_id, wallet_address")
+          .ilike("wallet_address", `%${trimmed}%`)
+          .limit(5);
+
+        const [profilesRes, walletsRes] = await Promise.all([profilesPromise, walletsPromise]);
+        if (profilesRes.error) throw profilesRes.error;
+
+        const userMap = new Map<string, UserResult>();
+        for (const u of (profilesRes.data || [])) {
+          userMap.set(u.user_id, u);
+        }
+
+        // Fetch profiles for wallet matches not already in results
+        if (walletsRes.data && walletsRes.data.length > 0) {
+          const walletUserIds = walletsRes.data
+            .map(w => w.user_id)
+            .filter(id => !userMap.has(id));
+
+          if (walletUserIds.length > 0) {
+            const { data: walletProfiles } = await supabase
+              .from("profiles")
+              .select("user_id, display_name, avatar_url, bio, handle")
+              .in("user_id", walletUserIds);
+
+            for (const p of (walletProfiles || [])) {
+              userMap.set(p.user_id, p);
+            }
+          }
+        }
+
+        setUserResults(Array.from(userMap.values()));
         setResults(null);
       } else {
         // Default: global search via edge function
