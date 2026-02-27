@@ -1516,6 +1516,30 @@ export type Database = {
         }
         Relationships: []
       }
+      fraud_whitelist: {
+        Row: {
+          created_at: string
+          id: string
+          reason: string
+          user_id: string
+          whitelisted_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason?: string
+          user_id: string
+          whitelisted_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason?: string
+          user_id?: string
+          whitelisted_by?: string | null
+        }
+        Relationships: []
+      }
       friendships: {
         Row: {
           addressee_id: string
