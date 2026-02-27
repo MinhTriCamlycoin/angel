@@ -118,8 +118,8 @@ export function useLeaderboard() {
         user.rank = index + 1;
       });
 
-      // Fetch light levels for displayed users (top 10)
-      const displayUserIds = combinedUsers.slice(0, 10).map(u => u.user_id);
+      // Fetch light levels for all displayed users
+      const displayUserIds = combinedUsers.map(u => u.user_id);
       if (displayUserIds.length > 0) {
         try {
           const { data: lightData } = await supabase.rpc("get_community_light_summary", {
@@ -149,7 +149,7 @@ export function useLeaderboard() {
       }
 
       setAllUsers(combinedUsers);
-      setTopUsers(combinedUsers.slice(0, 10));
+      setTopUsers(combinedUsers.slice(0, 9));
 
       // Stats
       const totalCoins = (balances || []).reduce((sum, b) => sum + (b.lifetime_earned || 0), 0);

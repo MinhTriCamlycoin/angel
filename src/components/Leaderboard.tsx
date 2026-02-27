@@ -125,7 +125,7 @@ export function Leaderboard() {
                       transition={{ duration: 0.3 }}
                       className="mt-2 space-y-1.5 overflow-hidden"
                     >
-                      {allUsers.slice(9, 30).map((user) => (
+                      {allUsers.slice(9).map((user) => (
                         <RankingRow
                           key={user.user_id}
                           user={user}
@@ -150,7 +150,7 @@ export function Leaderboard() {
                   ) : (
                     <>
                       <ChevronDown className="w-3.5 h-3.5 mr-1" />
-                      {t("common.showMore") || "Xem thêm"} ({Math.min(allUsers.length - 9, 21)})
+                      {t("common.showMore") || "Xem thêm"} ({allUsers.length - 9})
                     </>
                   )}
                 </Button>

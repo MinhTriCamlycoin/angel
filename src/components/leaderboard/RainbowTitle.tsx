@@ -1,12 +1,13 @@
 import { motion } from "framer-motion";
 
 // Rainbow 3D sparkling text component
-export function RainbowTitle({ text }: { text: string }) {
+export function RainbowTitle({ text, className }: { text: string; className?: string }) {
+  const textClass = `font-black text-lg md:text-xl tracking-wider uppercase select-none ${className || ""}`;
   return (
     <div className="relative inline-block">
       {/* 3D shadow layers */}
       <span
-        className="absolute inset-0 font-black text-lg md:text-xl tracking-wider uppercase whitespace-nowrap select-none"
+        className={`absolute inset-0 ${textClass}`}
         style={{
           WebkitTextStroke: "1px rgba(0,0,0,0.15)",
           color: "transparent",
@@ -20,7 +21,7 @@ export function RainbowTitle({ text }: { text: string }) {
 
       {/* Main rainbow text */}
       <motion.span
-        className="relative font-black text-lg md:text-xl tracking-wider uppercase whitespace-nowrap"
+        className={`relative ${textClass}`}
         style={{
           backgroundImage: "linear-gradient(90deg, #FF0000, #FF7F00, #FFFF00, #00FF00, #0000FF, #4B0082, #9400D3, #FF0000, #FF7F00, #FFFF00, #00FF00)",
           backgroundSize: "200% 100%",
@@ -44,7 +45,7 @@ export function RainbowTitle({ text }: { text: string }) {
 
       {/* Shimmer overlay */}
       <motion.span
-        className="absolute inset-0 font-black text-lg md:text-xl tracking-wider uppercase whitespace-nowrap pointer-events-none"
+        className={`absolute inset-0 ${textClass} pointer-events-none`}
         style={{
           backgroundImage: "linear-gradient(90deg, transparent 30%, rgba(255,255,255,0.9) 50%, transparent 70%)",
           backgroundSize: "200% 100%",

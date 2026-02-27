@@ -121,7 +121,7 @@ export function TopRankingHero({ topUsers }: TopRankingHeroProps) {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <RainbowTitle text={`✨ ${t("leaderboard.topRanking")} ✨`} />
+          <RainbowTitle text={`✨ ${t("leaderboard.topRanking")} ✨`} className="text-sm md:text-base" />
         </motion.h2>
 
         {/* Community Members Grid - No ranks, no coins */}
