@@ -262,9 +262,9 @@ const translations: Record<string, string> = {
   "common.viewAll": "عرض الكل",
   "common.collapse": "طي",
 
-  // Leaderboard
-  "leaderboard.title": "لوحة المتصدرين",
-  "leaderboard.topRanking": "أفضل ترتيب",
+  // Leaderboard / Light Community
+  "leaderboard.title": "مجتمع النور",
+  "leaderboard.topRanking": "مجتمع النور",
   "leaderboard.topCamlyCoin": "أعلى Camly Coin",
   "leaderboard.topQuestions": "أفضل الأسئلة",
   "leaderboard.noQuestions": "لا توجد أسئلة شعبية بعد",

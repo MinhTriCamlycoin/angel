@@ -270,9 +270,9 @@ const translations: Record<string, string> = {
   "common.viewAll": "すべて表示",
   "common.collapse": "折りたたむ",
 
-  // Leaderboard
-  "leaderboard.title": "リーダーボード",
-  "leaderboard.topRanking": "トップランキング",
+  // Leaderboard / Light Community
+  "leaderboard.title": "光のコミュニティ",
+  "leaderboard.topRanking": "光のコミュニティ",
   "leaderboard.topCamlyCoin": "トップCamly Coin",
   "leaderboard.topQuestions": "トップ質問",
   "leaderboard.noQuestions": "まだいいねされた質問がありません",

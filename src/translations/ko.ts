@@ -270,9 +270,9 @@ const translations: Record<string, string> = {
   "common.viewAll": "전체 보기",
   "common.collapse": "접기",
 
-  // Leaderboard
-  "leaderboard.title": "리더보드",
-  "leaderboard.topRanking": "최고 순위",
+  // Leaderboard / Light Community
+  "leaderboard.title": "빛의 커뮤니티",
+  "leaderboard.topRanking": "빛의 커뮤니티",
   "leaderboard.topCamlyCoin": "탑 Camly Coin",
   "leaderboard.topQuestions": "탑 질문",
   "leaderboard.noQuestions": "아직 좋아요된 질문 없음",

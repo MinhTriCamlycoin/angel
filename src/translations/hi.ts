@@ -270,9 +270,9 @@ const translations: Record<string, string> = {
   "common.viewAll": "सभी देखें",
   "common.collapse": "संक्षिप्त करें",
 
-  // Leaderboard
-  "leaderboard.title": "लीडरबोर्ड",
-  "leaderboard.topRanking": "शीर्ष रैंकिंग",
+  // Leaderboard / Light Community
+  "leaderboard.title": "प्रकाश समुदाय",
+  "leaderboard.topRanking": "प्रकाश समुदाय",
   "leaderboard.topCamlyCoin": "टॉप Camly Coin",
   "leaderboard.topQuestions": "टॉप प्रश्न",
   "leaderboard.noQuestions": "अभी तक कोई पसंद किए गए प्रश्न नहीं",

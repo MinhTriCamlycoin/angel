@@ -266,9 +266,9 @@ const translations: Record<string, string> = {
   "common.viewAll": "查看全部",
   "common.collapse": "收起",
 
-  // Leaderboard
-  "leaderboard.title": "排行榜",
-  "leaderboard.topRanking": "顶级排名",
+  // Leaderboard / Light Community
+  "leaderboard.title": "光之社区",
+  "leaderboard.topRanking": "光之社区",
   "leaderboard.topCamlyCoin": "Camly Coin榜",
   "leaderboard.topQuestions": "热门问题",
   "leaderboard.noQuestions": "暂无热门问题",

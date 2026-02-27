@@ -270,9 +270,9 @@ const translations: Record<string, string> = {
   "common.viewAll": "Смотреть все",
   "common.collapse": "Свернуть",
 
-  // Leaderboard
-  "leaderboard.title": "Таблица лидеров",
-  "leaderboard.topRanking": "ЛУЧШИЙ РЕЙТИНГ",
+  // Leaderboard / Light Community
+  "leaderboard.title": "Сообщество Света",
+  "leaderboard.topRanking": "СООБЩЕСТВО СВЕТА",
   "leaderboard.topCamlyCoin": "Топ Camly Coin",
   "leaderboard.topQuestions": "Топ вопросов",
   "leaderboard.noQuestions": "Пока нет понравившихся вопросов",

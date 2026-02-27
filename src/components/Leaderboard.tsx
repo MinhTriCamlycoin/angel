@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Trophy, ChevronDown, ChevronUp, Sparkles, Coins, Users } from "lucide-react";
+import { Trophy, Sparkles, Coins, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
@@ -9,14 +9,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import angelLogo from "@/assets/angel-ai-logo.png";
 import { TopRankingHero } from "@/components/leaderboard/TopRankingHero";
-import { RankingRow } from "@/components/leaderboard/RankingRow";
 import { RainbowTitle } from "@/components/leaderboard/RainbowTitle";
 import { LeaderboardFloatingEffects } from "@/components/leaderboard/LeaderboardEffects";
 
 export function Leaderboard() {
-  const { topUsers, stats, isLoading, allUsers } = useLeaderboard();
+  const { topUsers, stats, isLoading } = useLeaderboard();
   const { t } = useLanguage();
-  const [showAll, setShowAll] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -26,9 +24,6 @@ export function Leaderboard() {
     };
     getUser();
   }, []);
-
-  // Show all users when expanded
-  const displayUsers = showAll ? allUsers : topUsers.slice(0, 5);
 
   if (isLoading) {
     return (
@@ -52,13 +47,11 @@ export function Leaderboard() {
 
   return (
     <Card className="bg-white/30 backdrop-blur-sm border-white/40 shadow-lg overflow-hidden relative">
-      {/* Floating effects in the main card */}
       <LeaderboardFloatingEffects />
 
       <CardContent className="p-3 md:p-4 relative z-10">
-        {/* Compact Header with Logo and Rainbow Title */}
+        {/* Header with Logo and Title */}
         <div className="flex items-center justify-center gap-2 mb-3">
-          {/* Logo with Glow Effect */}
           <motion.div
             className="relative"
             animate={{ 
@@ -76,7 +69,6 @@ export function Leaderboard() {
               </div>
             </div>
             
-            {/* Sparkle Effects */}
             <motion.div
               className="absolute -top-0.5 -right-0.5"
               animate={{ opacity: [0, 1, 0], scale: [0.8, 1.2, 0.8] }}
@@ -86,11 +78,10 @@ export function Leaderboard() {
             </motion.div>
           </motion.div>
 
-          {/* Rainbow 3D Title */}
           <RainbowTitle text={t("leaderboard.topRanking")} />
         </div>
 
-        {/* Compact Stats Bar */}
+        {/* Stats Bar - Keep ecosystem stats */}
         <div className="flex items-center justify-center gap-3 mb-3 p-2 rounded-lg bg-gradient-to-r from-amber-100/50 via-yellow-50 to-amber-100/50 border border-amber-200/50">
           <div className="flex items-center gap-1.5">
             <div className="w-6 h-6 rounded-full bg-gradient-to-b from-amber-400 to-amber-600 flex items-center justify-center shadow-sm">
@@ -115,50 +106,13 @@ export function Leaderboard() {
           </div>
         </div>
 
-        {/* Hero Zone - Top 5 Trophy Display */}
+        {/* Community Members - No ranking */}
         {topUsers.length > 0 ? (
           <TopRankingHero topUsers={topUsers} />
         ) : (
           <div className="text-center py-6 text-foreground-muted">
             <Sparkles className="w-8 h-8 mx-auto mb-2 text-amber-300" />
             <p className="text-sm">{t("common.noData")}</p>
-          </div>
-        )}
-
-        {/* Ranking List - Only show when expanded (users beyond top 5) */}
-        {showAll && allUsers.length > 5 && (
-          <div className="space-y-2 mt-4">
-            {allUsers.slice(5).map(user => (
-              <RankingRow
-                key={user.user_id}
-                user={user}
-                isCurrentUser={user.user_id === currentUserId}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* View All Button - only show if there are users beyond top 5 */}
-        {allUsers.length > 5 && (
-          <div className="mt-4 text-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAll(!showAll)}
-              className="text-primary hover:text-primary-deep hover:bg-amber-50"
-            >
-              {showAll ? (
-                <>
-                  <ChevronUp className="w-4 h-4 mr-1" />
-                  {t("leaderboard.collapse")}
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-4 h-4 mr-1" />
-                  {t("leaderboard.viewMore")} ({allUsers.length - 5} {t("common.people")})
-                </>
-              )}
-            </Button>
           </div>
         )}
 
