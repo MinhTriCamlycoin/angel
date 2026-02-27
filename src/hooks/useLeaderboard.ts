@@ -108,11 +108,23 @@ export function useLeaderboard() {
         }
       });
 
-      // Shuffle users randomly instead of sorting by coins (No Ego)
-      for (let i = combinedUsers.length - 1; i > 0; i--) {
+      // Separate named users and anonymous users
+      const namedUsers = combinedUsers.filter(u => u.display_name && u.display_name.trim() !== "");
+      const anonymousUsers = combinedUsers.filter(u => !u.display_name || u.display_name.trim() === "");
+
+      // Shuffle each group randomly (No Ego)
+      for (let i = namedUsers.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [combinedUsers[i], combinedUsers[j]] = [combinedUsers[j], combinedUsers[i]];
+        [namedUsers[i], namedUsers[j]] = [namedUsers[j], namedUsers[i]];
       }
+      for (let i = anonymousUsers.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [anonymousUsers[i], anonymousUsers[j]] = [anonymousUsers[j], anonymousUsers[i]];
+      }
+
+      // Named users first, anonymous last
+      combinedUsers.length = 0;
+      combinedUsers.push(...namedUsers, ...anonymousUsers);
 
       combinedUsers.forEach((user, index) => {
         user.rank = index + 1;
