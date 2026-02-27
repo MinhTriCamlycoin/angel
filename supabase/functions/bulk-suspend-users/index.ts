@@ -112,6 +112,13 @@ serve(async (req) => {
           .update({ is_reviewed: true, reviewed_by: adminUser.id, reviewed_at: new Date().toISOString(), action_taken: "banned" })
           .eq("user_id", userId);
 
+        // Resolve all fraud signals
+        await supabase
+          .from("pplp_fraud_signals")
+          .update({ is_resolved: true, resolved_at: new Date().toISOString(), resolved_by: adminUser.id, resolution_notes: "Auto-resolved: permanent ban applied" })
+          .eq("actor_id", userId)
+          .eq("is_resolved", false);
+
         results.banned.push(userId);
       } catch (e) {
         console.error(`Error processing ${userId}:`, e);
