@@ -4217,6 +4217,10 @@ export type Database = {
       cleanup_expired_posts: { Args: never; Returns: undefined }
       cleanup_expired_stories: { Args: never; Returns: undefined }
       compute_policy_hash: { Args: { _policy_json: Json }; Returns: string }
+      detect_behavior_sequences: {
+        Args: { _action_id: string; _action_type: string; _user_id: string }
+        Returns: Json
+      }
       detect_coordinated_timing: {
         Args: never
         Returns: {
@@ -4419,6 +4423,7 @@ export type Database = {
           transaction_type: string
         }[]
       }
+      get_user_light_level: { Args: { _user_id: string }; Returns: Json }
       get_user_pplp_stats: {
         Args: { _user_id: string }
         Returns: {
