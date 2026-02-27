@@ -50,7 +50,7 @@ export function AddFUNToWalletButton() {
         after:absolute after:inset-0 after:rounded-full after:shadow-[inset_0_1px_2px_rgba(255,255,255,0.4)] after:pointer-events-none"
     >
       <Plus className="h-5 w-5" strokeWidth={3} />
-      <span className="relative z-10">Thêm FUN vào ví</span>
+      <span className="relative z-10">Thêm Contract FUN Money vào ví</span>
     </button>
   );
 }
