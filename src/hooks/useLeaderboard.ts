@@ -14,6 +14,7 @@ export interface LeaderboardUser {
   user_id: string;
   display_name: string | null;
   avatar_url: string | null;
+  handle: string | null;
   balance: number;
   lifetime_earned: number;
   rank: number;
@@ -57,7 +58,7 @@ export function useLeaderboard() {
           .order("lifetime_earned", { ascending: false }),
         supabase
           .from("profiles")
-          .select("user_id, display_name, avatar_url"),
+          .select("user_id, display_name, avatar_url, handle"),
         supabase
           .from("user_suspensions")
           .select("user_id")
@@ -75,7 +76,7 @@ export function useLeaderboard() {
       );
 
       const profileMap = new Map(
-        allProfiles?.map(p => [p.user_id, { display_name: p.display_name, avatar_url: p.avatar_url }]) || []
+        allProfiles?.map(p => [p.user_id, { display_name: p.display_name, avatar_url: p.avatar_url, handle: p.handle }]) || []
       );
 
       const combinedUsers: LeaderboardUser[] = [];
@@ -87,6 +88,7 @@ export function useLeaderboard() {
           user_id: balance.user_id,
           display_name: profile?.display_name || null,
           avatar_url: profile?.avatar_url || null,
+          handle: profile?.handle || null,
           balance: balance.balance || 0,
           lifetime_earned: balance.lifetime_earned || 0,
           rank: 0,
@@ -101,6 +103,7 @@ export function useLeaderboard() {
             user_id: profile.user_id,
             display_name: profile.display_name,
             avatar_url: profile.avatar_url,
+            handle: profile.handle || null,
             balance: 0,
             lifetime_earned: 0,
             rank: 0,
