@@ -17,6 +17,7 @@ import {
   Image,
   Gift,
   Shield,
+  ShieldCheck,
   FileBarChart,
   Siren,
   Vault,
@@ -46,6 +47,7 @@ const navGroups: NavGroup[] = [
       { to: "/admin/tet-reward", icon: Gift, label: "Thưởng Tết" },
       { to: "/admin/knowledge", icon: MessageSquare, label: "Kiến thức" },
       { to: "/admin/ideas", icon: Zap, label: "Ý tưởng" },
+      { to: "/admin/trust-list", icon: ShieldCheck, label: "WL/BL" },
     ],
   },
   {
