@@ -21,6 +21,9 @@ interface LedgerEntry {
   level: string;
   explain_ref: string | null;
   computed_at: string;
+  rule_version: string | null;
+  reason_codes: string[] | null;
+  trend: string | null;
 }
 
 interface Explanation {
@@ -129,6 +132,11 @@ export function ScoreExplanationPanel() {
                     <span>Rep: ×{Number(entry.reputation_weight).toFixed(2)}</span>
                     <span>Consistency: ×{Number(entry.consistency_multiplier).toFixed(2)}</span>
                     <span>Sequence: ×{Number(entry.sequence_multiplier).toFixed(2)}</span>
+                    {entry.rule_version && (
+                      <span className="col-span-2 text-[10px] bg-muted px-1.5 py-0.5 rounded w-fit">
+                        Rule: {entry.rule_version}
+                      </span>
+                    )}
                     {Number(entry.integrity_penalty) > 0 && (
                       <span className="text-destructive col-span-2 flex items-center gap-1">
                         <AlertTriangle className="h-3 w-3" />
@@ -136,6 +144,20 @@ export function ScoreExplanationPanel() {
                       </span>
                     )}
                   </div>
+
+                  {entry.reason_codes && entry.reason_codes.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {entry.reason_codes.map((code, i) => (
+                        <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded ${
+                          code.startsWith('INTERACTION_') || code.startsWith('RATING_') || code.startsWith('CONTENT_REVIEW') || code.startsWith('TEMPORARY_') || code.startsWith('QUALITY_')
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        }`}>
+                          {code.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   {expl && (
                     <>
