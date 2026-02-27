@@ -1399,6 +1399,60 @@ export type Database = {
         }
         Relationships: []
       }
+      features_user_day: {
+        Row: {
+          anti_farm_risk: number | null
+          avg_rating_weighted: number | null
+          consistency_streak: number | null
+          count_comments: number | null
+          count_help: number | null
+          count_journals: number | null
+          count_logins: number | null
+          count_posts: number | null
+          count_questions: number | null
+          count_reports_valid: number | null
+          date: string
+          onchain_value_score: number | null
+          sequence_count: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          anti_farm_risk?: number | null
+          avg_rating_weighted?: number | null
+          consistency_streak?: number | null
+          count_comments?: number | null
+          count_help?: number | null
+          count_journals?: number | null
+          count_logins?: number | null
+          count_posts?: number | null
+          count_questions?: number | null
+          count_reports_valid?: number | null
+          date: string
+          onchain_value_score?: number | null
+          sequence_count?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          anti_farm_risk?: number | null
+          avg_rating_weighted?: number | null
+          consistency_streak?: number | null
+          count_comments?: number | null
+          count_help?: number | null
+          count_journals?: number | null
+          count_logins?: number | null
+          count_posts?: number | null
+          count_questions?: number | null
+          count_reports_valid?: number | null
+          date?: string
+          onchain_value_score?: number | null
+          sequence_count?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       fraud_alerts: {
         Row: {
           action_taken: string | null
@@ -1936,6 +1990,57 @@ export type Database = {
           points?: number
           reason?: string
           source_type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      light_score_ledger: {
+        Row: {
+          base_score: number | null
+          computed_at: string | null
+          consistency_multiplier: number | null
+          explain_ref: string | null
+          final_light_score: number | null
+          id: string
+          integrity_penalty: number | null
+          level: string | null
+          period: string
+          period_end: string
+          period_start: string
+          reputation_weight: number | null
+          sequence_multiplier: number | null
+          user_id: string
+        }
+        Insert: {
+          base_score?: number | null
+          computed_at?: string | null
+          consistency_multiplier?: number | null
+          explain_ref?: string | null
+          final_light_score?: number | null
+          id?: string
+          integrity_penalty?: number | null
+          level?: string | null
+          period?: string
+          period_end: string
+          period_start: string
+          reputation_weight?: number | null
+          sequence_multiplier?: number | null
+          user_id: string
+        }
+        Update: {
+          base_score?: number | null
+          computed_at?: string | null
+          consistency_multiplier?: number | null
+          explain_ref?: string | null
+          final_light_score?: number | null
+          id?: string
+          integrity_penalty?: number | null
+          level?: string | null
+          period?: string
+          period_end?: string
+          period_start?: string
+          reputation_weight?: number | null
+          sequence_multiplier?: number | null
           user_id?: string
         }
         Relationships: []
@@ -2578,6 +2683,51 @@ export type Database = {
         }
         Relationships: []
       }
+      pplp_events: {
+        Row: {
+          actor_user_id: string
+          context_id: string | null
+          created_at: string
+          event_id: string
+          event_type: string
+          ingest_hash: string | null
+          occurred_at: string
+          payload_json: Json | null
+          scoring_tags: string[] | null
+          source: string | null
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          actor_user_id: string
+          context_id?: string | null
+          created_at?: string
+          event_id?: string
+          event_type: string
+          ingest_hash?: string | null
+          occurred_at?: string
+          payload_json?: Json | null
+          scoring_tags?: string[] | null
+          source?: string | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          actor_user_id?: string
+          context_id?: string | null
+          created_at?: string
+          event_id?: string
+          event_type?: string
+          ingest_hash?: string | null
+          occurred_at?: string
+          payload_json?: Json | null
+          scoring_tags?: string[] | null
+          source?: string | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
       pplp_evidences: {
         Row: {
           action_id: string
@@ -3030,6 +3180,48 @@ export type Database = {
         }
         Relationships: []
       }
+      pplp_ratings: {
+        Row: {
+          comment: string | null
+          content_id: string
+          created_at: string
+          id: string
+          pillar_heal_love: number
+          pillar_life_service: number
+          pillar_sustain: number
+          pillar_truth: number
+          pillar_unity_source: number
+          rater_user_id: string
+          weight_applied: number | null
+        }
+        Insert: {
+          comment?: string | null
+          content_id: string
+          created_at?: string
+          id?: string
+          pillar_heal_love?: number
+          pillar_life_service?: number
+          pillar_sustain?: number
+          pillar_truth?: number
+          pillar_unity_source?: number
+          rater_user_id: string
+          weight_applied?: number | null
+        }
+        Update: {
+          comment?: string | null
+          content_id?: string
+          created_at?: string
+          id?: string
+          pillar_heal_love?: number
+          pillar_life_service?: number
+          pillar_sustain?: number
+          pillar_truth?: number
+          pillar_unity_source?: number
+          rater_user_id?: string
+          weight_applied?: number | null
+        }
+        Relationships: []
+      }
       pplp_scores: {
         Row: {
           action_id: string
@@ -3357,9 +3549,14 @@ export type Database = {
           handle: string | null
           handle_updated_at: string | null
           id: string
+          mantra_ack_at: string | null
           popl_badge_level: string | null
           popl_verified: boolean | null
           popl_verified_at: string | null
+          pplp_accepted_at: string | null
+          pplp_version: string | null
+          reputation_level: string | null
+          reputation_score: number | null
           response_style: string | null
           social_links: Json | null
           soul_tags: string[] | null
@@ -3375,9 +3572,14 @@ export type Database = {
           handle?: string | null
           handle_updated_at?: string | null
           id?: string
+          mantra_ack_at?: string | null
           popl_badge_level?: string | null
           popl_verified?: boolean | null
           popl_verified_at?: string | null
+          pplp_accepted_at?: string | null
+          pplp_version?: string | null
+          reputation_level?: string | null
+          reputation_score?: number | null
           response_style?: string | null
           social_links?: Json | null
           soul_tags?: string[] | null
@@ -3393,9 +3595,14 @@ export type Database = {
           handle?: string | null
           handle_updated_at?: string | null
           id?: string
+          mantra_ack_at?: string | null
           popl_badge_level?: string | null
           popl_verified?: boolean | null
           popl_verified_at?: string | null
+          pplp_accepted_at?: string | null
+          pplp_version?: string | null
+          reputation_level?: string | null
+          reputation_score?: number | null
           response_style?: string | null
           social_links?: Json | null
           soul_tags?: string[] | null
@@ -3505,6 +3712,42 @@ export type Database = {
         Update: {
           created_at?: string
           word?: string
+        }
+        Relationships: []
+      }
+      score_explanations: {
+        Row: {
+          ai_ego_risk: number | null
+          ai_explanation: string | null
+          ai_pillar_scores: Json | null
+          created_at: string
+          id: string
+          penalties_json: Json | null
+          top_contributors_json: Json | null
+          user_id: string
+          version: string | null
+        }
+        Insert: {
+          ai_ego_risk?: number | null
+          ai_explanation?: string | null
+          ai_pillar_scores?: Json | null
+          created_at?: string
+          id?: string
+          penalties_json?: Json | null
+          top_contributors_json?: Json | null
+          user_id: string
+          version?: string | null
+        }
+        Update: {
+          ai_ego_risk?: number | null
+          ai_explanation?: string | null
+          ai_pillar_scores?: Json | null
+          created_at?: string
+          id?: string
+          penalties_json?: Json | null
+          top_contributors_json?: Json | null
+          user_id?: string
+          version?: string | null
         }
         Relationships: []
       }
@@ -4235,7 +4478,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      content_unified: {
+        Row: {
+          author_user_id: string | null
+          content_id: string | null
+          content_text: string | null
+          content_type: string | null
+          created_at: string | null
+          metadata_json: Json | null
+          root_content_id: string | null
+          visibility: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_camly_coins: {
@@ -4272,6 +4527,10 @@ export type Database = {
       auto_suspend_high_risk: {
         Args: { _risk_score: number; _signals?: Json; _user_id: string }
         Returns: Json
+      }
+      build_features_user_day: {
+        Args: { _date: string; _user_id: string }
+        Returns: undefined
       }
       calculate_consistency_multiplier: {
         Args: { _user_id: string }
@@ -4322,6 +4581,15 @@ export type Database = {
       }
       cleanup_expired_posts: { Args: never; Returns: undefined }
       cleanup_expired_stories: { Args: never; Returns: undefined }
+      compute_light_score_ledger: {
+        Args: {
+          _end: string
+          _period: string
+          _start: string
+          _user_id: string
+        }
+        Returns: string
+      }
       compute_policy_hash: { Args: { _policy_json: Json }; Returns: string }
       detect_behavior_sequences: {
         Args: { _action_id: string; _action_type: string; _user_id: string }
@@ -4767,6 +5035,7 @@ export type Database = {
         | "ANTI_SYBIL_CHECK"
         | "TIME_PATTERN_VALID"
         | "LOCATION_VALID"
+      reputation_level: "seed" | "sprout" | "builder" | "guardian" | "architect"
       suspension_type: "temporary" | "permanent"
     }
     CompositeTypes: {
@@ -4998,6 +5267,7 @@ export const Constants = {
         "TIME_PATTERN_VALID",
         "LOCATION_VALID",
       ],
+      reputation_level: ["seed", "sprout", "builder", "guardian", "architect"],
       suspension_type: ["temporary", "permanent"],
     },
   },
