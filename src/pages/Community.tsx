@@ -313,7 +313,12 @@ const Community = () => {
               <HonorBoard />
             </div>
 
-            {/* Nội Quy Cộng Đồng - ngay dưới Bảng Danh Dự */}
+            {/* Bảng Xếp Hạng Cộng Đồng Ánh Sáng */}
+            <div className="flex-shrink-0 mb-4">
+              <Leaderboard />
+            </div>
+
+            {/* Nội Quy Cộng Đồng */}
             <div className="flex-shrink-0 mb-4">
               <CommunityGuidelinesCard />
             </div>
@@ -347,11 +352,6 @@ const Community = () => {
               <SuggestedFriendsCard />
             </div>
 
-            {/* Bảng Xếp Hạng */}
-            <div className="flex-shrink-0 mb-4">
-              <Leaderboard />
-            </div>
-            
             {/* Quy tắc thưởng */}
             <div className="flex-shrink-0 mb-4">
               <RewardRulesCard dailyLimits={dailyLimits} />
