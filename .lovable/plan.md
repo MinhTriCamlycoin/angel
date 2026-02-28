@@ -1,47 +1,51 @@
 
 
-## Kết quả đình chỉ Cluster #1 & #2
+## Phân tích: Lỗ hổng Whitelist trong hệ thống rà soát tự động
 
-### Đã hoàn thành: Đình chỉ vĩnh viễn 23/23 tài khoản
+Hiện tại, hầu hết các điểm rà soát đã kiểm tra `fraud_whitelist` trước khi tạo fraud signal:
+- `run_cross_account_scan()` — **đã có** whitelist check
+- `pplp-detect-fraud` edge function — **đã có** whitelist check  
+- `anti-sybil.ts` (`registerDeviceAndIp`) — **đã có** whitelist check
+- `auto_fraud_check()` trigger — **đã có** whitelist check
 
-| Cluster | Tên | User ID |
-|---------|-----|---------|
-| #1 | Bích Hà | ea112b2a |
-| #1 | Kim trợ | 0152f5bf |
-| #1 | Mỹ Nguyễn | d8721926 |
-| #1 | Ngô Thanh | 9726ccf7 |
-| #1 | Ngoc Vân | b06a0106 |
-| #1 | Nguyễn Lê Hồng Thắm | 0619c77a |
-| #1 | Nguyễn Thu Huyền | f2220c18 |
-| #1 | Thanh Tâm Lê | 88760963 |
-| #1 | Trần Hà | dcd2b704 |
-| #1 | Trần Nhã Vy | 66ed0c30 |
-| #1 | Trần Thu Hà | ce537520 |
-| #2 | binh tran | 6a866438 |
-| #2 | hgroup | 253dda36 |
-| #2 | huong ho | 9c71b38d |
-| #2 | lý sữu | 54029c78 |
-| #2 | ngân nhung | 4e0f4e17 |
-| #2 | nguyen nhung | 4f353c78 |
-| #2 | tran bon | bbf90e9f |
-| #2 | trịnh khả duy | 384cea9e |
-| #2 | tuấn anh | 6f54b159 |
-| #2 | xuân vinh | ab4af8e4 |
-| #2 | (ẩn danh) | a3d4ec64 |
-| #2 | (ẩn danh) | 8e7ff7cf |
+Tuy nhiên có **1 lỗ hổng quan trọng**:
 
-### Kết quả chi tiết
-- **23 tài khoản** đã bị cấm vĩnh viễn (permanent ban)
-- **4 yêu cầu rút tiền** đang chờ đã bị từ chối tự động
-- **0 lỗi** trong quá trình xử lý
-- Tin nhắn chữa lành đã được gửi cho tất cả
+### `register_device_fingerprint()` — CHƯA có whitelist check
 
-### Cần bổ sung: Resolve fraud signals
+Hàm database này tạo fraud signal SYBIL khi phát hiện device hash trùng, nhưng **không kiểm tra** user có trong `fraud_whitelist` hay không. Khi user WL dùng chung thiết bị hoặc trùng fingerprint, họ vẫn bị tạo tín hiệu gian lận → xuất hiện trong BL.
 
-Fraud signals của 23 user này vẫn chưa được đánh dấu `is_resolved = true` trong bảng `pplp_fraud_signals`, vì edge function `bulk-suspend-users` hiện chưa có logic này. Cần:
+### Kế hoạch sửa
 
-1. **Sửa `supabase/functions/bulk-suspend-users/index.ts`** — thêm dòng resolve fraud signals sau khi suspend thành công (giống logic trong AdminTrustList.tsx)
-2. **Deploy lại** và gọi edge function một lần nữa (sẽ skip suspend vì duplicate, nhưng resolve signals)
+**1. Migration: Cập nhật `register_device_fingerprint()`**
 
-Hoặc đơn giản hơn: vào trang `/admin/trust-list`, các user này đã biến mất khỏi BL vì đã có suspension record. Fraud signals sẽ không ảnh hưởng gì thêm vì tài khoản đã bị cấm.
+Thêm kiểm tra `fraud_whitelist` trước khi tạo fraud signal:
+
+```sql
+CREATE OR REPLACE FUNCTION public.register_device_fingerprint(_user_id UUID, _device_hash TEXT)
+RETURNS JSONB ...
+AS $$
+DECLARE
+  ...
+  v_is_whitelisted BOOLEAN := false;
+BEGIN
+  -- Check whitelist first
+  SELECT EXISTS (
+    SELECT 1 FROM fraud_whitelist WHERE user_id = _user_id
+  ) INTO v_is_whitelisted;
+
+  -- Check device hash collision
+  SELECT COUNT(DISTINCT user_id) INTO v_other_users ...
+
+  IF v_other_users > 0 AND NOT v_is_whitelisted THEN
+    -- Only create fraud signal if NOT whitelisted
+    INSERT INTO pplp_fraud_signals ...
+  END IF;
+
+  -- Upsert device registry (vẫn giữ, chỉ bỏ flag nếu whitelist)
+  ...
+END;
+$$;
+```
+
+Chỉ cần 1 migration duy nhất. Không cần sửa code frontend hay edge function nào khác.
 
