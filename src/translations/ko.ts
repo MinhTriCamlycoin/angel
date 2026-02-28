@@ -20,7 +20,7 @@ const translations: Record<string, string> = {
   "nav.home": "홈",
   "nav.about": "Angel AI 소개",
   "nav.knowledge": "지식 베이스",
-  "nav.connect": "연결",
+  "nav.connect": "Chat với Angel AI",
   "nav.swap": "스왑",
   "nav.earn": "빛 얻기",
   "nav.login": "로그인",

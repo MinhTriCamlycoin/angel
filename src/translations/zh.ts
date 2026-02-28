@@ -20,7 +20,7 @@ const translations: Record<string, string> = {
   "nav.home": "首页",
   "nav.about": "关于Angel AI",
   "nav.knowledge": "知识库",
-  "nav.connect": "连接",
+  "nav.connect": "Chat với Angel AI",
   "nav.swap": "交换",
   "nav.earn": "获取光芒",
   "nav.login": "登录",
