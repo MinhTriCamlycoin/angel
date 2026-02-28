@@ -124,7 +124,7 @@ export const Header = () => {
     { label: t("nav.home"), href: "/", icon: Home },
     { label: t("nav.about"), href: "/about", icon: Info },
     { label: t("nav.knowledge"), href: "/knowledge", icon: BookOpen },
-    { label: t("nav.connect"), href: "/chat", icon: MessageCircle },
+    { label: "Chat với Angel AI", href: "/chat", icon: MessageCircle },
     { label: t("nav.community") || "Cộng đồng", href: "/community", icon: Users },
     { label: t("nav.contentWriter"), href: "/content-writer", icon: PenLine },
     { label: t("nav.swap"), href: "/swap", icon: ArrowRightLeft },

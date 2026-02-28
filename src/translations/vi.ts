@@ -54,7 +54,7 @@ const translations: Record<string, string> = {
   "nav.home": "Trang Chủ",
   "nav.about": "Về Angel AI",
   "nav.knowledge": "Knowledge",
-  "nav.connect": "Kết Nối",
+  "nav.connect": "Chat với Angel AI",
   "nav.swap": "Swap",
   "nav.earn": "Tích Lũy Ánh Sáng",
   "nav.login": "Đăng Nhập",
