@@ -48,7 +48,25 @@ serve(async (req) => {
 
     console.log(`[EpochReset] Finalizing period: ${periodLabel}, Opening: ${newPeriodLabel}`);
 
-    // ========== STEP 1: Finalize light_score_ledger for previous month ==========
+    // ========== STEP 1: Create mint_epoch record (draft) ==========
+    const { data: epochRecord, error: epochInsertErr } = await supabase
+      .from('mint_epochs')
+      .upsert({
+        epoch_label: periodLabel,
+        period_start: periodStart,
+        period_end: periodEnd,
+        status: 'draft',
+        rules_version: 'LS-Math-v1.0',
+      }, { onConflict: 'epoch_label' })
+      .select()
+      .single();
+
+    if (epochInsertErr) {
+      console.error('[EpochReset] Error creating mint_epoch:', epochInsertErr);
+    }
+    const epochId = epochRecord?.id;
+
+    // ========== STEP 2: Finalize light_score_ledger for previous month ==========
     const { data: monthlyData } = await supabase
       .from('features_user_day')
       .select('user_id, daily_light_score, consistency_multiplier, sequence_multiplier, integrity_penalty, reputation_weight')
@@ -57,8 +75,9 @@ serve(async (req) => {
       .gt('daily_light_score', 0);
 
     let ledgerCount = 0;
+    const userLightScores: Record<string, number> = {};
+
     if (monthlyData && monthlyData.length > 0) {
-      // Aggregate by user
       const userScores: Record<string, { total: number; count: number; lastCM: number; lastSM: number; lastIP: number; lastRW: number }> = {};
       for (const row of monthlyData) {
         if (!userScores[row.user_id]) {
@@ -74,6 +93,8 @@ serve(async (req) => {
 
       for (const userId of Object.keys(userScores)) {
         const us = userScores[userId];
+        userLightScores[userId] = Math.round(us.total * 100) / 100;
+
         let level = 'seed';
         if (us.total >= 2000) level = 'architect';
         else if (us.total >= 1000) level = 'guardian';
@@ -109,11 +130,46 @@ serve(async (req) => {
 
     console.log(`[EpochReset] Finalized ledger for ${ledgerCount} users`);
 
-    // ========== STEP 2: Reset user_light_totals.total_points = 0 ==========
+    // ========== STEP 3: Write mint_allocations ==========
+    if (epochId && Object.keys(userLightScores).length > 0) {
+      const totalLight = Object.values(userLightScores).reduce((a, b) => a + b, 0);
+      const allocations = Object.entries(userLightScores).map(([userId, score]) => ({
+        epoch_id: epochId,
+        user_id: userId,
+        eligible: score >= 10,
+        light_score: score,
+        contribution_ratio: totalLight > 0 ? Math.round((score / totalLight) * 10000) / 10000 : 0,
+        allocation_amount: 0, // Will be filled by pplp-epoch-allocate
+        reason_codes: score >= 10 ? ['ELIGIBLE'] : ['BELOW_LMIN'],
+      }));
+
+      // Batch insert in chunks of 100
+      for (let i = 0; i < allocations.length; i += 100) {
+        const chunk = allocations.slice(i, i + 100);
+        const { error: allocErr } = await supabase
+          .from('mint_allocations')
+          .upsert(chunk, { onConflict: 'epoch_id,user_id' });
+        if (allocErr) console.error('[EpochReset] mint_allocations error:', allocErr);
+      }
+
+      // Update mint_epoch with totals
+      await supabase
+        .from('mint_epochs')
+        .update({
+          total_light: totalLight,
+          user_count: Object.keys(userLightScores).length,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', epochId);
+
+      console.log(`[EpochReset] Wrote ${allocations.length} mint_allocations for epoch ${periodLabel}`);
+    }
+
+    // ========== STEP 4: Reset user_light_totals.total_points = 0 ==========
     const { error: resetError } = await supabase
       .from('user_light_totals')
       .update({ total_points: 0 })
-      .neq('total_points', 0); // Only update non-zero
+      .neq('total_points', 0);
 
     if (resetError) {
       console.error('[EpochReset] Error resetting total_points:', resetError);
@@ -121,8 +177,7 @@ serve(async (req) => {
       console.log('[EpochReset] Reset total_points to 0 for all users');
     }
 
-    // ========== STEP 3: Trigger epoch allocation BEFORE closing cycle ==========
-    // Call pplp-epoch-allocate to distribute FUN for the closing epoch
+    // ========== STEP 5: Trigger epoch allocation ==========
     try {
       const allocateResponse = await fetch(`${supabaseUrl}/functions/v1/pplp-epoch-allocate`, {
         method: 'POST',
@@ -130,7 +185,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${serviceRoleKey}`,
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ epoch_id: epochId }),
       });
       const allocateResult = await allocateResponse.json();
       console.log(`[EpochReset] Epoch allocation result:`, allocateResult);
@@ -138,11 +193,20 @@ serve(async (req) => {
       console.error('[EpochReset] Epoch allocation failed (continuing with reset):', allocErr);
     }
 
+    // ========== STEP 6: Finalize mint_epoch ==========
+    if (epochId) {
+      await supabase
+        .from('mint_epochs')
+        .update({ status: 'finalized', finalized_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', epochId);
+    }
+
     // Close any remaining open cycles
     await supabase
       .from('pplp_mint_cycles')
       .update({ status: 'closed', updated_at: new Date().toISOString() })
       .eq('status', 'open');
+
     // Get next cycle number
     const { data: lastCycle } = await supabase
       .from('pplp_mint_cycles')
@@ -178,6 +242,7 @@ serve(async (req) => {
       new_period: newPeriodLabel,
       ledger_users: ledgerCount,
       new_cycle_number: nextCycleNumber,
+      epoch_id: epochId,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
