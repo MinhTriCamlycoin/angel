@@ -1,49 +1,41 @@
 
 
-## Kế hoạch: Phân tách rõ "Điểm tháng này" vs "Tích lũy" trong frontend
+## Plan: Tạo bảng cấp độ Light sang trọng trong trang Cộng Đồng
 
-### Vấn đề hiện tại
-- `useLightPoints.ts` dòng 94: `getLevelInfo(lifetimePoints)` — tính level từ điểm tích lũy
-- `LightPointsDisplay.tsx` dòng 9: `getLevelInfo(totalPoints)` — tính level từ điểm tháng
-- Hai chỗ dùng khác nhau → không nhất quán
-- UI đã hiển thị cả 2 giá trị nhưng progress bar và level title bị lẫn lộn
+### Dữ liệu thực tế từ database (`pplp_light_levels`)
 
-### Thay đổi
+| Level | Icon | Name VI | Name EN | Score Range | Color |
+|-------|------|---------|---------|-------------|-------|
+| 1 | 🌱 | Hiện diện tích cực | Light Presence | 0 – 199 | #8BC34A |
+| 2 | 🌟 | Người tạo giá trị | Light Contributor | 200 – 499 | #FFC107 |
+| 3 | 🔨 | Người xây dựng | Light Builder | 500 – 999 | #FF9800 |
+| 4 | 🛡️ | Người bảo vệ | Light Guardian | 1,000 – 1,999 | #2196F3 |
+| 5 | 👑 | Người thiết kế | Light Architect | 2,000+ | #9C27B0 |
 
-**1. `src/hooks/useLightPoints.ts`**
-- Thêm field `monthlyLevel` (từ `totalPoints`) và `lifetimeLevel` (từ `lifetimePoints`) vào interface
-- Dòng 94: giữ `currentLevel` dựa trên `lifetimePoints` (cấp bậc dài hạn)
-- Export thêm `monthlyLevelInfo` để UI dùng cho progress bar tháng
+### Thiết kế component
 
-**2. `src/components/LightPointsDisplay.tsx`**
-- Header: hiển thị **lifetime level title** (cấp bậc tích lũy dài hạn)
-- Số lớn: hiển thị `totalPoints` với label "⭐ Điểm tháng 3"
-- Dòng nhỏ: hiển thị `lifetimePoints` với label "🏆 Tổng tích lũy"
-- Progress bar: dùng `totalPoints` cho tiến trình tháng này
-- Thêm progress bar thứ 2 nhỏ hơn cho lifetime level nếu cần
+Tạo component `LightLevelsTable` hiển thị ngay phía trên danh sách thành viên trong trang `/light-community`, với thiết kế:
 
-**3. `src/components/public-profile/PublicProfileStats.tsx`**
-- Không thay đổi (đã dùng dữ liệu riêng từ `usePublicProfile`)
+- **Header**: Tiêu đề "Các Cấp Độ Ánh Sáng" / "Light Levels" (đa ngôn ngữ)
+- **5 hàng card ngang** cho mỗi cấp độ, mỗi hàng gồm:
+  - Biểu tượng emoji lớn (icon) với viền gradient theo màu cấp độ
+  - Tên cấp độ (VI + EN) in đậm, màu theo level color
+  - Thanh progress bar thể hiện khoảng điểm (min → max)
+  - Hiển thị rõ khoảng điểm: "0 – 199 LS"
+- **Phong cách**: Gradient nền nhẹ từ màu cấp độ, border mềm, shadow tinh tế, bo tròn 2xl
+- **Collapsible**: Mặc định thu gọn, nhấn để mở rộng (tiết kiệm không gian mobile)
 
-### Chi tiết kỹ thuật
+### Các file thay đổi
 
-```text
-Hook output:
-  totalPoints     → điểm tháng này (reset mỗi tháng)
-  lifetimePoints  → điểm tích lũy (không bao giờ reset)
-  currentLevel    → level từ lifetimePoints (cấp bậc vĩnh viễn)
+1. **Tạo mới**: `src/components/leaderboard/LightLevelsTable.tsx`
+   - Component hiển thị 5 cấp độ với thiết kế sang trọng
+   - Dữ liệu hardcode từ database (static, không cần fetch vì hiếm khi thay đổi)
+   - Hỗ trợ đa ngôn ngữ qua `useLanguage`
+   - Sử dụng Collapsible từ Radix UI
 
-Display:
-  ┌─────────────────────────────────────┐
-  │ 🌟 Level 3 - Ngọn Đèn (tích lũy)  │
-  │                          0 ⭐       │
-  │                    Điểm tháng 3     │
-  │              Tích lũy: 350 🏆       │
-  ├─────────────────────────────────────┤
-  │ Tiến trình tháng: 0 / 100 (Lv.2)   │
-  │ ████░░░░░░░░░░░░░░░░░░░░ 0%        │
-  └─────────────────────────────────────┘
-```
+2. **Sửa**: `src/pages/LightCommunity.tsx`
+   - Import và đặt `LightLevelsTable` giữa subtitle và danh sách thành viên
 
-2 files cần sửa, không cần thay đổi database.
+3. **Sửa**: `src/translations/vi.ts` + `en.ts` (và 10 ngôn ngữ còn lại)
+   - Thêm key `lightLevels.title`, `lightLevels.scoreRange`, `lightLevels.showLevels`, `lightLevels.hideLevels`
 
