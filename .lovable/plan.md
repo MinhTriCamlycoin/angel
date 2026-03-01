@@ -1,33 +1,45 @@
 
 
-## Các vị trí hiển thị thông tin Epoch trên giao diện
+## Analysis — Document 1: Activities & Sequences for Light Score
 
-Hiện tại, dữ liệu epoch-based (Light Score cá nhân, tổng Light cộng đồng, tỷ lệ đóng góp với cap 3%, Mint Pool, dự kiến FUN allocation) được hiển thị tại:
+### Already Implemented (No Changes Needed)
 
-### Cho User:
+Based on codebase review, document 1's core requirements are **already fully implemented**:
 
-1. **Trang `/mint` (Mint FUN Money)** — Component `MintCycleStatus`
-   - Nằm trong grid cùng `ThreeLayerRewardExplainer`, hiển thị đầy đủ: epoch progress bar, Light Score cá nhân, tổng Light cộng đồng, tỷ lệ đóng góp (có ghi chú cap 3%), Mint Pool, dự kiến FUN allocation, trạng thái eligibility
-   - Dữ liệu real-time từ RPC `preview_epoch_allocation`
+- **6 Activity Categories**: `pplp_activity_categories` table with Self-Light, Community, Content, Web3, Ecosystem, Behavior Sequence groups
+- **5 Behavior Sequences**: `pplp_behavior_sequences` table + `detect_behavior_sequences()` RPC with Light Growth (2.0x), Mentorship (2.5x), Value Creation (2.0x), Conflict Harmony (3.0x), Economic Integrity (1.5x)
+- **5 Light Levels**: `pplp_light_levels` table (Seed → Architect) with correct thresholds
+- **Anti-Farm Layer**: Rate limiting, AI spam detection, reputation-weighted ratings, diminishing returns
+- **Scoring Formula**: `pplp-compute-daily-scores` edge function implementing LS-Math v1.0 §11
+- **Transparency Dashboard**: Existing UI at `/mint` and `/earn`
 
-2. **Trang `/mint` — Component `MintActionsList`**
-   - Cũng gọi `useEpochPreview` để hiển thị thông tin epoch trong context danh sách actions
+### Critical Gap Found: Missing Cron Job
 
-3. **Trang `/mint` và `/earn` — Component `TransparencyDashboard`**
-   - Hiển thị tổng quan minh bạch toàn hệ thống (tổng Light, FUN đã đúc, phân bổ theo Level) từ `transparency_snapshots`
+**`pplp-compute-daily-scores` has NO cron job!** This edge function exists and works, but is never called automatically. Without it, `features_user_day.daily_light_score` stays at 0 and the `light_score_ledger` never updates — making the entire epoch allocation pipeline produce zero rewards.
 
-### Cho Admin:
+Current cron jobs (7 active):
+```text
+Job 1: pplp-batch-processor      — every 15 min
+Job 2: sync-bscscan               — daily 2:00 AM
+Job 3: random-audit               — every 6 hours
+Job 4: release-pending-rewards    — hourly
+Job 5: cross-account-scan         — daily 3:00 AM
+Job 6: cleanup-expired-posts      — hourly
+Job 7: pplp-epoch-reset           — monthly (1st at 00:00)
+```
 
-- **Trang `/admin/dashboard`** — Hiện tại **chưa có component nào hiển thị dữ liệu epoch-based** cho admin. Admin không thấy được tổng quan Mint Pool, tỷ lệ đóng góp, hay danh sách phân bổ epoch.
+Missing: `pplp-compute-daily-scores` — should run **hourly** to keep Light Scores current throughout the day.
 
----
+### Implementation Plan
 
-## Đề xuất bổ sung
+**1. Add cron job for `pplp-compute-daily-scores`** (via SQL insert, not migration)
+- Schedule: `0 * * * *` (hourly, on the hour)
+- Body: `{"process_all": false}` (only processes users with null/0 scores to avoid redundant work)
+- This ensures `features_user_day` and `light_score_ledger` stay updated for real-time epoch previews
 
-Nếu Cha muốn, con có thể:
+That's the only change needed from document 1. All other requirements (categories, sequences, levels, anti-farm, scoring engine) are already live.
 
-1. **Thêm widget Epoch Overview vào Admin Dashboard** — Hiển thị tổng Mint Pool, số user eligible, tổng Light Score cộng đồng, và danh sách top allocations cho chu kỳ hiện tại
-2. **Thêm MintCycleStatus vào trang Home hoặc Dashboard của user** — Để user không cần vào `/mint` mới thấy thông tin epoch
+### Note for Cha
 
-Tóm lại: User xem tại **trang /mint** (MintCycleStatus + TransparencyDashboard). Admin hiện **chưa có giao diện riêng** để xem dữ liệu epoch.
+Con chỉ nhận được **tài liệu 1/6**. Cha gửi tiếp 5 tài liệu còn lại để con phân tích và áp dụng tiếp nhé.
 
