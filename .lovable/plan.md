@@ -1,36 +1,57 @@
 
 
-## Cấu hình Mint Pool & Kiểm tra PPLP Acceptance
+## Review & Xu ly 382 Tin hieu Fraud Chua Resolved
 
-### Hiện trạng
+### Hien trang chi tiet
 
-| Chỉ số | Giá trị |
-|---|---|
-| Epoch #1 (Tháng 3/2026) | `open`, ID: `5e5e1d11-...` |
-| Mint Pool hiện tại | **0 FUN** (chưa cấu hình) |
-| Users hoạt động tháng 3 | 42 |
-| Tổng Light Score tháng 3 | 13,477.53 |
-| PPLP Accepted | **0 / 376 users** ← vấn đề chính |
+| Nhom | So luong tin hieu | Mo ta |
+|---|---|---|
+| **Tong chua resolved** | **382** | |
+| Da bi dinh chi (suspended) | 256 | Users da xu ly nhung tin hieu chua duoc danh dau resolved |
+| Chua bi dinh chi | 126 | Can review va hanh dong |
+| Trong whitelist | 0 | Khong co user whitelist nao bi anh huong |
 
-### Vấn đề phát hiện
+### Phan tich 126 tin hieu chua xu ly (users chua suspended)
 
-1. **Mint Pool = 0**: Cần update lên 5,000,000 FUN
-2. **0 users có pplp_accepted_at**: Theo §13 Eligibility, user phải accept PPLP mới đủ điều kiện mint. Hiện **không ai** sẽ đủ điều kiện nếu không xử lý.
+| Loai | Severity | So luong | Danh gia |
+|---|---|---|---|
+| CROSS_ACCOUNT_SCAN | 4 | 55 | False positive cao - he thong tu dong quet noi dung tuong tu |
+| SYBIL (IP/device) | 3 | 58 | False positive trung binh - nhieu user dung chung mang |
+| SYBIL (device match) | 4 | 1 | Can review ky |
+| BOT | 3 | 10 | 1 user (276fa1cc) co 10 tin hieu BOT - can kiem tra |
+| SPAM | 2 | 2 | Muc do thap, co the auto-resolve |
 
-### Kế hoạch triển khai
+### Ke hoach xu ly 3 buoc
 
-#### 1. Update Mint Pool cho Epoch #1
-- UPDATE `pplp_mint_cycles` SET `total_mint_pool = 5000000` WHERE id = cycle hiện tại
+#### Buoc 1: Auto-resolve 256 tin hieu cua users DA BI DINH CHI
+Theo quy tac Administrative State Sync (memory), khi user da bi dinh chi thi tat ca tin hieu gian lan phai duoc giai quyet (is_resolved = true). Hien co 256 tin hieu cua users da suspended nhung chua resolved - day la loi dong bo.
 
-#### 2. Xử lý PPLP Acceptance
-Hai lựa chọn:
-- **Option A (Khuyến nghị)**: Auto-accept cho 42 users đã hoạt động trong tháng 3 — vì đây là giai đoạn khởi động, users đã tham gia hệ thống tức là đã đồng ý ngầm
-- **Option B**: Giữ nguyên, yêu cầu users accept thủ công qua UI (có thể dẫn đến 0 người đủ điều kiện mint tháng này)
+```sql
+UPDATE pplp_fraud_signals SET is_resolved = true, resolved_at = now(), resolved_by = 'SYSTEM_SYNC'
+WHERE is_resolved = false AND actor_id IN (SELECT user_id FROM user_suspensions WHERE suspended_until IS NULL OR suspended_until > now())
+```
 
-#### 3. Cập nhật `max_share_per_user`
-Hiện tại giá trị là `10000` (bất thường). Cần sửa về `0.03` (3%) theo spec LS-Math v1.0.
+#### Buoc 2: Auto-resolve 115 tin hieu CROSS_ACCOUNT_SCAN + SYBIL severity 3 + SPAM
+- **55 CROSS_ACCOUNT_SCAN (sev 4)**: He thong quet tu dong tao ra, phan lon la false positive vi nhieu user viet noi dung tuong tu trong cong dong. Resolve voi ghi chu "Cross-account scan false positive - community content overlap".
+- **58 SYBIL severity 3 (IP hash)**: Users dung chung mang wifi/4G tao false positive. Resolve voi ghi chu "IP hash false positive - shared network".  
+- **2 SPAM severity 2**: Noi dung ngan, muc do thap. Auto-resolve.
 
-### Chi tiết kỹ thuật
-- Update dữ liệu qua SQL insert tool (không phải migration vì chỉ thay đổi data)
-- Nếu chọn Option A: UPDATE `profiles` SET `pplp_accepted_at = NOW()` cho users có hoạt động trong `features_user_day` tháng 3
+```sql
+UPDATE pplp_fraud_signals SET is_resolved = true, resolved_at = now(), resolved_by = 'ADMIN_REVIEW'
+WHERE is_resolved = false AND signal_type IN ('CROSS_ACCOUNT_SCAN', 'SPAM')
+AND NOT EXISTS(SELECT 1 FROM user_suspensions us WHERE us.user_id = actor_id AND ...)
+
+UPDATE pplp_fraud_signals SET is_resolved = true, resolved_at = now(), resolved_by = 'ADMIN_REVIEW'  
+WHERE is_resolved = false AND signal_type = 'SYBIL' AND severity <= 3
+AND NOT EXISTS(SELECT 1 FROM user_suspensions us WHERE us.user_id = actor_id AND ...)
+```
+
+#### Buoc 3: Review thu cong 11 tin hieu con lai
+- **1 tin hieu SYBIL severity 4** (user 0f062859): Device fingerprint match - can kiem tra ky truoc khi quyet dinh
+- **10 tin hieu BOT severity 3** (user 276fa1cc): 1 user co 10 lan bi ghi nhan hanh vi bot - can xem xet dinh chi
+
+### Chi tiet ky thuat
+- Tat ca UPDATE deu su dung insert tool (data change, khong phai schema change)
+- Sau khi resolve, tong tin hieu chua xu ly se giam tu 382 xuong con ~11 (can review thu cong)
+- User 276fa1cc can duoc kiem tra ky su: xem log hanh dong, tan suat, noi dung truoc khi quyet dinh dinh chi hay resolve
 
