@@ -121,13 +121,28 @@ serve(async (req) => {
       console.log('[EpochReset] Reset total_points to 0 for all users');
     }
 
-    // ========== STEP 3: Close old mint cycle, open new one ==========
-    // Close any open cycles
+    // ========== STEP 3: Trigger epoch allocation BEFORE closing cycle ==========
+    // Call pplp-epoch-allocate to distribute FUN for the closing epoch
+    try {
+      const allocateResponse = await fetch(`${supabaseUrl}/functions/v1/pplp-epoch-allocate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify({}),
+      });
+      const allocateResult = await allocateResponse.json();
+      console.log(`[EpochReset] Epoch allocation result:`, allocateResult);
+    } catch (allocErr) {
+      console.error('[EpochReset] Epoch allocation failed (continuing with reset):', allocErr);
+    }
+
+    // Close any remaining open cycles
     await supabase
       .from('pplp_mint_cycles')
       .update({ status: 'closed', updated_at: new Date().toISOString() })
       .eq('status', 'open');
-
     // Get next cycle number
     const { data: lastCycle } = await supabase
       .from('pplp_mint_cycles')

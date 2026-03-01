@@ -5044,6 +5044,20 @@ export type Database = {
       is_coordinator_or_admin: { Args: { _user_id: string }; Returns: boolean }
       is_user_approved: { Args: { _user_id: string }; Returns: boolean }
       is_user_suspended: { Args: { _user_id: string }; Returns: boolean }
+      preview_epoch_allocation: {
+        Args: { _user_id: string }
+        Returns: {
+          days_remaining: number
+          epoch_period: string
+          estimated_allocation: number
+          ineligibility_reason: string
+          is_eligible: boolean
+          mint_pool: number
+          my_light_score: number
+          my_ratio: number
+          total_light: number
+        }[]
+      }
       process_daily_login: {
         Args: { _user_id: string }
         Returns: {
