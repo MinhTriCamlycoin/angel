@@ -4912,12 +4912,15 @@ export type Database = {
       get_community_light_summary: {
         Args: { _user_ids: string[] }
         Returns: {
-          color: string
-          icon: string
-          level: number
-          name_en: string
-          name_vi: string
-          trend: string
+          avatar_url: string
+          completed_sequences: number
+          display_name: string
+          handle: string
+          level_color: string
+          level_icon: string
+          level_name_vi: string
+          light_level: number
+          total_score: number
           user_id: string
         }[]
       }
