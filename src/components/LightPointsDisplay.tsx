@@ -6,7 +6,7 @@ import { Sparkles, Star, TrendingUp } from "lucide-react";
 const LightPointsDisplay = () => {
   const { totalPoints, lifetimePoints, isLoading, getLevelInfo, recentPoints } = useLightPoints();
 
-  const levelInfo = getLevelInfo(lifetimePoints);
+  const levelInfo = getLevelInfo(totalPoints);
 
   if (isLoading) {
     return (
@@ -33,8 +33,9 @@ const LightPointsDisplay = () => {
             </div>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-divine-gold">{lifetimePoints.toLocaleString()}</p>
-            <p className="text-xs text-foreground-muted">Light Points</p>
+            <p className="text-2xl font-bold text-divine-gold">{totalPoints.toLocaleString()}</p>
+            <p className="text-xs text-foreground-muted">Điểm tháng này</p>
+            <p className="text-xs text-foreground-muted mt-0.5">Tích lũy: {lifetimePoints.toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -46,12 +47,12 @@ const LightPointsDisplay = () => {
             <div className="flex justify-between text-sm">
               <span className="text-foreground-muted">Tiến trình đến Level {levelInfo.nextLevel.level}</span>
               <span className="text-divine-gold font-medium">
-                {lifetimePoints} / {levelInfo.nextLevel.points}
+                {totalPoints} / {levelInfo.nextLevel.points}
               </span>
             </div>
             <Progress value={levelInfo.progress} className="h-2" />
             <p className="text-xs text-foreground-muted">
-              Còn {levelInfo.nextLevel.points - lifetimePoints} points để đạt "{levelInfo.nextLevel.title}"
+              Còn {levelInfo.nextLevel.points - totalPoints} points để đạt "{levelInfo.nextLevel.title}"
             </p>
           </div>
         )}
