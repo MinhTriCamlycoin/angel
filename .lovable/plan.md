@@ -1,40 +1,50 @@
 
 
-## Redesign "Hướng dẫn Mint FUN Money từ A đến Z"
+## Thiết kế lại Light Actions theo dạng lưới tháng
 
-### Current Issues
-1. The guide is a single long vertical timeline inside a collapsible card -- dense and overwhelming
-2. All 9 steps are listed linearly with small text, making it hard to scan
-3. The 3-phase structure (Setup / Earn / Claim) is indicated only by dot colors -- not visually distinct enough
+### Vấn đề hiện tại
+Mỗi action hiển thị dạng card lớn (chiếm ~200px chiều cao) với đầy đủ thông tin (5 pillars, progress bar, reward, button). Khi user có 50+ actions, trang rất dài và khó tổng quan.
 
-### Proposed New Design
+### Thiết kế mới: Monthly Grid View
 
-Restructure into a **3-phase tab/accordion layout** with clear visual separation:
+**Layout tổng quan:**
+- Nhóm actions theo tháng (Tháng 3/2026, Tháng 2/2026...)
+- Mỗi tháng là 1 section collapsible, tháng hiện tại mở sẵn
+- Trong mỗi tháng: hiển thị dạng bảng lưới compact
 
-**Layout: 3 horizontal phase cards (on desktop) / stacked (on mobile)**
+**Bảng lưới cho mỗi tháng:**
 
-Each phase becomes its own visually distinct card:
-- **Phase 1 "Thiết lập"** (blue): Steps 1-4 with blue accent
-- **Phase 2 "Tích lũy"** (amber): Steps 5-6 with amber accent  
-- **Phase 3 "Nhận FUN"** (green): Steps 7-9 with green accent
+```text
+┌──────────────────────────────────────────────────────────┐
+│ 📅 Tháng 3/2026          42 actions  │ Tổng: +4,200 FUN │
+├──────┬──────────┬───────┬───────┬────────┬──────────────┤
+│ Ngày │ Loại     │ Score │ S T H │ Reward │ Trạng thái   │
+├──────┼──────────┼───────┼───────┼────────┼──────────────┤
+│ 01/3 │ Hỏi AI   │ 83.9  │ ●●●●● │ +95    │ ✅ Đã mint   │
+│ 01/3 │ Nhật ký  │ 79.2  │ ●●●●○ │ +88    │ ✅ Đã mint   │
+│ 02/3 │ Đăng bài │ 91.0  │ ●●●●● │ +102   │ ⏳ Đang xử lý│
+└──────┴──────────┴───────┴───────┴────────┴──────────────┘
+```
 
-Each phase card contains:
-- Phase header with icon + number badge showing step count
-- Compact step list with icon + title only (descriptions expand on click)
-- Action buttons/links inline
+**Chi tiết thiết kế:**
+1. **Header tháng**: Tên tháng + tổng số actions + tổng FUN reward, collapsible
+2. **Hàng compact**: Mỗi action là 1 row ~40px thay vì card 200px
+   - Ngày (dd/MM)
+   - Loại action (icon + label ngắn)
+   - Light Score (số + mini progress bar)
+   - 5 Pillars dạng 5 chấm tròn nhỏ màu (thay vì grid 5 ô)
+   - Reward (+FUN)
+   - Badge trạng thái nhỏ
+3. **Click vào row** → expand hiển thị chi tiết (pillars đầy đủ, tx hash, BSCScan link)
+4. **Mobile**: Ẩn bớt cột (Score, Pillars), giữ Ngày + Loại + Reward + Status
 
-**Additional changes:**
-- Keep the Epoch info banner at the top but make it more compact
-- Remove the collapsible wrapper -- show the 3 phase cards directly (less hiding = better discoverability)
-- Use `Tabs` component for phase switching on mobile to save space
-- Steps within each phase use a clean checklist style instead of timeline dots
+### Files cần sửa
+1. **`src/components/mint/MintActionsList.tsx`** — Nhóm actions theo tháng, render grid thay vì cards
+2. **`src/components/mint/FUNMoneyMintCard.tsx`** — Thêm variant compact (row) bên cạnh card view hiện tại, hoặc tạo component mới `MintActionRow.tsx`
 
-### Files to modify
-- `src/components/mint/MintGuideFullFlow.tsx` -- Complete redesign of the component layout
-
-### Technical approach
-- Use responsive grid: `grid-cols-1 md:grid-cols-3` for the 3 phase cards
-- Each step inside a phase is a mini-collapsible (click title to see description + tips)
-- Phase card headers use gradient backgrounds matching phase colors
-- Keep all existing data (steps, tips, links, contract address) -- just restructure the presentation
+### Approach
+- Tạo component mới `MintActionRow.tsx` cho dạng hàng compact
+- Tạo component `MonthlyActionsGroup.tsx` để nhóm + collapsible theo tháng
+- Cập nhật `MintActionsList.tsx` để group actions by month và render dạng mới
+- Giữ nguyên stats cards và epoch banner ở trên
 
