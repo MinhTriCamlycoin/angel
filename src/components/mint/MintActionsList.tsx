@@ -1,21 +1,16 @@
 import { useAuth } from "@/hooks/useAuth";
 import { usePPLPActions } from "@/hooks/usePPLPActions";
-import { useMintRequest } from "@/hooks/useMintRequest";
+import { useEpochPreview } from "@/hooks/useEpochPreview";
 import { FUNMoneyMintCard } from "./FUNMoneyMintCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { RefreshCw, Sparkles, Inbox, AlertCircle, Send, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useWeb3WalletContext as useWeb3Wallet } from "@/contexts/Web3WalletContext";
-import { toast } from "sonner";
+import { RefreshCw, Sparkles, Inbox, AlertCircle, Coins } from "lucide-react";
+import { useEffect } from "react";
 
 export function MintActionsList() {
   const { user } = useAuth();
-  const { actions, isLoading, fetchActions, fetchUnmintedActions } = usePPLPActions();
-  const { requestMintBatch, isRequesting, batchProgress } = useMintRequest();
-  const { isConnected, connect, address } = useWeb3Wallet();
-  const [viewMode, setViewMode] = useState<"all" | "unminted">("all");
+  const { actions, isLoading, fetchActions } = usePPLPActions();
+  const { preview } = useEpochPreview();
 
   useEffect(() => {
     if (user) {
@@ -48,12 +43,6 @@ export function MintActionsList() {
     return Array.isArray(s) ? s[0] : s;
   };
 
-  const resolveMintRequest = (a: any) => {
-    const mr = a.pplp_mint_requests;
-    if (!mr) return null;
-    return Array.isArray(mr) ? mr[0] : mr;
-  };
-
   // Claimable: scored with decision=pass, or already minted
   const claimableActions = actions?.filter((a: any) => {
     if (a.status === "minted") return true;
@@ -63,13 +52,6 @@ export function MintActionsList() {
     }
     return false;
   }) || [];
-
-  // Unminted: scored+pass but NO mint request
-  const unmintedActions = claimableActions.filter((a: any) => {
-    if (a.status === "minted") return false;
-    const mr = resolveMintRequest(a);
-    return !mr;
-  });
 
   // Failed: scored but decision != pass
   const failedActions = actions?.filter((a: any) => {
@@ -81,35 +63,6 @@ export function MintActionsList() {
   }) || [];
 
   const pendingActions = actions?.filter((a: any) => a.status === "pending") || [];
-
-  // Handle "Request Mint All" 
-  const handleMintAll = async () => {
-    if (!isConnected || !address) {
-      await connect();
-      return;
-    }
-
-    // Fetch ALL unminted actions (not just the 50 loaded)
-    const allUnminted = await fetchUnmintedActions();
-    if (allUnminted.length === 0) {
-      toast.info("Không có action nào cần gửi yêu cầu mint");
-      return;
-    }
-
-    const result = await requestMintBatch(
-      allUnminted.map((a: any) => ({
-        id: a.id,
-        action_type: a.action_type,
-        evidence_hash: a.evidence_hash,
-        pplp_scores: a.pplp_scores,
-      })),
-      address
-    );
-
-    if (result.success > 0) {
-      fetchActions();
-    }
-  };
 
   if (claimableActions.length === 0 && failedActions.length === 0 && pendingActions.length === 0) {
     return (
@@ -129,20 +82,33 @@ export function MintActionsList() {
 
   return (
     <div className="space-y-6">
-      {/* Thống kê tổng quan */}
+      {/* Epoch-based info banner */}
+      <div className="p-4 rounded-lg border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 space-y-2">
+        <div className="flex items-center gap-2">
+          <Coins className="h-5 w-5 text-amber-600" />
+          <p className="font-medium text-sm">
+            💡 Mô hình Epoch — FUN được phân bổ cuối mỗi tháng
+          </p>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Mỗi hành động đóng góp vào Light Score tháng này. Cuối chu kỳ, hệ thống tự động phân bổ FUN từ Mint Pool dựa trên tỷ lệ đóng góp của bạn.
+          {preview && preview.is_eligible && preview.estimated_allocation > 0 && (
+            <span className="font-medium text-amber-700 dark:text-amber-400">
+              {" "}Dự kiến: ~{preview.estimated_allocation.toLocaleString()} FUN
+            </span>
+          )}
+        </p>
+      </div>
+
+      {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-lg border bg-card p-3 text-center">
-          <p className="text-2xl font-bold text-orange-600">{unmintedActions.length}</p>
-          <p className="text-xs text-muted-foreground">Chưa gửi</p>
+          <p className="text-2xl font-bold text-orange-600">{claimableActions.length}</p>
+          <p className="text-xs text-muted-foreground">Đạt điều kiện</p>
         </div>
         <div className="rounded-lg border bg-card p-3 text-center">
-          <p className="text-2xl font-bold text-blue-600">
-            {claimableActions.filter((a: any) => {
-              const mr = resolveMintRequest(a);
-              return mr && mr.status === "pending";
-            }).length}
-          </p>
-          <p className="text-xs text-muted-foreground">Đang chờ duyệt</p>
+          <p className="text-2xl font-bold text-blue-600">{pendingActions.length}</p>
+          <p className="text-xs text-muted-foreground">Đang chấm điểm</p>
         </div>
         <div className="rounded-lg border bg-card p-3 text-center">
           <p className="text-2xl font-bold text-green-600">
@@ -158,62 +124,16 @@ export function MintActionsList() {
           <Sparkles className="h-5 w-5 text-amber-600" />
           <h3 className="font-semibold">Light Actions của bạn</h3>
           <span className="text-sm text-muted-foreground">
-            ({claimableActions.length} sẵn sàng{failedActions.length > 0 ? `, ${failedActions.length} không đạt` : ""}, {pendingActions.length} đang xử lý)
+            ({claimableActions.length} đạt{failedActions.length > 0 ? `, ${failedActions.length} không đạt` : ""}, {pendingActions.length} đang xử lý)
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => fetchActions()}>
-            <RefreshCw className="h-4 w-4 mr-1" />
-            Làm mới
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" onClick={() => fetchActions()}>
+          <RefreshCw className="h-4 w-4 mr-1" />
+          Làm mới
+        </Button>
       </div>
 
-      {/* Batch Mint All Button */}
-      {unmintedActions.length > 0 && (
-        <div className="p-4 rounded-lg border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <p className="font-medium text-sm">
-                ⚡ {unmintedActions.length} action chưa gửi yêu cầu mint
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Gửi tất cả cùng lúc để Admin duyệt nhanh hơn
-              </p>
-            </div>
-            <Button
-              onClick={handleMintAll}
-              disabled={isRequesting}
-              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
-              size="sm"
-            >
-              {isRequesting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  Đang gửi...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-1" />
-                  Gửi tất cả yêu cầu mint
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* Progress bar */}
-          {batchProgress && (
-            <div className="space-y-1">
-              <Progress value={(batchProgress.current / batchProgress.total) * 100} className="h-2" />
-              <p className="text-xs text-muted-foreground text-right">
-                {batchProgress.current}/{batchProgress.total} đã gửi
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Scored/Ready to claim */}
+      {/* Scored/Ready actions */}
       {claimableActions.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2">
           {claimableActions.map((action: any) => (

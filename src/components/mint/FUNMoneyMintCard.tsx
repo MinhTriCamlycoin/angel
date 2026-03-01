@@ -8,15 +8,8 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  Loader2,
   ExternalLink,
-  Wallet,
-  Send,
 } from "lucide-react";
-import { useMintRequest } from "@/hooks/useMintRequest";
-import { useWeb3WalletContext as useWeb3Wallet } from "@/contexts/Web3WalletContext";
-import { toast } from "sonner";
-import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 
@@ -89,10 +82,6 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
 };
 
 export function FUNMoneyMintCard({ action, onMintSuccess }: Props) {
-  const { isConnected, connect, address, hasWallet } = useWeb3Wallet();
-  const { requestMint, isRequesting } = useMintRequest();
-  const [requestSent, setRequestSent] = useState(false);
-
   const score = resolveOne(action.pplp_scores);
   const mintRequest = resolveOne(action.pplp_mint_requests);
   const statusConfig = STATUS_CONFIG[action.status] || STATUS_CONFIG.pending;
@@ -101,37 +90,12 @@ export function FUNMoneyMintCard({ action, onMintSuccess }: Props) {
   // Determine mint request status
   const mintRequestStatus = mintRequest?.status;
   const hasTxHash = mintRequest?.tx_hash && mintRequest.tx_hash.startsWith("0x");
-  const isPendingApproval = mintRequestStatus === "pending" || requestSent;
+  const isPendingApproval = mintRequestStatus === "pending";
   const isSigned = mintRequestStatus === "signed";
   const isMintedOnChain = mintRequestStatus === "minted" || action.status === "minted";
 
-  const canRequestMint =
-    action.status === "scored" &&
-    score?.decision === "pass" &&
-    !isPendingApproval &&
-    !isSigned &&
-    !isMintedOnChain;
-
-  const handleRequestMint = async () => {
-    if (!isConnected || !address) {
-      await connect();
-      return;
-    }
-
-    if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
-      toast.error("Vui lòng kết nối ví MetaMask trước");
-      return;
-    }
-
-    const success = await requestMint(action.id, address);
-    if (success) {
-      setRequestSent(true);
-      onMintSuccess?.();
-    }
-  };
-
   return (
-    <Card className={`transition-all ${canRequestMint ? "hover:shadow-lg hover:border-amber-400" : ""}`}>
+    <Card className="transition-all">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -243,34 +207,18 @@ export function FUNMoneyMintCard({ action, onMintSuccess }: Props) {
               </Button>
             )}
           </div>
-        ) : canRequestMint ? (
-          <Button
-            onClick={handleRequestMint}
-            disabled={isRequesting}
-            className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
-          >
-            {isRequesting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Đang gửi...
-              </>
-            ) : !isConnected ? (
-              <>
-                <Wallet className="mr-2 h-4 w-4" />
-                Kết nối ví để Mint
-              </>
-            ) : (
-              <>
-                <Send className="mr-2 h-4 w-4" />
-                Request Mint FUN
-              </>
-            )}
-          </Button>
         ) : isPendingApproval || isSigned ? (
           <Button variant="outline" className="w-full" disabled>
             <Clock className="mr-2 h-4 w-4" />
             Đang xử lý...
           </Button>
+        ) : action.status === "scored" && score?.decision === "pass" ? (
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+            <Sparkles className="h-4 w-4 text-amber-600 shrink-0" />
+            <span className="text-xs text-amber-700 dark:text-amber-300">
+              FUN sẽ được phân bổ cuối chu kỳ tháng dựa trên tổng Light Score
+            </span>
+          </div>
         ) : action.status === "pending" ? (
           <Button variant="outline" className="w-full" disabled>
             <Clock className="mr-2 h-4 w-4" />
