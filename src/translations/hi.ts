@@ -473,7 +473,7 @@ const translations: Record<string, string> = {
   "community.images": "छवियां",
   "community.feelings": "भावनाएं",
   "community.post": "पोस्ट करें",
-  "community.leaderboard": "लीडरबोर्ड",
+  "community.leaderboard": "प्रकाश बोर्ड",
   "community.leaderboardStats": "लीडरबोर्ड और आंकड़े",
   "community.sortRecent": "हाल का",
   "community.sortPopular": "लोकप्रिय",

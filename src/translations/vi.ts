@@ -654,7 +654,7 @@ const translations: Record<string, string> = {
   "community.images": "Ảnh",
   "community.feelings": "Cảm xúc",
   "community.post": "Đăng",
-  "community.leaderboard": "Bảng Xếp Hạng",
+  "community.leaderboard": "Bảng Ánh Sáng",
   "community.leaderboardStats": "Bảng Xếp Hạng & Thống Kê",
   "community.sortRecent": "Mới nhất",
   "community.sortPopular": "Phổ biến",

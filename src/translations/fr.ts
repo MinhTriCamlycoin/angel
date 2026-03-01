@@ -484,7 +484,7 @@ const translations: Record<string, string> = {
   "community.images": "Images",
   "community.feelings": "Sentiments",
   "community.post": "Publier",
-  "community.leaderboard": "Classement",
+  "community.leaderboard": "Tableau de Lumière",
   "community.leaderboardStats": "Classement & Statistiques",
   "community.sortRecent": "Récent",
   "community.sortPopular": "Populaire",

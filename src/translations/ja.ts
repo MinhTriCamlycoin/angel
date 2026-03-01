@@ -492,7 +492,7 @@ const translations: Record<string, string> = {
   "community.images": "画像",
   "community.feelings": "気持ち",
   "community.post": "投稿",
-  "community.leaderboard": "ランキング",
+  "community.leaderboard": "光のボード",
   "community.leaderboardStats": "ランキングと統計",
   "community.sortRecent": "最新",
   "community.sortPopular": "人気",

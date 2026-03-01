@@ -492,7 +492,7 @@ const translations: Record<string, string> = {
   "community.images": "이미지",
   "community.feelings": "감정",
   "community.post": "게시",
-  "community.leaderboard": "리더보드",
+  "community.leaderboard": "빛의 보드",
   "community.leaderboardStats": "리더보드 & 통계",
   "community.sortRecent": "최신",
   "community.sortPopular": "인기",
