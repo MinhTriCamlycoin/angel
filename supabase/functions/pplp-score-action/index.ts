@@ -397,6 +397,46 @@ serve(async (req) => {
       else reasonCodes.push('TEMPORARY_WEIGHT_ADJUSTMENT');
     }
 
+    // Check for governance participation (GOV_VOTE_CAST events in last 30 days)
+    try {
+      const { count: govVotes } = await supabase
+        .from('pplp_events')
+        .select('*', { count: 'exact', head: true })
+        .eq('actor_user_id', action.actor_id)
+        .eq('event_type', 'GOV_VOTE_CAST')
+        .gte('occurred_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+      if (govVotes && govVotes > 0) reasonCodes.push('GOVERNANCE_PARTICIPATION');
+    } catch (_) {}
+
+    // Check fraud signals for specific adjustment codes
+    try {
+      const { data: fraudSignals } = await supabase
+        .from('pplp_fraud_signals')
+        .select('signal_type')
+        .eq('actor_id', action.actor_id)
+        .eq('is_resolved', false);
+
+      if (fraudSignals && fraudSignals.length > 0) {
+        const signalTypes = fraudSignals.map(s => s.signal_type);
+        if (signalTypes.some(t => ['burst_like', 'bot_pattern', 'temporal_anomaly'].includes(t))) {
+          reasonCodes.push('INTERACTION_PATTERN_UNSTABLE');
+        }
+        if (signalTypes.some(t => ['ring_rating', 'reciprocal_rating'].includes(t))) {
+          reasonCodes.push('RATING_CLUSTER_REVIEW');
+        }
+      }
+    } catch (_) {}
+
+    // Check for content under review
+    try {
+      const { count: contentUnderReview } = await supabase
+        .from('pplp_actions')
+        .select('*', { count: 'exact', head: true })
+        .eq('actor_id', action.actor_id)
+        .eq('status', 'under_review');
+      if (contentUnderReview && contentUnderReview > 0) reasonCodes.push('CONTENT_REVIEW_IN_PROGRESS');
+    } catch (_) {}
+
     // ========== 7c. Get active scoring rule version ==========
     let activeRuleVersion = 'V1.0';
     try {
