@@ -2220,6 +2220,101 @@ export type Database = {
           },
         ]
       }
+      mint_allocations: {
+        Row: {
+          allocation_amount: number
+          contribution_ratio: number
+          created_at: string
+          eligible: boolean
+          epoch_id: string
+          id: string
+          light_score: number
+          onchain_tx_hash: string | null
+          reason_codes: string[] | null
+          user_id: string
+        }
+        Insert: {
+          allocation_amount?: number
+          contribution_ratio?: number
+          created_at?: string
+          eligible?: boolean
+          epoch_id: string
+          id?: string
+          light_score?: number
+          onchain_tx_hash?: string | null
+          reason_codes?: string[] | null
+          user_id: string
+        }
+        Update: {
+          allocation_amount?: number
+          contribution_ratio?: number
+          created_at?: string
+          eligible?: boolean
+          epoch_id?: string
+          id?: string
+          light_score?: number
+          onchain_tx_hash?: string | null
+          reason_codes?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mint_allocations_epoch_id_fkey"
+            columns: ["epoch_id"]
+            isOneToOne: false
+            referencedRelation: "mint_epochs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mint_epochs: {
+        Row: {
+          created_at: string
+          epoch_label: string
+          finalized_at: string | null
+          id: string
+          mint_pool_amount: number
+          onchain_tx_hash: string | null
+          period_end: string
+          period_start: string
+          rules_version: string
+          status: string
+          total_light: number
+          updated_at: string
+          user_count: number
+        }
+        Insert: {
+          created_at?: string
+          epoch_label: string
+          finalized_at?: string | null
+          id?: string
+          mint_pool_amount?: number
+          onchain_tx_hash?: string | null
+          period_end: string
+          period_start: string
+          rules_version?: string
+          status?: string
+          total_light?: number
+          updated_at?: string
+          user_count?: number
+        }
+        Update: {
+          created_at?: string
+          epoch_label?: string
+          finalized_at?: string | null
+          id?: string
+          mint_pool_amount?: number
+          onchain_tx_hash?: string | null
+          period_end?: string
+          period_start?: string
+          rules_version?: string
+          status?: string
+          total_light?: number
+          updated_at?: string
+          user_count?: number
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           actor_id: string | null
@@ -2748,6 +2843,7 @@ export type Database = {
           occurred_at: string
           payload_json: Json | null
           scoring_tags: string[] | null
+          signature: string | null
           source: string | null
           target_id: string | null
           target_type: string | null
@@ -2762,6 +2858,7 @@ export type Database = {
           occurred_at?: string
           payload_json?: Json | null
           scoring_tags?: string[] | null
+          signature?: string | null
           source?: string | null
           target_id?: string | null
           target_type?: string | null
@@ -2776,6 +2873,7 @@ export type Database = {
           occurred_at?: string
           payload_json?: Json | null
           scoring_tags?: string[] | null
+          signature?: string | null
           source?: string | null
           target_id?: string | null
           target_type?: string | null
