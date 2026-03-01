@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCommunityPosts } from "@/hooks/useCommunityPosts";
 import { CollapsibleCreatePost } from "@/components/community/CollapsibleCreatePost";
 import { PostCard } from "@/components/community/PostCard";
-import { RewardRulesCard } from "@/components/community/RewardRulesCard";
+
 import { CommunityHeader } from "@/components/community/CommunityHeader";
 import { FunEcosystemSidebar } from "@/components/community/FunEcosystemSidebar";
 import { SuggestedFriendsCard } from "@/components/community/SuggestedFriendsCard";
@@ -245,7 +245,6 @@ const Community = () => {
                       <Web3TransactionHistory />
                       <Leaderboard />
                       <SuggestedFriendsCard />
-                      <RewardRulesCard dailyLimits={dailyLimits} />
                     </div>
                   </SheetContent>
                 </Sheet>
@@ -352,10 +351,6 @@ const Community = () => {
               <SuggestedFriendsCard />
             </div>
 
-            {/* Quy tắc thưởng */}
-            <div className="flex-shrink-0 mb-4">
-              <RewardRulesCard dailyLimits={dailyLimits} />
-            </div>
             </aside>
           </div>
         </div>
