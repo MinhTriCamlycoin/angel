@@ -8,6 +8,7 @@ export interface CommunityLightInfo {
   icon: string;
   color: string;
   trend: string;
+  total_score: number;
 }
 
 export interface LeaderboardUser {
@@ -144,12 +145,13 @@ export function useLeaderboard() {
           if (lightData && Array.isArray(lightData)) {
             const lightMap = new Map(
               lightData.map((l: any) => [l.user_id, {
-                level: l.level,
-                name_vi: l.name_vi,
-                name_en: l.name_en,
-                icon: l.icon,
-                color: l.color,
-                trend: l.trend,
+                level: l.light_level ?? l.level,
+                name_vi: l.level_name_vi ?? l.name_vi,
+                name_en: l.level_name_vi ?? l.name_en,
+                icon: l.level_icon ?? l.icon,
+                color: l.level_color ?? l.color,
+                trend: l.trend ?? 'stable',
+                total_score: l.total_score ?? 0,
               }])
             );
 

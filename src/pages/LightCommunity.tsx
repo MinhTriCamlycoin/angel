@@ -46,10 +46,13 @@ function MemberCard({ user, index }: { user: LeaderboardUser; index: number }) {
             )}
           </div>
 
-          {/* Light Level Badge - hide for anonymous */}
+          {/* Right side: Light Level Badge + Score */}
           {!isAnonymous && (
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 flex flex-col items-end gap-1">
               <LightLevelBadge lightInfo={user.light_info} size="md" showTrend={false} />
+              <span className="text-xs font-semibold text-amber-600">
+                ⚡ {(user.light_info?.total_score ?? 0).toFixed(1)} LS
+              </span>
             </div>
           )}
         </div>
