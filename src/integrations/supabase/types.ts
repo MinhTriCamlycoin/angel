@@ -4974,6 +4974,7 @@ export type Database = {
           total_coins_today: number
         }[]
       }
+      get_mint_request_stats: { Args: never; Returns: Json }
       get_next_nonce: { Args: { _user_id: string }; Returns: number }
       get_top_recipients: {
         Args: { _date_filter?: string; _limit?: number }

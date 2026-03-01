@@ -204,22 +204,22 @@ export default function AdminMintApproval() {
     }
   }, []);
 
-  // Fetch global counts from DB (not limited by the 1000 record fetch)
+  // Fetch global counts using DB function (handles 10K+ records efficiently)
   const fetchGlobalCounts = useCallback(async () => {
     try {
-      const [pending, signed, minted] = await Promise.all([
-        supabase.from("pplp_mint_requests").select("amount", { count: "exact", head: false }).eq("status", "pending"),
-        supabase.from("pplp_mint_requests").select("amount", { count: "exact", head: false }).eq("status", "signed"),
-        supabase.from("pplp_mint_requests").select("amount", { count: "exact", head: false }).eq("status", "minted"),
-      ]);
-      setGlobalCounts({
-        pending: pending.count || 0,
-        signed: signed.count || 0,
-        minted: minted.count || 0,
-        pendingFun: (pending.data || []).reduce((s, r) => s + (r.amount || 0), 0),
-        signedFun: (signed.data || []).reduce((s, r) => s + (r.amount || 0), 0),
-        mintedFun: (minted.data || []).reduce((s, r) => s + (r.amount || 0), 0),
-      });
+      const { data, error } = await supabase.rpc("get_mint_request_stats");
+      if (error) throw error;
+      if (data) {
+        const stats = data as Record<string, number>;
+        setGlobalCounts({
+          pending: stats.pending || 0,
+          signed: stats.signed || 0,
+          minted: stats.minted || 0,
+          pendingFun: stats.pending_fun || 0,
+          signedFun: stats.signed_fun || 0,
+          mintedFun: stats.minted_fun || 0,
+        });
+      }
     } catch (e) {
       console.error("Error fetching global counts:", e);
     }
