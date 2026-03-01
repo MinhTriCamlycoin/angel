@@ -697,7 +697,7 @@ const translations: Record<string, string> = {
   "community.images": "图片",
   "community.feelings": "心情",
   "community.post": "发布",
-  "community.leaderboard": "排行榜",
+  "community.leaderboard": "光之榜",
   "community.leaderboardStats": "排行榜和统计",
   "community.sortRecent": "最新",
   "community.sortPopular": "热门",
