@@ -33,6 +33,7 @@ export function useLightPoints(): LightPointsData & {
   addPoints: (points: number, reason: string, sourceType: string) => Promise<void>;
   refreshPoints: () => Promise<void>;
   getLevelInfo: (points: number) => { level: number; title: string; nextLevel: typeof LEVEL_THRESHOLDS[0] | null; progress: number };
+  getCurrentMonth: () => string;
 } {
   const { user } = useAuth();
   const [data, setData] = useState<LightPointsData>({
@@ -65,6 +66,11 @@ export function useLightPoints(): LightPointsData & {
       nextLevel: nextLevelInfo,
       progress: Math.min(100, Math.max(0, progress)),
     };
+  };
+
+  const getCurrentMonth = () => {
+    const now = new Date();
+    return `Tháng ${now.getMonth() + 1}/${now.getFullYear()}`;
   };
 
   const fetchPoints = async () => {
@@ -138,6 +144,7 @@ export function useLightPoints(): LightPointsData & {
     addPoints,
     refreshPoints: fetchPoints,
     getLevelInfo,
+    getCurrentMonth,
   };
 }
 
