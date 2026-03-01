@@ -11,6 +11,7 @@ import { CoreValuesSection } from "@/components/CoreValuesSection";
 import { ConnectionSection } from "@/components/ConnectionSection";
 import { Footer } from "@/components/Footer";
 import { DailyLoginReward } from "@/components/earn/DailyLoginReward";
+import { MintCycleStatus } from "@/components/pplp/MintCycleStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { MainSidebar } from "@/components/MainSidebar";
@@ -73,6 +74,13 @@ const Index = () => {
               {/* Master Charter Showcase - MOST PROMINENT POSITION */}
               <MasterCharterShowcase />
               
+              {/* Epoch Mint Status - for logged in users */}
+              {user && (
+                <div className="px-4 sm:px-6 lg:px-8 py-4">
+                  <MintCycleStatus />
+                </div>
+              )}
+
               {/* Welcome Block */}
               <WelcomeBlock />
               
