@@ -1,12 +1,13 @@
 import { useLightPoints, LEVEL_THRESHOLDS } from "@/hooks/useLightPoints";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles, Star, TrendingUp } from "lucide-react";
+import { Sparkles, Star, TrendingUp, Trophy } from "lucide-react";
 
 const LightPointsDisplay = () => {
-  const { totalPoints, lifetimePoints, isLoading, getLevelInfo, recentPoints } = useLightPoints();
+  const { totalPoints, lifetimePoints, isLoading, getLevelInfo, recentPoints, getCurrentMonth } = useLightPoints();
 
-  const levelInfo = getLevelInfo(totalPoints);
+  const lifetimeLevelInfo = getLevelInfo(lifetimePoints);
+  const monthlyLevelInfo = getLevelInfo(totalPoints);
 
   if (isLoading) {
     return (
@@ -20,7 +21,7 @@ const LightPointsDisplay = () => {
 
   return (
     <Card className="border-divine-gold/20 shadow-soft overflow-hidden">
-      {/* Header with gradient */}
+      {/* Header - Lifetime level */}
       <div className="bg-gradient-to-r from-divine-gold/20 via-divine-light/20 to-divine-gold/20 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -28,32 +29,47 @@ const LightPointsDisplay = () => {
               <Sparkles className="w-6 h-6 text-divine-gold" />
             </div>
             <div>
-              <p className="text-sm text-foreground-muted">Level {levelInfo.level}</p>
-              <h3 className="font-bold text-divine-gold">{levelInfo.title}</h3>
+              <p className="text-sm text-foreground-muted">Level {lifetimeLevelInfo.level} (tích lũy)</p>
+              <h3 className="font-bold text-divine-gold">{lifetimeLevelInfo.title}</h3>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-divine-gold">{totalPoints.toLocaleString()}</p>
-            <p className="text-xs text-foreground-muted">Điểm tháng này</p>
-            <p className="text-xs text-foreground-muted mt-0.5">Tích lũy: {lifetimePoints.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-divine-gold">{totalPoints.toLocaleString()} ⭐</p>
+            <p className="text-xs text-foreground-muted">Điểm {getCurrentMonth()}</p>
+            <p className="text-xs text-foreground-muted mt-0.5 flex items-center justify-end gap-1">
+              <Trophy className="w-3 h-3" /> Tích lũy: {lifetimePoints.toLocaleString()}
+            </p>
           </div>
         </div>
       </div>
 
       <CardContent className="pt-4 space-y-4">
-        {/* Progress to next level */}
-        {levelInfo.nextLevel && (
+        {/* Monthly progress */}
+        {monthlyLevelInfo.nextLevel && (
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-foreground-muted">Tiến trình đến Level {levelInfo.nextLevel.level}</span>
+              <span className="text-foreground-muted">Tiến trình tháng → Level {monthlyLevelInfo.nextLevel.level}</span>
               <span className="text-divine-gold font-medium">
-                {totalPoints} / {levelInfo.nextLevel.points}
+                {totalPoints} / {monthlyLevelInfo.nextLevel.points}
               </span>
             </div>
-            <Progress value={levelInfo.progress} className="h-2" />
+            <Progress value={monthlyLevelInfo.progress} className="h-2" />
             <p className="text-xs text-foreground-muted">
-              Còn {levelInfo.nextLevel.points - totalPoints} points để đạt "{levelInfo.nextLevel.title}"
+              Còn {monthlyLevelInfo.nextLevel.points - totalPoints} điểm để đạt "{monthlyLevelInfo.nextLevel.title}"
             </p>
+          </div>
+        )}
+
+        {/* Lifetime progress (smaller) */}
+        {lifetimeLevelInfo.nextLevel && (
+          <div className="space-y-1.5 pt-2 border-t border-divine-gold/10">
+            <div className="flex justify-between text-xs">
+              <span className="text-foreground-muted">Tích lũy → Level {lifetimeLevelInfo.nextLevel.level} ({lifetimeLevelInfo.nextLevel.title})</span>
+              <span className="text-foreground-muted">
+                {lifetimePoints} / {lifetimeLevelInfo.nextLevel.points}
+              </span>
+            </div>
+            <Progress value={lifetimeLevelInfo.progress} className="h-1.5" />
           </div>
         )}
 
@@ -77,7 +93,7 @@ const LightPointsDisplay = () => {
           </div>
         )}
 
-        {/* Level badges preview */}
+        {/* Level badges */}
         <div className="pt-2 border-t border-divine-gold/10">
           <p className="text-sm font-medium mb-2">Các cấp độ ánh sáng</p>
           <div className="flex flex-wrap gap-2">
@@ -85,12 +101,12 @@ const LightPointsDisplay = () => {
               <div
                 key={level.level}
                 className={`px-2 py-1 rounded-full text-xs ${
-                  levelInfo.level >= level.level
+                  lifetimeLevelInfo.level >= level.level
                     ? "bg-divine-gold/20 text-divine-gold"
                     : "bg-muted text-muted-foreground"
                 }`}
               >
-                <Star className={`inline w-3 h-3 mr-1 ${levelInfo.level >= level.level ? "fill-current" : ""}`} />
+                <Star className={`inline w-3 h-3 mr-1 ${lifetimeLevelInfo.level >= level.level ? "fill-current" : ""}`} />
                 {level.title}
               </div>
             ))}
