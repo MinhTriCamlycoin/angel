@@ -39,6 +39,7 @@ import {
   Image
 } from "lucide-react";
 import AdminNavToolbar from "@/components/admin/AdminNavToolbar";
+import { AdminEpochOverview } from "@/components/admin/AdminEpochOverview";
 import angelAvatar from "@/assets/angel-avatar.png";
 
 interface UserWithStatus {
@@ -365,6 +366,11 @@ const AdminDashboard = () => {
       <AdminNavToolbar />
 
       <main className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Epoch Overview */}
+        <div className="mb-6">
+          <AdminEpochOverview />
+        </div>
+
         {/* BSCScan Sync */}
         <Card className="border-divine-gold/20 mb-6">
           <CardHeader className="pb-3">
