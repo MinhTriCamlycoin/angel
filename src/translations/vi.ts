@@ -1,5 +1,8 @@
 const translations: Record<string, string> = {
   "common.you": "Bạn",
+
+  // Light Levels
+  "lightLevels.title": "✨ Các Cấp Độ Ánh Sáng",
   
   // Earn page - Spiritual subtitle
   "earn.subtitleSpiritual": "Tích lũy Ánh Sáng qua biết ơn và hành động yêu thương – Kiếm Camly Coin từ trái tim ✨",

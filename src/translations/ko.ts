@@ -1,4 +1,7 @@
 const translations: Record<string, string> = {
+  // Light Levels
+  "lightLevels.title": "✨ 빛의 레벨",
+
   // Early Adopter
   "earlyAdopter.title": "얼리 어답터 보상",
   "earlyAdopter.description": "처음 100명의 사용자를 위한 특별 보상을 받으려면 10개의 유효한 질문을 완료하세요!",
