@@ -10,13 +10,15 @@ import {
   Download,
   Save,
   Sparkles,
-  Send,
+  CalendarClock,
+  TrendingUp,
   Clock,
   Zap,
   ExternalLink,
   Copy,
   CheckCircle2,
-  Plus,
+  Shield,
+  BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AddFUNToWalletButton } from "@/components/mint/AddFUNToWalletButton";
@@ -53,6 +55,7 @@ export function MintGuideFullFlow({ defaultOpen = true }: { defaultOpen?: boolea
   };
 
   const steps: Step[] = [
+    // ── PHASE 1: THIẾT LẬP ──
     {
       number: 1,
       title: "Đăng ký & đăng nhập Angel AI",
@@ -114,36 +117,73 @@ export function MintGuideFullFlow({ defaultOpen = true }: { defaultOpen?: boolea
         </Link>
       ),
     },
+
+    // ── PHASE 2: TÍCH LŨY (Epoch-based) ──
     {
       number: 5,
-      title: "Thực hiện Light Actions",
-      description: "Chat với Angel AI, đăng bài cộng đồng, viết nhật ký biết ơn, tặng quà cho bạn bè...",
+      title: "Thực hiện Light Actions mỗi ngày",
+      description: "Chat với Angel AI, đăng bài cộng đồng, viết nhật ký, giúp đỡ bạn bè... Mỗi hành động được chấm điểm theo 5 trụ cột PPLP (S·T·H·C·U).",
       icon: <Sparkles className="h-4 w-4" />,
       phase: "earn",
       tips: (
-        <div className="flex flex-wrap gap-2">
-          <Link to="/chat" className="text-xs text-amber-700 dark:text-amber-400 underline">Chat AI</Link>
-          <Link to="/community" className="text-xs text-amber-700 dark:text-amber-400 underline">Cộng đồng</Link>
-          <Link to="/earn" className="text-xs text-amber-700 dark:text-amber-400 underline">Kiếm điểm</Link>
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap gap-2">
+            <Link to="/chat" className="text-xs text-amber-700 dark:text-amber-400 underline">Chat AI</Link>
+            <Link to="/community" className="text-xs text-amber-700 dark:text-amber-400 underline">Cộng đồng</Link>
+            <Link to="/earn" className="text-xs text-amber-700 dark:text-amber-400 underline">Kiếm điểm</Link>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            💡 Chất lượng {'>'} Số lượng. Hành động đều đặn mỗi ngày sẽ tăng Consistency Multiplier.
+          </p>
         </div>
       ),
     },
     {
       number: 6,
-      title: "Gửi yêu cầu Mint",
-      description: 'Khi đạt Light Score ≥ 60, nhấn "Gửi tất cả yêu cầu mint" ở danh sách bên dưới.',
-      icon: <Send className="h-4 w-4" />,
+      title: "Tích lũy Light Score trong Epoch",
+      description: "Mỗi tháng = 1 Epoch. Light Score = (Base Action × 0.4 + Content × 0.6 + Sequence Bonus) × Reputation × Consistency – Integrity Penalty. Cần đạt tối thiểu 10 LS để đủ điều kiện nhận FUN.",
+      icon: <TrendingUp className="h-4 w-4" />,
       phase: "earn",
       tips: (
-        <p className="text-xs text-muted-foreground">
-          Angel AI chấm điểm theo 5 trụ cột PPLP. Chỉ hành động đạt ≥60 mới được mint.
-        </p>
+        <div className="space-y-1">
+          <div className="grid grid-cols-5 gap-1 text-[10px] text-center">
+            <span className="bg-amber-100 dark:bg-amber-900/30 rounded px-1 py-0.5">Cấp 1<br/>0-199</span>
+            <span className="bg-amber-100 dark:bg-amber-900/30 rounded px-1 py-0.5">Cấp 2<br/>200-499</span>
+            <span className="bg-amber-100 dark:bg-amber-900/30 rounded px-1 py-0.5">Cấp 3<br/>500-999</span>
+            <span className="bg-amber-100 dark:bg-amber-900/30 rounded px-1 py-0.5">Cấp 4<br/>1K-2K</span>
+            <span className="bg-amber-100 dark:bg-amber-900/30 rounded px-1 py-0.5">Cấp 5<br/>2000+</span>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            ⚡ Light Score càng cao → phần thưởng FUN càng lớn.
+          </p>
+        </div>
+      ),
+    },
+
+    // ── PHASE 3: NHẬN FUN (Epoch Allocation) ──
+    {
+      number: 7,
+      title: "Cuối Epoch: Phân bổ FUN Money tự động",
+      description: "Cuối mỗi tháng, Mint Pool (tối đa 5.000.000 FUN) được phân bổ cho tất cả user đủ điều kiện theo công thức: FUN = Pool × (Light Score của bạn ÷ Tổng Light Score hệ thống). Giới hạn tối đa 3% pool/người.",
+      icon: <CalendarClock className="h-4 w-4" />,
+      phase: "claim",
+      tips: (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 text-[11px]">
+            <Shield className="h-3 w-3 text-green-600" />
+            <span className="text-muted-foreground">Điều kiện: LS ≥ 10 + Đã chấp thuận PPLP + Không có fraud signal nghiêm trọng</span>
+          </div>
+          <div className="flex items-center gap-2 text-[11px]">
+            <BarChart3 className="h-3 w-3 text-blue-600" />
+            <span className="text-muted-foreground">Anti-whale: Mỗi user tối đa nhận 3% tổng pool (150.000 FUN)</span>
+          </div>
+        </div>
       ),
     },
     {
-      number: 7,
-      title: "Chờ Admin duyệt (EIP-712)",
-      description: "Admin ký chữ ký EIP-712 → FUN Money được lock on-chain cho bạn. Trạng thái: Locked.",
+      number: 8,
+      title: "Admin ký duyệt (EIP-712) → Lock on-chain",
+      description: "Admin ký chữ ký EIP-712 cho phần FUN được phân bổ → FUN Money được lock on-chain cho bạn.",
       icon: <Clock className="h-4 w-4" />,
       phase: "claim",
       tips: (
@@ -153,7 +193,7 @@ export function MintGuideFullFlow({ defaultOpen = true }: { defaultOpen?: boolea
       ),
     },
     {
-      number: 8,
+      number: 9,
       title: "Activate → Claim — Nhận FUN về ví ✨",
       description: "Nhấn Activate All (Locked → Activated), rồi Claim All (Activated → Flowing). FUN thuộc về bạn!",
       icon: <Zap className="h-4 w-4" />,
@@ -200,6 +240,13 @@ export function MintGuideFullFlow({ defaultOpen = true }: { defaultOpen?: boolea
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="px-4 pb-4 space-y-1">
+            {/* Epoch info banner */}
+            <div className="rounded-lg bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-950/40 dark:to-orange-950/40 border border-amber-200 dark:border-amber-800 p-3 mb-3">
+              <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
+                🔄 <strong>Mô hình Epoch:</strong> FUN Money được phân bổ theo chu kỳ tháng dựa trên Light Score tích lũy — không phải mint từng hành động. Hành động đều đặn + chất lượng cao = phần thưởng lớn hơn.
+              </p>
+            </div>
+
             {/* Phase labels */}
             <div className="flex gap-4 text-[11px] font-medium mb-2 px-1">
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-600" /> Thiết lập</span>
