@@ -1,37 +1,39 @@
 
 
-## Phân tích Tài liệu 4 (Thực sự): Scoring Rule Versioning, API, Reason Codes, Transparency
+## Phân tích Tài liệu 5: LIGHT SCORE MATHEMATICAL SPEC (LS-Math v1.0)
 
-### Kết quả: 2 gaps nhỏ cần bổ sung
+### Kết quả: Nội dung trùng 100% với spec đã triển khai
 
-Tài liệu này mô tả 9 phần. Sau khi đối chiếu với codebase:
+Tài liệu 5 chính là bản đầy đủ của `docs/LIGHT_SCORE_MATH_SPEC.md` đã có trong codebase. Đối chiếu từng section:
 
-| Phần | Trạng thái | Chi tiết |
-|---|---|---|
-| **Phần 3: Scoring Rule Versioning** | ✅ | Bảng `scoring_rules` có đầy đủ (V1.0 + LS-Math-v1.0), `light_score_ledger.rule_version` đã có, migration strategy đúng (không tính lại quá khứ) |
-| **Phần 4: API Endpoints** | ✅ | 5 edge functions đã triển khai: `pplp-event-ingest`, `pplp-submit-rating`, `pplp-light-profile`, `pplp-light-me`, `pplp-mint-summary` |
-| **Phần 5: Reason Codes tích cực** | ⚠️ **Thiếu 2** | 7 positive codes: thiếu `GOVERNANCE_PARTICIPATION`. 5 adjustment codes: thiếu `INTERACTION_PATTERN_UNSTABLE`, `RATING_CLUSTER_REVIEW`, `CONTENT_REVIEW_IN_PROGRESS` |
-| **Phần 6: Level System** | ✅ | 5 levels đúng spec, chỉ hiển thị Level + Trend, không ranking |
-| **Phần 7: Mint Engine** | ✅ | Anti-whale 3%, epoch flow 7 bước, `mint_epochs` + `mint_allocations` đã có |
-| **Phần 8: Transparency Dashboard** | ✅ | `TransparencyDashboard.tsx` hiển thị đúng 5 chỉ số, không lộ cá nhân |
-| **Phần 9: Bảo vệ dài hạn** | ✅ | Fraud detection, random audit, slow mint curve đã có |
+| Section | Spec | Triển khai | Trạng thái |
+|---|---|---|---|
+| §1-2: Definitions & Inputs | 5 pillars, event stream, ratings | `pplp_events`, `pplp_ratings` | ✅ |
+| §3: Reputation Weight | `clip(w_min, w_max, 1 + α·log(1+R))` | `scoring-engine.ts::computeReputationWeight` + RPC `compute_reputation_weight_v2` | ✅ |
+| §4: Content Pillar Score | Weighted average + cold-start fallback | `compute_content_pillar_score` RPC + AI fallback | ✅ |
+| §5: Action Base Score | `B_u(t) = Σ b_τ · g(x)` | `pplp-compute-daily-scores` edge function | ✅ |
+| §6: Content Score per day | `C_u(t) = Σ ρ · h(P_c)`, γ=1.3 | `scoring-engine.ts::computeContentScore` | ✅ |
+| §7: Consistency Multiplier | `1 + β·(1 - e^(-S/λ))` | `scoring-engine.ts::computeConsistencyMultiplier` | ✅ |
+| §8: Sequence Multiplier | `1 + η·tanh(Q/κ)` | `scoring-engine.ts::computeSequenceMultiplier` | ✅ |
+| §9: Integrity Penalty | `1 - min(π_max, θ·r)` | `scoring-engine.ts::computeIntegrityPenalty` | ✅ |
+| §10: Cold-start fallback | `P̃_c = μ_topic · φ_u` | AI Pillar Analyzer fallback | ✅ |
+| §11: Daily Light Score | `L = L_raw · M_cons · M_seq · Π` | `scoring-engine.ts::computeDailyLightScore` | ✅ |
+| §12: Epoch Light Score | `L_u(e) = Σ L_u(t)` | `compute_epoch_light_score` RPC | ✅ |
+| §13: Eligibility | 4 conditions | `scoring-engine.ts::checkMintEligibility` | ✅ |
+| §14: Mint Allocation + Anti-whale | Cap 3%, iterative redistribution | `scoring-engine.ts::computeMintAllocation` + `pplp-epoch-allocate` | ✅ |
+| §15: Level mapping | 5 levels, no ranking | `get_user_light_level` RPC + `light_levels` table | ✅ |
+| §16: Explainability | Top 5 contributors + reason codes | `score_explanations` table + `ScoreExplanationPanel.tsx` | ✅ |
+| §17: Default params | All 16 params | `DEFAULT_CONFIG` in `scoring-engine.ts` | ✅ |
+| §18: Design Guarantees | 5 properties | Architecture enforced | ✅ |
+| §19: AI Support | ego_risk, pillar_suggest, spam_risk | `pplp-ai-pillar-analyzer` edge function | ✅ |
 
-### Gaps cần triển khai
+### Kết luận
 
-**Gap: Thiếu 4 Reason Codes trong scoring engine**
+Không có gap nào. Tài liệu 5 là bản toán học chi tiết của spec đã được triển khai đầy đủ trong:
+- `src/lib/scoring-engine.ts` (pure functions)
+- `docs/LIGHT_SCORE_MATH_SPEC.md` (documentation)
+- `docs/SCORING_CONFIG_V1.md` (config + test cases)
+- Edge functions + RPCs (backend pipeline)
 
-Hiện tại `pplp-score-action/index.ts` chỉ phát ra 7 codes. Thiếu:
-1. `GOVERNANCE_PARTICIPATION` — khi user có event `GOV_VOTE_CAST` gần đây
-2. `INTERACTION_PATTERN_UNSTABLE` — khi fraud signals có `signal_type` liên quan đến pattern instability
-3. `RATING_CLUSTER_REVIEW` — khi fraud signals phát hiện ring rating
-4. `CONTENT_REVIEW_IN_PROGRESS` — khi user có nội dung đang bị review
-
-Cả 4 codes này đã được định nghĩa trong `docs/PPLP_REWARD_MECHANISM.md` và `ScoreExplanationPanel.tsx` đã render chúng đúng, nhưng scoring engine chưa phát ra.
-
-### Kế hoạch triển khai
-
-1. Cập nhật `pplp-score-action/index.ts` — thêm logic phát 4 reason codes còn thiếu vào section 7b
-2. Deploy edge function
-
-Thay đổi rất nhỏ, chỉ thêm ~30 dòng code kiểm tra thêm trong scoring engine.
+**Cha gửi tiếp tài liệu 6 để con phân tích nhé!**
 
