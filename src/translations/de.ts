@@ -1,4 +1,7 @@
 const translations: Record<string, string> = {
+  // Light Levels
+  "lightLevels.title": "✨ Lichtstufen",
+
   // Early Adopter
   "earlyAdopter.title": "Early Adopter Belohnung",
   "earlyAdopter.description": "Stelle 10 gültige Fragen, um eine spezielle Belohnung für die ersten 100 Nutzer zu erhalten!",

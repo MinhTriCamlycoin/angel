@@ -6,6 +6,7 @@ import { useLeaderboard, LeaderboardUser } from "@/hooks/useLeaderboard";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LightLevelBadge } from "@/components/leaderboard/LightLevelBadge";
 import { RainbowTitle } from "@/components/leaderboard/RainbowTitle";
+import { LightLevelsTable } from "@/components/leaderboard/LightLevelsTable";
 import { getProfilePath } from "@/lib/profileUrl";
 import { motion } from "framer-motion";
 import angelAvatar from "@/assets/angel-avatar.png";
@@ -99,6 +100,9 @@ const LightCommunity = () => {
           {t("leaderboard.subtitle") || "Những người đóng góp bền vững trong hệ sinh thái FUN Play"}
         </p>
       </div>
+
+      {/* Light Levels Table */}
+      <LightLevelsTable />
 
       {/* Members list */}
       <div className="max-w-2xl mx-auto px-4 pb-20">
