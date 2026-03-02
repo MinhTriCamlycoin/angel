@@ -265,6 +265,13 @@ export const Header = () => {
                           </>
                         )}
                         
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                          <Link to="/attester-panel" className="flex items-center gap-2">
+                            <Shield className="w-4 h-4 text-emerald-600" />
+                            <span className="font-medium">Attester Panel</span>
+                          </Link>
+                        </DropdownMenuItem>
+                        
                         <DropdownMenuSeparator />
                         
                         {/* Logout */}
@@ -473,7 +480,23 @@ export const Header = () => {
                         </Link>
                       )}
 
-                      {/* Sign Out Button */}
+                      {/* Attester Panel */}
+                      <Link 
+                        to="/attester-panel"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="mx-4 flex items-center justify-between p-4 rounded-xl 
+                          bg-gradient-to-r from-emerald-100 to-teal-100 dark:from-emerald-950/40 dark:to-teal-950/40
+                          border border-emerald-300/50 dark:border-emerald-700/50 transition-all hover:shadow-md"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-emerald-200 dark:bg-emerald-900/50 flex items-center justify-center">
+                            <Shield className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
+                          </div>
+                          <span className="font-semibold text-foreground">Attester Panel</span>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                      </Link>
+
                       <button
                         onClick={() => {
                           handleSignOut();
