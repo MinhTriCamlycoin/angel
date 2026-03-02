@@ -23,7 +23,7 @@ export function Leaderboard() {
     getUser();
   }, []);
 
-  const displayUsers = allUsers.slice(0, 5);
+  const displayUsers = allUsers.slice(0, 6);
 
   if (isLoading) {
     return (
@@ -63,10 +63,10 @@ export function Leaderboard() {
           </div>
         </div>
 
-        {/* Member list */}
+        {/* Member grid */}
         {allUsers.length > 0 ? (
           <>
-            <div className="space-y-2">
+            <div className="grid grid-cols-3 gap-2">
               {displayUsers.map((user, i) => (
                 <motion.div
                   key={user.user_id}
@@ -80,7 +80,7 @@ export function Leaderboard() {
             </div>
 
             {/* Show more */}
-            {allUsers.length > 5 && (
+            {allUsers.length > 6 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -88,7 +88,7 @@ export function Leaderboard() {
                 className="w-full mt-3 text-xs text-muted-foreground hover:text-primary hover:bg-primary-pale/40 rounded-xl"
               >
                 <ChevronDown className="w-3.5 h-3.5 mr-1" />
-                {t("common.showMore") || "Xem thêm"} ({allUsers.length - 5})
+                {t("common.showMore") || "Xem thêm"} ({allUsers.length - 6})
               </Button>
             )}
           </>
