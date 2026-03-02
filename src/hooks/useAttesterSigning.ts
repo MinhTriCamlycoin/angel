@@ -1,15 +1,8 @@
 /**
  * useAttesterSigning — Hook for GOV Attester EIP-712 signing
- * 
- * Flow:
- * 1. Connect wallet (MetaMask) → detect GOV group
- * 2. Fetch pending requests (status: pending_sig or signing, group not yet signed)
- * 3. Sign EIP-712 PureLoveProof via browser wallet
- * 4. Update multisig_signatures + multisig_completed_groups in DB
- * 5. When 3/3 groups signed → status becomes "signed"
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { ethers } from "ethers";
 import { supabase } from "@/integrations/supabase/client";
 import { useWeb3WalletContext } from "@/contexts/Web3WalletContext";
@@ -45,7 +38,7 @@ export interface MultisigMintRequest {
 
 export function useAttesterSigning() {
   const { address, isConnected } = useWeb3WalletContext();
-  const [pendingRequests, setPendingRequests] = useState<MultisigMintRequest[]>([]);
+  const [allRequests, setAllRequests] = useState<MultisigMintRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSigning, setIsSigning] = useState(false);
 
@@ -53,39 +46,28 @@ export function useAttesterSigning() {
   const myName = address ? getAttesterName(address) : null;
   const isAttester = address ? isGovAttester(address) : false;
 
-  // Fetch requests that need signing from my group
-  const fetchPendingRequests = useCallback(async () => {
+  const fetchRequests = useCallback(async () => {
     if (!myGroup) return;
-
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from("pplp_mint_requests")
         .select("*")
-        .in("status", ["pending_sig", "signing"])
-        .order("created_at", { ascending: true });
+        .in("status", ["pending_sig", "signing", "signed"])
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-
-      // Filter: only requests where my group hasn't signed yet
-      const filtered = (data || []).filter((r: any) => {
-        const completedGroups: string[] = r.multisig_completed_groups || [];
-        return !completedGroups.includes(myGroup);
-      });
-
-      setPendingRequests(filtered as MultisigMintRequest[]);
+      setAllRequests((data || []) as MultisigMintRequest[]);
     } catch (err) {
-      console.error("Error fetching pending requests:", err);
+      console.error("Error fetching requests:", err);
     } finally {
       setIsLoading(false);
     }
   }, [myGroup]);
 
-  // Subscribe to realtime updates
   useEffect(() => {
     if (!myGroup) return;
-
-    fetchPendingRequests();
+    fetchRequests();
 
     const channel = supabase
       .channel("attester-signing")
@@ -97,18 +79,13 @@ export function useAttesterSigning() {
           table: "pplp_mint_requests",
           filter: "status=in.(pending_sig,signing,signed)",
         },
-        () => {
-          fetchPendingRequests();
-        }
+        () => fetchRequests()
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [myGroup, fetchPendingRequests]);
+    return () => { supabase.removeChannel(channel); };
+  }, [myGroup, fetchRequests]);
 
-  // Sign a specific request with EIP-712
   const signRequest = useCallback(
     async (request: MultisigMintRequest) => {
       if (!address || !myGroup || !isAttester) {
@@ -121,7 +98,6 @@ export function useAttesterSigning() {
         const provider = new ethers.BrowserProvider((window as any).ethereum);
         const signer = await provider.getSigner();
 
-        // Build EIP-712 message matching contract PureLoveProof struct
         const message = {
           user: request.recipient_address,
           actionHash: request.action_hash,
@@ -132,14 +108,12 @@ export function useAttesterSigning() {
 
         toast.loading("Đang ký EIP-712...", { id: `sign-${request.id}` });
 
-        // Sign via MetaMask
         const signature = await signer.signTypedData(
           FUN_MONEY_DOMAIN,
           PPLP_LOCK_TYPES as unknown as Record<string, ethers.TypedDataField[]>,
           message
         );
 
-        // Update DB: add signature to multisig_signatures
         const currentSigs = request.multisig_signatures || {};
         const updatedSigs = {
           ...currentSigs,
@@ -169,12 +143,12 @@ export function useAttesterSigning() {
 
         toast.success(
           allGroupsSigned
-            ? `✅ Đủ ${REQUIRED_SIGNATURES}/${REQUIRED_SIGNATURES} chữ ký! Request sẵn sàng submit on-chain.`
+            ? `✅ Đủ ${REQUIRED_SIGNATURES}/${REQUIRED_SIGNATURES} chữ ký! Sẵn sàng submit on-chain.`
             : `✓ Nhóm ${myGroup.toUpperCase()} đã ký (${completedGroups.length}/${REQUIRED_SIGNATURES})`,
           { id: `sign-${request.id}` }
         );
 
-        await fetchPendingRequests();
+        await fetchRequests();
         return true;
       } catch (err: any) {
         console.error("Signing error:", err);
@@ -187,7 +161,24 @@ export function useAttesterSigning() {
         setIsSigning(false);
       }
     },
-    [address, myGroup, myName, isAttester, fetchPendingRequests]
+    [address, myGroup, myName, isAttester, fetchRequests]
+  );
+
+  // Split: pending = my group hasn't signed yet; signed = my group already signed or fully signed
+  const pendingRequests = useMemo(
+    () => allRequests.filter((r) => {
+      const completed = r.multisig_completed_groups || [];
+      return myGroup ? !completed.includes(myGroup) && r.status !== "signed" : false;
+    }),
+    [allRequests, myGroup]
+  );
+
+  const signedRequests = useMemo(
+    () => allRequests.filter((r) => {
+      const completed = r.multisig_completed_groups || [];
+      return myGroup ? completed.includes(myGroup) || r.status === "signed" : r.status === "signed";
+    }),
+    [allRequests, myGroup]
   );
 
   return {
@@ -197,9 +188,11 @@ export function useAttesterSigning() {
     isConnected,
     address,
     pendingRequests,
+    signedRequests,
+    allRequests,
     isLoading,
     isSigning,
     signRequest,
-    refreshRequests: fetchPendingRequests,
+    refreshRequests: fetchRequests,
   };
 }
