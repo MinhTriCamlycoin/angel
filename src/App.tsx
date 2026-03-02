@@ -70,6 +70,7 @@ import CoordinatorProject from "./pages/CoordinatorProject";
 import DynamicRoute from "./pages/DynamicRoute";
 import PostDetail from "./pages/PostDetail";
 import LightCommunity from "./pages/LightCommunity";
+import AttesterPanel from "./pages/AttesterPanel";
 // Note: Global error handling is in main.tsx (registered before React renders)
 
 const queryClient = new QueryClient();
@@ -128,6 +129,7 @@ const App = () => (
               <Route path="/admin/treasury" element={<AdminTreasury />} />
               <Route path="/admin/contract-status" element={<AdminContractStatus />} />
               <Route path="/admin/trust-list" element={<AdminTrustList />} />
+              <Route path="/attester-panel" element={<AttesterPanel />} />
               <Route path="/receipt/:receiptId" element={<Receipt />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/community-questions" element={<CommunityQuestions />} />
