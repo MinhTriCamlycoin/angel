@@ -56,6 +56,12 @@ interface MintRequestRow {
   created_at: string;
   minted_at: string | null;
   on_chain_error: string | null;
+  // Multisig fields
+  amount_wei?: string | null;
+  platform_id?: string | null;
+  multisig_signatures?: Record<string, any>;
+  multisig_completed_groups?: string[];
+  multisig_required_groups?: string[];
   // Joined data
   pplp_actions?: {
     action_type: string;
@@ -85,9 +91,14 @@ const ACTION_LABELS: Record<string, string> = {
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { label: "Chờ duyệt", variant: "outline" },
+  pending_sig: { label: "Chờ ký multisig", variant: "outline" },
+  signing: { label: "Đang ký multisig", variant: "secondary" },
   signed: { label: "Đã ký", variant: "secondary" },
+  submitted: { label: "Đã submit", variant: "secondary" },
+  confirmed: { label: "Đã xác nhận", variant: "default" },
   minted: { label: "Đã mint", variant: "default" },
   rejected: { label: "Từ chối", variant: "destructive" },
+  failed: { label: "Thất bại", variant: "destructive" },
   expired: { label: "Hết hạn", variant: "outline" },
 };
 

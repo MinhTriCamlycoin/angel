@@ -3123,12 +3123,17 @@ export type Database = {
           action_id: string
           actor_id: string
           amount: number
+          amount_wei: string | null
           created_at: string
           evidence_hash: string
           id: string
           minted_at: string | null
+          multisig_completed_groups: string[] | null
+          multisig_required_groups: string[] | null
+          multisig_signatures: Json | null
           nonce: number
           on_chain_error: string | null
+          platform_id: string | null
           policy_version: number
           recipient_address: string
           signature: string | null
@@ -3144,12 +3149,17 @@ export type Database = {
           action_id: string
           actor_id: string
           amount: number
+          amount_wei?: string | null
           created_at?: string
           evidence_hash: string
           id?: string
           minted_at?: string | null
+          multisig_completed_groups?: string[] | null
+          multisig_required_groups?: string[] | null
+          multisig_signatures?: Json | null
           nonce: number
           on_chain_error?: string | null
+          platform_id?: string | null
           policy_version?: number
           recipient_address: string
           signature?: string | null
@@ -3165,12 +3175,17 @@ export type Database = {
           action_id?: string
           actor_id?: string
           amount?: number
+          amount_wei?: string | null
           created_at?: string
           evidence_hash?: string
           id?: string
           minted_at?: string | null
+          multisig_completed_groups?: string[] | null
+          multisig_required_groups?: string[] | null
+          multisig_signatures?: Json | null
           nonce?: number
           on_chain_error?: string | null
+          platform_id?: string | null
           policy_version?: number
           recipient_address?: string
           signature?: string | null

@@ -92,10 +92,21 @@ export const FUN_MONEY_ABI = [
 
 // Registered Attesters (via govSetAttester on contract)
 // Role: Ký mint on-chain (lockWithPPLP) — ĐỘC LẬP với Treasury wallet
-// Current: 1-sig (attesterThreshold = 1)
-// Future: 3-sig when additional attester keys are added
+// Multisig 3-of-3: 11 GOV members across WILL/WISDOM/LOVE groups
+// attesterThreshold = 3 (set via govSetAttesterThreshold on contract)
 export const REGISTERED_ATTESTERS = [
-  "0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D", // Attester #1 (Mint signer — NOT Treasury)
+  // WILL (Ý Chí) 💪
+  "0xe32d50a0badE4cbD5B0d6120d3A5FD07f63694f1", // Minh Trí
+  "0xfd0Da7a744245e7aCECCd786d5a743Ef9291a557", // Ánh Nguyệt
+  "0x02D5578173bd0DB25462BB32A254Cd4b2E6D9a0D", // Thu Trang
+  // WISDOM (Trí Tuệ) 🌟
+  "0xCa319fBc39F519822385F2D0a0114B14fa89A301", // Bé Giàu
+  "0xDf8249159BB67804D718bc8186f95B75CE5ECbe8", // Bé Ngọc
+  "0x5102Ecc4a458a1af76aFA50d23359a712658a402", // Ái Vân
+  // LOVE (Yêu Thương) ❤️
+  "0xE418a560611e80E4239F5513D41e583fC9AC2E6d", // Thanh Tiên
+  "0x67464Df3082828b3Cf10C5Cb08FC24A28228EFd1", // Bé Kim
+  "0x9ec8C51175526BEbB1D04100256De71CF99B7CCC", // Bé Hà
 ] as const;
 
 // Treasury wallet (chi trả thưởng — KHÔNG dùng để ký mint)
