@@ -66,13 +66,14 @@ export function Leaderboard() {
         {/* Member grid */}
         {allUsers.length > 0 ? (
           <>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="flex overflow-x-auto gap-2 pb-2 snap-x snap-mandatory scrollbar-none">
               {displayUsers.map((user, i) => (
                 <motion.div
                   key={user.user_id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05, duration: 0.3 }}
+                  className="snap-start flex-shrink-0"
                 >
                   <RankingRow user={user} />
                 </motion.div>

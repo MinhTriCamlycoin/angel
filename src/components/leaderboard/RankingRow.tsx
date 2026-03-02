@@ -18,7 +18,7 @@ export function RankingRow({ user }: RankingRowProps) {
       to={getProfilePath(user.user_id, user.handle)}
       className="group block"
     >
-      <div className="flex flex-col items-center gap-1 p-2.5 rounded-2xl border border-[#daa520]/20 bg-gradient-to-b from-card/90 via-[#ffd700]/[0.03] to-card/90 hover:from-[#ffd700]/[0.06] hover:via-[#ffec8b]/[0.08] hover:to-[#ffd700]/[0.06] hover:border-[#daa520]/35 transition-all duration-300 hover:shadow-[0_2px_15px_rgba(218,165,32,0.12)] h-full">
+      <div className="flex flex-col items-center gap-1 p-2.5 rounded-2xl border border-[#daa520]/20 bg-gradient-to-b from-card/90 via-[#ffd700]/[0.03] to-card/90 hover:from-[#ffd700]/[0.06] hover:via-[#ffec8b]/[0.08] hover:to-[#ffd700]/[0.06] hover:border-[#daa520]/35 transition-all duration-300 hover:shadow-[0_2px_15px_rgba(218,165,32,0.12)] h-full w-[88px]">
         {/* Avatar with golden ring */}
         <div className="relative flex-shrink-0">
           <Avatar className="w-10 h-10 sm:w-11 sm:h-11 border-2 border-[#daa520]/40 shadow-[0_0_8px_rgba(255,215,0,0.15)] group-hover:border-[#ffd700]/70 transition-colors duration-300">
