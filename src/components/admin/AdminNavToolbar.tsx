@@ -60,6 +60,7 @@ const navGroups: NavGroup[] = [
       { to: "/admin/mint-approval", icon: Shield, label: "Mint Approval" },
       { to: "/admin/contract-status", icon: Shield, label: "Contract" },
       { to: "/admin/tip-reports", icon: Gift, label: "Tip Reports" },
+      { to: "/attester-panel", icon: ShieldCheck, label: "Attester" },
     ],
   },
   {
