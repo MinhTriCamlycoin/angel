@@ -4,7 +4,7 @@ import { TrendingUp, Minus, TrendingDown } from "lucide-react";
 
 interface LightLevelBadgeProps {
   lightInfo?: CommunityLightInfo;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   showTrend?: boolean;
 }
 
@@ -32,6 +32,15 @@ export function LightLevelBadge({ lightInfo, size = "md", showTrend = true }: Li
   const TrendIcon = trend.icon;
   const levelName = currentLanguage === "vi" ? info.name_vi : info.name_en;
   const colors = levelColors[info.level] || levelColors[1];
+
+  if (size === "xs") {
+    return (
+      <div className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full ${colors.bg} border ${colors.border} shadow-sm max-w-full`}>
+        <span className="text-[10px]">{info.icon}</span>
+        <span className={`text-[9px] font-semibold ${colors.text} truncate`}>{levelName}</span>
+      </div>
+    );
+  }
 
   if (size === "sm") {
     return (
