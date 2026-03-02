@@ -218,7 +218,15 @@ const Community = () => {
                 </div>
               </AuthActionGuard>
 
-              {/* Mobile Leaderboard Button */}
+              {/* Mobile: HonorBoard + Leaderboard inline */}
+              {isMobile && (
+                <div className="space-y-3">
+                  <HonorBoard />
+                  <Leaderboard />
+                </div>
+              )}
+
+              {/* Mobile: Other boards in Sheet */}
               {isMobile && (
                 <Sheet open={showMobileLeaderboard} onOpenChange={setShowMobileLeaderboard}>
                   <SheetTrigger asChild>
@@ -227,7 +235,7 @@ const Community = () => {
                       className="w-full border-amber-300 text-amber-700 hover:bg-amber-50 hover:border-amber-400 flex items-center justify-center gap-2 text-xs sm:text-sm py-2"
                     >
                       <Trophy className="w-4 h-4 flex-shrink-0" />
-                      <span className="truncate">{t("community.leaderboard")}</span>
+                      <span className="truncate">{t("community.leaderboardStats")}</span>
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="bottom" className="h-[85vh] overflow-y-auto px-3 sm:px-6">
@@ -238,12 +246,10 @@ const Community = () => {
                       </SheetTitle>
                     </SheetHeader>
                     <div className="space-y-3 sm:space-y-4 mt-3 sm:mt-4 pb-6">
-                      <HonorBoard />
                       <GiftHonorBoard />
                       <DonationHonorBoard />
                       <GiftTransactionHistory />
                       <Web3TransactionHistory />
-                      <Leaderboard />
                       <SuggestedFriendsCard />
                     </div>
                   </SheetContent>
