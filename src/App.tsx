@@ -53,6 +53,8 @@ import UserProfile from "./pages/UserProfile";
 import Messages from "./pages/Messages";
 import ActivityHistory from "./pages/ActivityHistory";
 import Mint from "./pages/Mint";
+import UnifiedDashboard from "./pages/UnifiedDashboard";
+import UnifiedLightScore from "./pages/UnifiedLightScore";
 import Receipt from "./pages/Receipt";
 import AdminTipReports from "./pages/AdminTipReports";
 import AdminTetReward from "./pages/AdminTetReward";
@@ -106,6 +108,8 @@ const App = () => (
               <Route path="/knowledge" element={<Knowledge />} />
               <Route path="/activity-history" element={<ActivityHistory />} />
               <Route path="/mint" element={<Mint />} />
+              <Route path="/unified-dashboard" element={<UnifiedDashboard />} />
+              <Route path="/unified-light-score" element={<UnifiedLightScore />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/knowledge" element={<AdminKnowledge />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
