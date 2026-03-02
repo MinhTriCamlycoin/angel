@@ -1,35 +1,55 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useAttesterSigning, MultisigMintRequest } from "@/hooks/useAttesterSigning";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Shield, CheckCircle2, Clock, RefreshCw, Loader2, AlertCircle } from "lucide-react";
-import { GOV_GROUPS, SIGNATURE_ORDER, GovGroupName } from "@/lib/govGroups";
-import { formatDistanceToNow } from "date-fns";
+import { Shield, CheckCircle2, Clock, RefreshCw, Loader2, AlertCircle, Sparkles } from "lucide-react";
+import { GOV_GROUPS, SIGNATURE_ORDER, GovGroupName, REQUIRED_SIGNATURES } from "@/lib/govGroups";
+import { formatDistanceToNow, format } from "date-fns";
 import { vi } from "date-fns/locale";
 
 function SignatureStatus({ request }: { request: MultisigMintRequest }) {
   const completed = request.multisig_completed_groups || [];
   return (
-    <div className="flex gap-2 flex-wrap">
+    <div className="space-y-2">
       {SIGNATURE_ORDER.map((group) => {
         const g = GOV_GROUPS[group];
         const signed = completed.includes(group);
         const sigData = request.multisig_signatures?.[group];
         return (
-          <Badge
+          <div
             key={group}
-            variant={signed ? "default" : "outline"}
-            className={signed ? "bg-green-600 text-white" : ""}
+            className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
+              signed ? "border-green-500/30 bg-green-500/10" : "border-border/50 bg-muted/30"
+            }`}
           >
-            {g.emoji} {g.label} {signed ? "✓" : "○"}
-            {sigData?.signer_name && (
-              <span className="ml-1 text-[10px] opacity-80">({sigData.signer_name})</span>
-            )}
-          </Badge>
+            <div className="flex items-center gap-2">
+              <span>{g.emoji}</span>
+              <span className="font-medium">{g.label}</span>
+              {signed ? (
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+              ) : (
+                <Clock className="w-4 h-4 text-muted-foreground" />
+              )}
+            </div>
+            <div className="text-right text-xs text-muted-foreground">
+              {sigData ? (
+                <>
+                  <span className="font-medium text-foreground">{sigData.signer_name}</span>
+                  {sigData.signed_at && (
+                    <span className="ml-2">
+                      {format(new Date(sigData.signed_at), "HH:mm dd/MM", { locale: vi })}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span>Chưa ký</span>
+              )}
+            </div>
+          </div>
         );
       })}
     </div>
@@ -41,15 +61,16 @@ function RequestCard({
   onSign,
   isSigning,
   myGroup,
+  showSignButton,
 }: {
   request: MultisigMintRequest;
   onSign: (r: MultisigMintRequest) => void;
   isSigning: boolean;
   myGroup: GovGroupName | null;
+  showSignButton: boolean;
 }) {
-  const alreadySigned = myGroup
-    ? (request.multisig_completed_groups || []).includes(myGroup)
-    : false;
+  const completedCount = (request.multisig_completed_groups || []).length;
+  const isFullySigned = request.status === "signed";
 
   return (
     <Card className="border-border/50">
@@ -61,13 +82,17 @@ function RequestCard({
             </p>
             <p className="text-lg font-bold">{request.amount.toLocaleString()} FUN</p>
           </div>
-          <Badge variant={request.status === "signed" ? "default" : "secondary"}>
-            {request.status === "pending_sig"
-              ? "Chờ ký"
-              : request.status === "signing"
-              ? "Đang ký"
-              : request.status}
-          </Badge>
+          <div className="flex flex-col items-end gap-1">
+            {isFullySigned ? (
+              <Badge className="bg-green-600 text-white">
+                <Sparkles className="w-3 h-3 mr-1" /> Sẵn sàng mint
+              </Badge>
+            ) : (
+              <Badge variant="secondary">
+                {completedCount}/{REQUIRED_SIGNATURES} chữ ký
+              </Badge>
+            )}
+          </div>
         </div>
 
         <div className="text-xs text-muted-foreground space-y-1">
@@ -84,7 +109,7 @@ function RequestCard({
 
         <SignatureStatus request={request} />
 
-        {!alreadySigned && myGroup && (
+        {showSignButton && (
           <Button
             onClick={() => onSign(request)}
             disabled={isSigning}
@@ -102,12 +127,6 @@ function RequestCard({
             )}
           </Button>
         )}
-
-        {alreadySigned && (
-          <div className="flex items-center gap-2 text-green-600 text-sm">
-            <CheckCircle2 className="w-4 h-4" /> Nhóm bạn đã ký
-          </div>
-        )}
       </CardContent>
     </Card>
   );
@@ -121,6 +140,7 @@ export default function AttesterPanel() {
     isConnected,
     address,
     pendingRequests,
+    signedRequests,
     isLoading,
     isSigning,
     signRequest,
@@ -189,28 +209,55 @@ export default function AttesterPanel() {
               <Skeleton key={i} className="h-40 w-full" />
             ))}
           </div>
-        ) : pendingRequests.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              <Clock className="w-10 h-10 mx-auto mb-3 opacity-50" />
-              <p>Không có yêu cầu nào cần ký</p>
-            </CardContent>
-          </Card>
         ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              {pendingRequests.length} yêu cầu cần ký
-            </p>
-            {pendingRequests.map((req) => (
-              <RequestCard
-                key={req.id}
-                request={req}
-                onSign={signRequest}
-                isSigning={isSigning}
-                myGroup={myGroup}
-              />
-            ))}
-          </div>
+          <>
+            {/* Section: Cần ký */}
+            <section className="space-y-3">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Clock className="w-5 h-5 text-amber-500" />
+                Cần ký ({pendingRequests.length})
+              </h2>
+              {pendingRequests.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground">
+                    <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>Không có yêu cầu nào cần ký</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                pendingRequests.map((req) => (
+                  <RequestCard
+                    key={req.id}
+                    request={req}
+                    onSign={signRequest}
+                    isSigning={isSigning}
+                    myGroup={myGroup}
+                    showSignButton={true}
+                  />
+                ))
+              )}
+            </section>
+
+            {/* Section: Đã ký */}
+            {signedRequests.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  Đã ký ({signedRequests.length})
+                </h2>
+                {signedRequests.map((req) => (
+                  <RequestCard
+                    key={req.id}
+                    request={req}
+                    onSign={signRequest}
+                    isSigning={isSigning}
+                    myGroup={myGroup}
+                    showSignButton={false}
+                  />
+                ))}
+              </section>
+            )}
+          </>
         )}
       </main>
       <Footer />
