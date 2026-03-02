@@ -1,21 +1,26 @@
 
 
-## Cập nhật Bảng Cộng Đồng Ánh Sáng: Hiển thị hàng ngang + tên dưới ảnh
+## Cập nhật layout RankingRow: Avatar + Badge ngang hàng, tên ở dưới
 
-### Vấn đề hiện tại
-Bảng đang hiển thị dạng **grid 3 cột** (lưới). Con muốn chuyển về dạng **hàng ngang cuộn được** (horizontal scroll) và giữ tên hiển thị dưới ảnh đại diện.
+### Hiểu yêu cầu
+Con muốn mỗi thành viên hiển thị theo layout:
+```text
+┌─────────────────────────┐
+│ [Avatar+icon🌱] [Badge] │  ← ngang hàng
+│     Tên User            │  ← dưới avatar
+└─────────────────────────┘
+```
+- Hình đại diện có icon level nhỏ ở góc phải dưới
+- Badge cấp độ nằm **ngang hàng** với avatar (bên phải)
+- Tên user nằm **dưới** hình đại diện
+- Tất cả vẫn trong hàng ngang cuộn được (horizontal scroll)
 
 ### Thay đổi
 
-**1. `src/components/Leaderboard.tsx`** — Đổi grid → horizontal scroll
-- Thay `grid grid-cols-3` thành `flex overflow-x-auto` với snap scrolling
-- Mỗi card có chiều rộng cố định (~90px) để hiển thị đều trên hàng ngang
-- Ẩn scrollbar cho gọn, hỗ trợ vuốt ngang trên mobile
+**`src/components/leaderboard/RankingRow.tsx`** — Đổi layout từ dọc sang ngang
+- Hàng trên: `flex flex-row` chứa Avatar (có icon overlay) + LightLevelBadge cạnh nhau
+- Hàng dưới: Tên user căn giữa bên dưới
+- Bỏ fixed width `w-[88px]`, thay bằng width phù hợp hơn cho layout ngang (~120-140px)
 
-**2. `src/components/leaderboard/RankingRow.tsx`** — Giữ layout dọc (avatar → tên → badge)
-- Giữ nguyên cấu trúc hiện tại: avatar trên, tên dưới, badge dưới cùng
-- Đảm bảo chiều rộng card cố định để hàng ngang đều đẹp trên mọi thiết bị
-
-### Kết quả
-Bảng sẽ hiển thị 1 hàng ngang vuốt được, mỗi thành viên là 1 card nhỏ (avatar + tên + level badge), hoạt động đồng nhất trên mobile và desktop.
+**`src/components/Leaderboard.tsx`** — Không đổi (đã là horizontal scroll)
 
