@@ -1635,6 +1635,39 @@ export type Database = {
           },
         ]
       }
+      fun_id_links: {
+        Row: {
+          angel_user_id: string
+          created_at: string
+          fun_profile_user_id: string | null
+          id: string
+          linked_at: string
+          status: string
+          updated_at: string
+          wallet_address: string | null
+        }
+        Insert: {
+          angel_user_id: string
+          created_at?: string
+          fun_profile_user_id?: string | null
+          id?: string
+          linked_at?: string
+          status?: string
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Update: {
+          angel_user_id?: string
+          created_at?: string
+          fun_profile_user_id?: string | null
+          id?: string
+          linked_at?: string
+          status?: string
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
       fun_pool_config: {
         Row: {
           created_at: string

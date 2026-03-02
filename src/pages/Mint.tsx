@@ -30,6 +30,25 @@ export default function Mint() {
 
         <main className="flex-1 container mx-auto px-4 py-8 pt-28">
           <div className="max-w-6xl mx-auto space-y-8">
+
+            {/* FUN Profile Redirect Banner */}
+            <Alert className="border-primary/30 bg-primary/5">
+              <ExternalLink className="h-4 w-4 text-primary" />
+              <AlertTitle className="text-primary font-semibold">Mint FUN trên FUN Profile</AlertTitle>
+              <AlertDescription className="mt-2">
+                <p className="text-foreground-muted mb-3">
+                  Hệ thống Mint FUN đã được tích hợp vào FUN Profile. Bạn có thể mint trực tiếp tại đó với cùng một bảng PPLP.
+                </p>
+                <Button
+                  onClick={() => window.open("https://fun.rich/wallet/fun_money", "_blank")}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Đến FUN Profile để Mint
+                </Button>
+              </AlertDescription>
+            </Alert>
+
             {/* Header */}
             <div className="text-center space-y-4">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-sm font-medium">

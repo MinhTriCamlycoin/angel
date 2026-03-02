@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { Mail, Lock, ArrowLeft, Sparkles, Eye, EyeOff, Check, Search, Gem, Heart, Leaf, Star, Sun } from "lucide-react";
+import { Mail, Lock, ArrowLeft, Sparkles, Eye, EyeOff, Check, Search, Gem, Heart, Leaf, Star, Sun, Globe } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 
@@ -784,6 +784,21 @@ const Auth = () => {
           <p className="mt-4 text-center text-xs text-muted-foreground">
             Bạn có thể xem nội dung trang chủ mà không cần đăng nhập
           </p>
+
+          {/* FUN Profile Auth Option */}
+          <div className="mt-4 pt-4 border-t border-border/50 text-center">
+            <p className="text-xs text-muted-foreground mb-2">Hoặc đăng ký qua FUN Profile</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => window.open("https://fun.rich/auth", "_blank")}
+              className="text-primary border-primary/30 hover:bg-primary/5"
+            >
+              <Globe className="w-4 h-4 mr-2" />
+              Đăng ký qua FUN Profile
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

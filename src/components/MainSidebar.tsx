@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { 
   Home, Info, BookOpen, MessageCircle, Users, 
-  PenLine, ArrowRightLeft, Star, PanelLeft, Gift, History, Shield, User, Crown
+  PenLine, ArrowRightLeft, Star, PanelLeft, Gift, History, Shield, User, Crown, Globe, LayoutDashboard
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { NavLink } from "@/components/NavLink";
@@ -35,18 +35,20 @@ export function MainSidebar() {
   const [showGiftDialog, setShowGiftDialog] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [handle, setHandle] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("avatar_url, display_name")
+      .select("avatar_url, display_name, handle")
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
         if (data) {
           setAvatarUrl(data.avatar_url);
           setDisplayName(data.display_name);
+          setHandle(data.handle);
         }
       });
   }, [user]);
@@ -57,6 +59,8 @@ export function MainSidebar() {
     { label: t("nav.founder") || "Nhà sáng lập", href: "/about#founder", icon: Crown },
     { label: t("nav.knowledge"), href: "/knowledge", icon: BookOpen },
     { label: "Chat với Angel AI", href: "/chat", icon: MessageCircle },
+    { label: "FUN Profile", href: "__fun_profile__", icon: Globe, external: true },
+    { label: "Dashboard tổng hợp", href: "/unified-dashboard", icon: LayoutDashboard },
     { label: t("nav.community") || "Cộng đồng", href: "/community", icon: Users },
     { label: t("nav.contentWriter"), href: "/content-writer", icon: PenLine },
     { label: t("nav.swap"), href: "/swap", icon: ArrowRightLeft },
@@ -92,7 +96,27 @@ export function MainSidebar() {
             <SidebarMenu>
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = location.pathname === item.href;
+                const isExternal = (item as any).external;
+                const isActive = !isExternal && location.pathname === item.href;
+
+                // External link (FUN Profile)
+                if (isExternal) {
+                  const funUrl = handle
+                    ? `https://fun.rich/@${handle}`
+                    : "https://fun.rich";
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        tooltip={item.label}
+                        className="transition-all duration-200 hover:bg-amber-100/70 text-foreground"
+                        onClick={() => window.open(funUrl, "_blank")}
+                      >
+                        <Icon className="w-5 h-5 text-primary" />
+                        <span className="font-medium">{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                }
                 
                 return (
                   <SidebarMenuItem key={item.href}>
