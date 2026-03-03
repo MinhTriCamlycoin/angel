@@ -785,18 +785,31 @@ const Auth = () => {
             Bạn có thể xem nội dung trang chủ mà không cần đăng nhập
           </p>
 
-          {/* FUN Profile Auth Option */}
+          {/* FUN Profile SSO Login */}
           <div className="mt-4 pt-4 border-t border-border/50 text-center">
-            <p className="text-xs text-muted-foreground mb-2">Hoặc đăng ký qua FUN Profile</p>
+            <p className="text-xs text-muted-foreground mb-2">Đăng nhập từ hệ sinh thái FUN</p>
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              onClick={() => window.open("https://fun.rich/auth", "_blank")}
-              className="text-primary border-primary/30 hover:bg-primary/5"
+              onClick={async () => {
+                try {
+                  const { funProfile } = await import("@/lib/funProfile");
+                  funProfile.startAuth();
+                } catch (err) {
+                  console.error("FUN Profile SSO error:", err);
+                  toast({
+                    title: "Lỗi kết nối FUN Profile",
+                    description: "Không thể kết nối SSO. Vui lòng thử lại.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              className="w-full py-5 border-divine-gold/20 hover:bg-divine-gold/5 hover:border-divine-gold/40 transition-all"
             >
-              <Globe className="w-4 h-4 mr-2" />
-              Đăng ký qua FUN Profile
+              <span className="flex items-center gap-3">
+                <Globe className="w-5 h-5 text-divine-gold" />
+                Đăng nhập bằng FUN Profile
+              </span>
             </Button>
           </div>
         </CardContent>
