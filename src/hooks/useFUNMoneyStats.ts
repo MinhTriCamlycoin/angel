@@ -2,16 +2,16 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface FUNMoneyStats {
-  totalScored: number;   // FUN ready to claim (scored + pass)
-  totalMinted: number;   // FUN already minted on-chain
-  totalPending: number;  // FUN pending/processing
+  totalAllocated: number;  // FUN allocated in epochs (ready to claim)
+  totalMinted: number;     // FUN already minted on-chain
+  totalPending: number;    // FUN pending epoch allocation
   totalAmount: number;
   isLoading: boolean;
 }
 
 export function useFUNMoneyStats(userId?: string) {
   const [stats, setStats] = useState<FUNMoneyStats>({
-    totalScored: 0,
+    totalAllocated: 0,
     totalMinted: 0,
     totalPending: 0,
     totalAmount: 0,
@@ -25,38 +25,46 @@ export function useFUNMoneyStats(userId?: string) {
     }
 
     try {
-      const { data, error } = await supabase
-        .from("pplp_actions")
-        .select("status, pplp_scores(final_reward, decision)")
-        .eq("actor_id", userId);
+      // Fetch from mint_allocations (epoch-based FUN distribution)
+      const { data: allocations, error: allocError } = await supabase
+        .from("mint_allocations")
+        .select("fun_allocated, status")
+        .eq("user_id", userId)
+        .eq("eligible", true);
 
-      if (error) throw error;
+      if (allocError) throw allocError;
 
       let totalMinted = 0;
-      let totalScored = 0;
-      let totalPending = 0;
+      let totalAllocated = 0;
 
-      (data || []).forEach((action) => {
-        // pplp_scores is one-to-one, so it's an object (or null)
-        const score = action.pplp_scores as { final_reward: number; decision: string } | null;
-        if (!score) return;
-
-        const reward = score.final_reward || 0;
-
-        if (action.status === "minted") {
-          totalMinted += reward;
-        } else if (action.status === "scored" && score.decision === "pass") {
-          totalScored += reward;
-        } else {
-          totalPending += reward;
+      (allocations || []).forEach((alloc: any) => {
+        const amount = alloc.fun_allocated || 0;
+        if (alloc.status === "minted" || alloc.status === "onchain") {
+          totalMinted += amount;
+        } else if (alloc.status === "allocated" || alloc.status === "approved") {
+          totalAllocated += amount;
         }
       });
 
+      // Pending = current epoch Light Score contribution (not yet allocated)
+      // We estimate from current light_score_ledger
+      const { data: ledgerData } = await supabase
+        .from("light_score_ledger")
+        .select("final_light_score")
+        .eq("user_id", userId);
+
+      const currentLightScore = (ledgerData || []).reduce(
+        (sum: number, row: any) => sum + (row.final_light_score || 0), 0
+      );
+
+      // Pending is informational — actual FUN will be calculated at epoch end
+      const totalPending = currentLightScore > 0 ? Math.round(currentLightScore) : 0;
+
       setStats({
-        totalScored,
+        totalAllocated,
         totalMinted,
         totalPending,
-        totalAmount: totalMinted + totalScored + totalPending,
+        totalAmount: totalMinted + totalAllocated,
         isLoading: false,
       });
     } catch (error) {
@@ -69,5 +77,9 @@ export function useFUNMoneyStats(userId?: string) {
     fetchStats();
   }, [fetchStats]);
 
-  return stats;
+  // Backwards compatibility: expose totalScored as alias for totalAllocated
+  return {
+    ...stats,
+    totalScored: stats.totalAllocated,
+  };
 }

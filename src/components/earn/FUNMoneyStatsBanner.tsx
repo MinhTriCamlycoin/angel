@@ -75,9 +75,16 @@ export function FUNMoneyStatsBanner({ userId }: FUNMoneyStatsBannerProps) {
           {isLoading ? (
             <Skeleton className="h-9 w-40 bg-white/20" />
           ) : (
-            <p className="text-3xl font-bold">
-              {totalAmount.toLocaleString()} FUN
-            </p>
+            <>
+              <p className="text-3xl font-bold">
+                {totalAmount.toLocaleString()} FUN
+              </p>
+              {totalPending > 0 && (
+                <p className="text-white/60 text-xs mt-1">
+                  +{totalPending.toLocaleString()} Light Score (epoch hiện tại)
+                </p>
+              )}
+            </>
           )}
         </div>
 
