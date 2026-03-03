@@ -73,6 +73,7 @@ import DynamicRoute from "./pages/DynamicRoute";
 import PostDetail from "./pages/PostDetail";
 import LightCommunity from "./pages/LightCommunity";
 import AttesterPanel from "./pages/AttesterPanel";
+import AuthCallback from "./pages/AuthCallback";
 // Note: Global error handling is in main.tsx (registered before React renders)
 
 const queryClient = new QueryClient();
@@ -96,6 +97,7 @@ const App = () => (
               <Route path="/chat" element={<Chat />} />
               <Route path="/about" element={<About />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/profile/:tab" element={<Profile />} />
               <Route path="/onboarding" element={<Onboarding />} />
