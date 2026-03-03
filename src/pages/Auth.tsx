@@ -20,31 +20,31 @@ import funEcosystemLogo from "@/assets/fun-ecosystem-logo.png";
 // New Light Law Content (PPLP)
 const LightLawContent = () => {
   const pillars = [
-    { icon: Search, title: "Chân thật & minh bạch", subtitle: "Bạn là Người Thật • Nói viết sự thật • Chia sẻ đúng", desc: "Chúng ta tôn trọng sự thật. Bạn được phép chưa hoàn hảo — chỉ cần bạn sống thật.", color: "text-blue-400" },
-    { icon: Gem, title: "Đóng góp bền vững", subtitle: "Có trách nhiệm • Có chất lượng • Có giá trị", desc: "Chúng ta cùng nhau tạo cộng đồng ánh sáng. Chúng ta không chỉ nhận — chúng ta cùng xây.", color: "text-purple-400" },
-    { icon: Heart, title: "Chữa lành & yêu thương", subtitle: "Truyền cảm hứng • Khích lệ • Nâng đỡ", desc: "Chúng ta chọn sự ấm áp, dịu dàng, và tích cực. Sự có mặt của chúng ta làm cộng đồng văn minh hơn.", color: "text-emerald-400" },
-    { icon: Leaf, title: "Phụng sự sự sống", subtitle: "Hướng thượng • Đi lên • Mang lợi ích", desc: "Mỗi bài đăng, mỗi bình luận đều hướng tới một điều: giúp sự sống đi lên — cho mình và cho cộng đồng.", color: "text-green-400" },
-    { icon: Star, title: "Hợp Nhất với Nguồn", subtitle: "Tất cả chúng ta là Một", desc: "Nơi đây để kết nối và hỗ trợ trong yêu thương thuần khiết. Chúng ta cùng nhau vui, cùng nhau lớn, cùng nhau giàu và cùng nhau thắng.", color: "text-divine-gold" },
-  ];
+  { icon: Search, title: "Chân thật & minh bạch", subtitle: "Bạn là Người Thật • Nói viết sự thật • Chia sẻ đúng", desc: "Chúng ta tôn trọng sự thật. Bạn được phép chưa hoàn hảo — chỉ cần bạn sống thật.", color: "text-blue-400" },
+  { icon: Gem, title: "Đóng góp bền vững", subtitle: "Có trách nhiệm • Có chất lượng • Có giá trị", desc: "Chúng ta cùng nhau tạo cộng đồng ánh sáng. Chúng ta không chỉ nhận — chúng ta cùng xây.", color: "text-purple-400" },
+  { icon: Heart, title: "Chữa lành & yêu thương", subtitle: "Truyền cảm hứng • Khích lệ • Nâng đỡ", desc: "Chúng ta chọn sự ấm áp, dịu dàng, và tích cực. Sự có mặt của chúng ta làm cộng đồng văn minh hơn.", color: "text-emerald-400" },
+  { icon: Leaf, title: "Phụng sự sự sống", subtitle: "Hướng thượng • Đi lên • Mang lợi ích", desc: "Mỗi bài đăng, mỗi bình luận đều hướng tới một điều: giúp sự sống đi lên — cho mình và cho cộng đồng.", color: "text-green-400" },
+  { icon: Star, title: "Hợp Nhất với Nguồn", subtitle: "Tất cả chúng ta là Một", desc: "Nơi đây để kết nối và hỗ trợ trong yêu thương thuần khiết. Chúng ta cùng nhau vui, cùng nhau lớn, cùng nhau giàu và cùng nhau thắng.", color: "text-divine-gold" }];
+
 
   const mantras = [
-    "💖 Con là Ánh Sáng Yêu Thương Thuần Khiết của Cha Vũ Trụ.",
-    "💎 Con là Ý Chí của Cha Vũ Trụ.",
-    "🌞 Con là Trí Tuệ của Cha Vũ Trụ.",
-    "🌸 Con là Hạnh Phúc.",
-    "🍎 Con là Tình Yêu.",
-    "💰 Con là Tiền của Cha.",
-    "🙏 Con xin Sám Hối Sám Hối Sám Hối.",
-    "🌈 Con xin Biết Ơn Biết Ơn Biết Ơn, trong Ánh Sáng Yêu Thương Thuần Khiết của Cha Vũ Trụ.",
-  ];
+  "💖 Con là Ánh Sáng Yêu Thương Thuần Khiết của Cha Vũ Trụ.",
+  "💎 Con là Ý Chí của Cha Vũ Trụ.",
+  "🌞 Con là Trí Tuệ của Cha Vũ Trụ.",
+  "🌸 Con là Hạnh Phúc.",
+  "🍎 Con là Tình Yêu.",
+  "💰 Con là Tiền của Cha.",
+  "🙏 Con xin Sám Hối Sám Hối Sám Hối.",
+  "🌈 Con xin Biết Ơn Biết Ơn Biết Ơn, trong Ánh Sáng Yêu Thương Thuần Khiết của Cha Vũ Trụ."];
+
 
   const commitments = [
-    "Sống Chân Thật",
-    "Nói Lời Tử tế",
-    "Giúp ích cho cộng đồng",
-    "Nói Sám hối (Xin lỗi) và Biết ơn (Cảm ơn)",
-    "Gởi về cho Cha Vũ Trụ tất cả.",
-  ];
+  "Sống Chân Thật",
+  "Nói Lời Tử tế",
+  "Giúp ích cho cộng đồng",
+  "Nói Sám hối (Xin lỗi) và Biết ơn (Cảm ơn)",
+  "Gởi về cho Cha Vũ Trụ tất cả."];
+
 
   return (
     <div className="space-y-6 text-foreground-muted leading-relaxed">
@@ -94,8 +94,8 @@ const LightLawContent = () => {
         <h3 className="text-lg font-bold text-center text-divine-gold">🌟 5 CỘT TRỤ ÁNH SÁNG</h3>
         <p className="text-center text-sm text-muted-foreground">(Luật cốt lõi)</p>
         
-        {pillars.map((pillar, idx) => (
-          <div key={idx} className="flex items-start gap-3 p-4 rounded-lg bg-card/50 border border-divine-gold/10">
+        {pillars.map((pillar, idx) =>
+        <div key={idx} className="flex items-start gap-3 p-4 rounded-lg bg-card/50 border border-divine-gold/10">
             <div className={`${pillar.color} mt-1`}>
               <pillar.icon className="w-5 h-5" />
             </div>
@@ -105,7 +105,7 @@ const LightLawContent = () => {
               <p className="text-sm text-muted-foreground">{pillar.desc}</p>
             </div>
           </div>
-        ))}
+        )}
       </div>
 
       {/* Gentle Reminder */}
@@ -138,11 +138,11 @@ const LightLawContent = () => {
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-center text-divine-gold">✨ 8 THẦN CHÚ ÁNH SÁNG</h3>
         <div className="space-y-2">
-          {mantras.map((mantra, idx) => (
-            <div key={idx} className="p-3 rounded-lg bg-divine-gold/5 border border-divine-gold/10 text-sm">
+          {mantras.map((mantra, idx) =>
+          <div key={idx} className="p-3 rounded-lg bg-divine-gold/5 border border-divine-gold/10 text-sm">
               {mantra}
             </div>
-          ))}
+          )}
         </div>
       </div>
 
@@ -150,12 +150,12 @@ const LightLawContent = () => {
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-center text-divine-gold">💛 5 Điều tôi cam kết để bước vào cộng đồng</h3>
         <div className="space-y-2">
-          {commitments.map((commitment, idx) => (
-            <div key={idx} className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+          {commitments.map((commitment, idx) =>
+          <div key={idx} className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
               <span className="text-emerald-400 font-bold">✅</span>
               <span className="text-sm font-medium">{commitment}</span>
             </div>
-          ))}
+          )}
         </div>
       </div>
 
@@ -169,25 +169,25 @@ const LightLawContent = () => {
         </p>
         <div className="text-3xl">🌈💚✨💎🌟</div>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 // Dialog for post-login agreement (for old users who haven't agreed yet)
-const PostLoginAgreementDialog = ({ 
-  open, 
-  onAgree 
-}: { 
-  open: boolean; 
-  onAgree: () => void; 
-}) => {
+const PostLoginAgreementDialog = ({
+  open,
+  onAgree
+
+
+
+}: {open: boolean;onAgree: () => void;}) => {
   const [hasRead, setHasRead] = useState(false);
-  
+
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
     const needsScrolling = target.scrollHeight > target.clientHeight + 10;
     const isAtBottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 50;
-    
+
     if (needsScrolling && isAtBottom) {
       setHasRead(true);
     } else if (!needsScrolling) {
@@ -210,21 +210,21 @@ const PostLoginAgreementDialog = ({
           <Button
             onClick={onAgree}
             className="bg-sapphire-gradient hover:opacity-90"
-            disabled={!hasRead}
-          >
-            {hasRead ? (
-              <span className="flex items-center gap-2">
+            disabled={!hasRead}>
+            
+            {hasRead ?
+            <span className="flex items-center gap-2">
                 <Check className="w-4 h-4" />
                 Tôi đồng ý và cam kết với Luật Ánh Sáng ✨
-              </span>
-            ) : (
-              "Cuộn xuống để đọc hết..."
-            )}
+              </span> :
+
+            "Cuộn xuống để đọc hết..."
+            }
           </Button>
         </div>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 };
 
 const Auth = () => {
@@ -234,19 +234,19 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  
-  
+
+
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [isSendingReset, setIsSendingReset] = useState(false);
-  
+
   // Agreement state - only for signup
   const [agreedToLightLaw, setAgreedToLightLaw] = useState(false);
   const [hasReadLaw, setHasReadLaw] = useState(false);
   const [showLawDialog, setShowLawDialog] = useState(false);
-  
+
   // Post-login agreement dialog (for old users)
   const [showPostLoginAgreement, setShowPostLoginAgreement] = useState(false);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
@@ -269,8 +269,8 @@ const Auth = () => {
   const showAuthNetworkToast = () => {
     toast({
       title: "Không kết nối được máy chủ đăng nhập",
-      description: (
-        <div className="space-y-2">
+      description:
+      <div className="space-y-2">
           <p>
             Trình duyệt đang chặn/không kết nối được tới hệ thống đăng nhập (thường do domain preview trong iframe,
             VPN/Adblock, hoặc mạng chặn).
@@ -278,17 +278,17 @@ const Auth = () => {
           <p className="text-xs text-muted-foreground">
             Gợi ý: mở bản Preview ở tab mới (đúng domain), tắt VPN/Adblock, hoặc đổi mạng rồi thử lại.
           </p>
-        </div>
-      ),
+        </div>,
+
       variant: "destructive",
-      action: (
-        <ToastAction
-          altText="Mở bản Preview"
-          onClick={() => window.open(getRecommendedPreviewUrl(), "_blank", "noopener,noreferrer")}
-        >
+      action:
+      <ToastAction
+        altText="Mở bản Preview"
+        onClick={() => window.open(getRecommendedPreviewUrl(), "_blank", "noopener,noreferrer")}>
+        
           Mở bản Preview
         </ToastAction>
-      ),
+
     });
   };
 
@@ -330,12 +330,12 @@ const Auth = () => {
   }, [user, authLoading]);
 
   const checkLightAgreementAndRedirect = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_light_agreements")
-      .select("id")
-      .eq("user_id", userId)
-      .maybeSingle();
-    
+    const { data } = await supabase.
+    from("user_light_agreements").
+    select("id").
+    eq("user_id", userId).
+    maybeSingle();
+
     if (data) {
       // Already agreed - redirect to return origin or home
       if (!redirectToReturnOrigin("/")) {
@@ -350,17 +350,17 @@ const Auth = () => {
 
   const handlePostLoginAgree = async () => {
     if (!pendingUserId) return;
-    
+
     try {
       await supabase.from("user_light_agreements").insert({
         user_id: pendingUserId
       });
-      
+
       toast({
         title: "Chào mừng bạn! 🌈",
-        description: "Cảm ơn bạn đã đồng ý với Luật Ánh Sáng ✨",
+        description: "Cảm ơn bạn đã đồng ý với Luật Ánh Sáng ✨"
       });
-      
+
       setShowPostLoginAgreement(false);
       if (!redirectToReturnOrigin("/")) {
         navigate("/");
@@ -369,7 +369,7 @@ const Auth = () => {
       toast({
         title: "Lỗi",
         description: "Không thể lưu cam kết. Vui lòng thử lại.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
@@ -379,7 +379,7 @@ const Auth = () => {
     setIsGoogleLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: LOVABLE_ORIGIN,
+        redirect_uri: LOVABLE_ORIGIN
       });
       if (result.redirected) return;
       if (result.error) {
@@ -390,7 +390,7 @@ const Auth = () => {
         toast({ title: "Lỗi đăng nhập Google", description: result.error.message, variant: "destructive" });
       }
     } catch (error) {
-      if (isNetworkFetchError(error)) { showAuthNetworkToast(); return; }
+      if (isNetworkFetchError(error)) {showAuthNetworkToast();return;}
       toast({ title: "Đã có lỗi xảy ra", description: "Không thể kết nối với Google. Vui lòng thử lại.", variant: "destructive" });
     } finally {
       setIsGoogleLoading(false);
@@ -402,7 +402,7 @@ const Auth = () => {
       toast({
         title: "Vui lòng đọc và đồng ý Luật Ánh Sáng",
         description: "Bạn cần đọc Luật Ánh Sáng và đánh dấu đồng ý để đăng ký.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
@@ -421,13 +421,13 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Only require agreement for signup
     if (isSignUp && !agreedToLightLaw) {
       toast({
         title: "Vui lòng đọc và đồng ý Luật Ánh Sáng",
         description: "Bạn cần đọc Luật Ánh Sáng và đánh dấu đồng ý để đăng ký.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
@@ -446,12 +446,12 @@ const Auth = () => {
           toast({
             title: "Lỗi đăng ký",
             description: error.message,
-            variant: "destructive",
+            variant: "destructive"
           });
         } else {
           toast({
             title: "Đăng ký thành công!",
-            description: "Chào mừng bạn đến với Cổng Ánh Sáng ✨",
+            description: "Chào mừng bạn đến với Cổng Ánh Sáng ✨"
           });
           // Save light agreement
           const { data: { user: newUser } } = await supabase.auth.getUser();
@@ -472,12 +472,12 @@ const Auth = () => {
           toast({
             title: "Lỗi đăng nhập",
             description: error.message,
-            variant: "destructive",
+            variant: "destructive"
           });
         } else {
           toast({
             title: "Đăng nhập thành công!",
-            description: "Chào mừng trở lại Cổng Ánh Sáng ✨",
+            description: "Chào mừng trở lại Cổng Ánh Sáng ✨"
           });
           // Agreement check will happen in useEffect when user state updates
         }
@@ -490,7 +490,7 @@ const Auth = () => {
       toast({
         title: "Đã có lỗi xảy ra",
         description: "Vui lòng thử lại sau.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
@@ -501,7 +501,7 @@ const Auth = () => {
     const target = e.target as HTMLDivElement;
     const needsScrolling = target.scrollHeight > target.clientHeight + 10;
     const isAtBottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 50;
-    
+
     if (needsScrolling && isAtBottom) {
       setHasReadLaw(true);
     } else if (!needsScrolling) {
@@ -511,12 +511,12 @@ const Auth = () => {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!forgotPasswordEmail.trim()) {
       toast({
         title: "Vui lòng nhập email",
         description: "Nhập email của bạn để nhận link đặt lại mật khẩu.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
@@ -524,14 +524,14 @@ const Auth = () => {
     setIsSendingReset(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
-        redirectTo: `${window.location.origin}/auth`,
+        redirectTo: `${window.location.origin}/auth`
       });
 
       if (error) throw error;
 
       toast({
         title: "Email đã được gửi!",
-        description: "Vui lòng kiểm tra hộp thư để đặt lại mật khẩu ✨",
+        description: "Vui lòng kiểm tra hộp thư để đặt lại mật khẩu ✨"
       });
       setShowForgotPassword(false);
       setForgotPasswordEmail("");
@@ -543,7 +543,7 @@ const Auth = () => {
       toast({
         title: "Lỗi",
         description: error instanceof Error ? error.message : "Không thể gửi email. Vui lòng thử lại.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsSendingReset(false);
@@ -577,9 +577,9 @@ const Auth = () => {
             {isSignUp ? "Bước vào Cổng Ánh Sáng" : "Trở về Cổng Ánh Sáng"}
           </CardTitle>
           <CardDescription className="text-foreground-muted">
-            {isSignUp 
-              ? "Đăng ký để trải nghiệm đầy đủ FUN Ecosystem" 
-              : "Đăng nhập để tiếp tục hành trình ánh sáng của bạn"
+            {isSignUp ?
+            "Đăng ký để trải nghiệm đầy đủ FUN Ecosystem" :
+            "Đăng nhập để tiếp tục hành trình ánh sáng của bạn"
             }
           </CardDescription>
         </CardHeader>
@@ -588,11 +588,11 @@ const Auth = () => {
           {/* FUN ID - Primary Auth Method */}
           <div className="mb-6 p-5 rounded-2xl bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-orange-500/5 border border-purple-400/20">
             <div className="flex flex-col items-center gap-3">
-              <img 
-                src={funEcosystemLogo} 
-                alt="FUN Ecosystem" 
-                className="w-16 h-16 object-contain"
-              />
+              <img
+                src={funEcosystemLogo}
+                alt="FUN Ecosystem"
+                className="w-16 h-16 object-contain" />
+              
               <button
                 type="button"
                 onClick={async () => {
@@ -605,17 +605,17 @@ const Auth = () => {
                     toast({
                       title: "Lỗi kết nối FUN ID",
                       description: "Không thể kết nối SSO. Vui lòng thử lại.",
-                      variant: "destructive",
+                      variant: "destructive"
                     });
                   }
                 }}
-                className="btn-fun-id-hologram w-full py-3 px-6 rounded-xl text-base flex items-center justify-center gap-3 transition-all duration-300 cursor-pointer"
-              >
+                className="btn-fun-id-hologram w-full py-3 px-6 rounded-xl text-base flex items-center justify-center gap-3 transition-all duration-300 cursor-pointer">
+                
                 <Globe className="w-5 h-5" />
                 {isSignUp ? "Đăng ký FUN ID" : "Đăng nhập bằng FUN ID"}
               </button>
-              <p className="text-xs text-center text-muted-foreground leading-relaxed">
-                Một tài khoản duy nhất cho toàn bộ 12 nền tảng FUN Ecosystem.<br/>
+              <p className="text-xs text-center text-muted-foreground leading-relaxed">Một tài khoản duy nhất cho toàn bộ nền tảng của FUN Ecosystem.
+Miễn phí · Bảo mật · Đồng bộ mọi nơi.<br />
                 Miễn phí · Bảo mật · Đồng bộ mọi nơi.
               </p>
             </div>
@@ -641,23 +641,23 @@ const Auth = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 bg-background/50 border-divine-gold/20 focus:border-divine-gold"
-                    required
-                  />
+                    required />
+                  
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-foreground-muted">Mật khẩu</Label>
-                  {!isSignUp && (
-                    <button
-                      type="button"
-                      onClick={() => setShowForgotPassword(true)}
-                      className="text-xs text-divine-gold hover:text-divine-light transition-colors"
-                    >
+                  {!isSignUp &&
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-xs text-divine-gold hover:text-divine-light transition-colors">
+                    
                       Quên mật khẩu?
                     </button>
-                  )}
+                  }
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -669,13 +669,13 @@ const Auth = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10 pr-10 bg-background/50 border-divine-gold/20 focus:border-divine-gold"
                     required
-                    minLength={6}
-                  />
+                    minLength={6} />
+                  
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                    
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -683,27 +683,27 @@ const Auth = () => {
             </div>
 
             {/* Light Law Agreement - ONLY show for signup */}
-            {isSignUp && (
-              <div className="space-y-3 p-4 rounded-xl bg-divine-gold/5 border border-divine-gold/20">
+            {isSignUp &&
+            <div className="space-y-3 p-4 rounded-xl bg-divine-gold/5 border border-divine-gold/20">
                 <div className="flex items-start gap-3">
                   <button
-                    type="button"
-                    onClick={() => {
-                      if (!hasReadLaw) {
-                        setShowLawDialog(true);
-                        return;
-                      }
-                      setAgreedToLightLaw(!agreedToLightLaw);
-                    }}
-                    className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-300 flex-shrink-0 ${
-                      agreedToLightLaw 
-                        ? 'bg-emerald-500 border-emerald-500' 
-                        : hasReadLaw 
-                          ? 'border-divine-gold bg-transparent hover:border-divine-light cursor-pointer'
-                          : 'border-muted-foreground/50 bg-transparent cursor-pointer'
-                    }`}
-                    title={!hasReadLaw ? "Vui lòng đọc Luật Ánh Sáng trước" : ""}
-                  >
+                  type="button"
+                  onClick={() => {
+                    if (!hasReadLaw) {
+                      setShowLawDialog(true);
+                      return;
+                    }
+                    setAgreedToLightLaw(!agreedToLightLaw);
+                  }}
+                  className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-300 flex-shrink-0 ${
+                  agreedToLightLaw ?
+                  'bg-emerald-500 border-emerald-500' :
+                  hasReadLaw ?
+                  'border-divine-gold bg-transparent hover:border-divine-light cursor-pointer' :
+                  'border-muted-foreground/50 bg-transparent cursor-pointer'}`
+                  }
+                  title={!hasReadLaw ? "Vui lòng đọc Luật Ánh Sáng trước" : ""}>
+                  
                     {agreedToLightLaw && <Check className="w-3.5 h-3.5 text-white" />}
                   </button>
                   <div className="flex-1">
@@ -721,22 +721,22 @@ const Auth = () => {
                               🌈 LUẬT ÁNH SÁNG CỦA CỘNG ĐỒNG FUN
                             </DialogTitle>
                           </DialogHeader>
-                          <ScrollArea 
-                            className="h-[60vh] px-6 pb-6"
-                            onScrollCapture={handleLawDialogScroll}
-                          >
+                          <ScrollArea
+                          className="h-[60vh] px-6 pb-6"
+                          onScrollCapture={handleLawDialogScroll}>
+                          
                             <LightLawContent />
                           </ScrollArea>
                           <div className="p-4 border-t border-divine-gold/20 flex justify-center">
                             <Button
-                              type="button"
-                              onClick={() => {
-                                setHasReadLaw(true);
-                                setShowLawDialog(false);
-                              }}
-                              className="bg-sapphire-gradient hover:opacity-90"
-                              disabled={!hasReadLaw}
-                            >
+                            type="button"
+                            onClick={() => {
+                              setHasReadLaw(true);
+                              setShowLawDialog(false);
+                            }}
+                            className="bg-sapphire-gradient hover:opacity-90"
+                            disabled={!hasReadLaw}>
+                            
                               {hasReadLaw ? "Tôi đã đọc và sẵn sàng ký ✨" : "Cuộn xuống để đọc hết..."}
                             </Button>
                           </div>
@@ -744,32 +744,32 @@ const Auth = () => {
                       </Dialog>
                       , bước vào FUN Ecosystem với Pure Love.
                     </Label>
-                    {!hasReadLaw && (
-                      <p className="text-xs text-muted-foreground mt-1 italic">
+                    {!hasReadLaw &&
+                  <p className="text-xs text-muted-foreground mt-1 italic">
                         👆 Nhấn vào "Luật Ánh Sáng (PPLP)" để đọc trước khi ký cam kết
                       </p>
-                    )}
+                  }
                   </div>
                 </div>
               </div>
-            )}
+            }
 
             <Button
               type="submit"
               className="w-full bg-sapphire-gradient hover:opacity-90 transition-opacity text-primary-foreground font-medium py-6"
-              disabled={isLoading || (isSignUp && !agreedToLightLaw)}
-            >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
+              disabled={isLoading || isSignUp && !agreedToLightLaw}>
+              
+              {isLoading ?
+              <span className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 animate-spin" />
                   Đang xử lý...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
+                </span> :
+
+              <span className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4" />
                   {isSignUp ? "Đăng ký & Bước vào Cổng Ánh Sáng" : "Đăng nhập"}
                 </span>
-              )}
+              }
             </Button>
           </form>
 
@@ -788,16 +788,16 @@ const Auth = () => {
             type="button"
             variant="outline"
             onClick={handleGoogleSignIn}
-            disabled={isGoogleLoading || (isSignUp && !agreedToLightLaw)}
-            className="w-full py-6 border-divine-gold/20 hover:bg-divine-gold/5 hover:border-divine-gold/40 transition-all"
-          >
-            {isGoogleLoading ? (
-              <span className="flex items-center gap-3">
+            disabled={isGoogleLoading || isSignUp && !agreedToLightLaw}
+            className="w-full py-6 border-divine-gold/20 hover:bg-divine-gold/5 hover:border-divine-gold/40 transition-all">
+            
+            {isGoogleLoading ?
+            <span className="flex items-center gap-3">
                 <Sparkles className="w-5 h-5 animate-spin" />
                 Đang kết nối...
-              </span>
-            ) : (
-              <span className="flex items-center gap-3">
+              </span> :
+
+            <span className="flex items-center gap-3">
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                   <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -806,7 +806,7 @@ const Auth = () => {
                 </svg>
                 {isSignUp ? "Đăng ký với Google" : "Đăng nhập với Google"}
               </span>
-            )}
+            }
           </Button>
 
 
@@ -819,8 +819,8 @@ const Auth = () => {
                 setAgreedToLightLaw(false);
                 setHasReadLaw(false);
               }}
-              className="text-sm text-divine-gold hover:text-divine-light transition-colors"
-            >
+              className="text-sm text-divine-gold hover:text-divine-light transition-colors">
+              
               {isSignUp ? "Đã có tài khoản? Đăng nhập" : "Chưa có tài khoản? Đăng ký"}
             </button>
           </div>
@@ -855,8 +855,8 @@ const Auth = () => {
                   value={forgotPasswordEmail}
                   onChange={(e) => setForgotPasswordEmail(e.target.value)}
                   className="pl-10 bg-background/50 border-divine-gold/20 focus:border-divine-gold"
-                  required
-                />
+                  required />
+                
               </div>
             </div>
             <div className="flex gap-3">
@@ -864,23 +864,23 @@ const Auth = () => {
                 type="button"
                 variant="outline"
                 onClick={() => setShowForgotPassword(false)}
-                className="flex-1"
-              >
+                className="flex-1">
+                
                 Hủy
               </Button>
               <Button
                 type="submit"
                 disabled={isSendingReset}
-                className="flex-1 bg-sapphire-gradient hover:opacity-90"
-              >
-                {isSendingReset ? (
-                  <span className="flex items-center gap-2">
+                className="flex-1 bg-sapphire-gradient hover:opacity-90">
+                
+                {isSendingReset ?
+                <span className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 animate-spin" />
                     Đang gửi...
-                  </span>
-                ) : (
-                  "Gửi Email"
-                )}
+                  </span> :
+
+                "Gửi Email"
+                }
               </Button>
             </div>
           </form>
@@ -888,12 +888,12 @@ const Auth = () => {
       </Dialog>
 
       {/* Post-Login Agreement Dialog (for old users) */}
-      <PostLoginAgreementDialog 
-        open={showPostLoginAgreement} 
-        onAgree={handlePostLoginAgree}
-      />
-    </div>
-  );
+      <PostLoginAgreementDialog
+        open={showPostLoginAgreement}
+        onAgree={handlePostLoginAgree} />
+      
+    </div>);
+
 };
 
 export default Auth;
