@@ -1,167 +1,120 @@
 
-# SO SANH: Ke hoach Bridge cua Cha vs SSO SDK (@fun-ecosystem/sso-sdk)
+# KE HOACH TRIEN KHAI SSO BRIDGE (PHIA ANGEL AI)
+
+Cha Lovable Angel AI da doc ky ke hoach cua Cha Lovable FUN Profile. Ke hoach rat ro rang va day du. Duoi day la ke hoach trien khai cu the phia Angel AI.
 
 ---
 
-## I. TONG QUAN 2 PHUONG AN
+## I. HIEN TRANG ANGEL AI
 
-| Tieu chi | Ke hoach Bridge (Cha de xuat) | SSO SDK (fun-ecosystem) |
-|---|---|---|
-| **Kieu** | Custom bridge_code + HMAC server-to-server | OAuth 2.0 + PKCE (chuan industry) |
-| **Auth flow** | bridge_code 1 lan (TTL 60s) + server exchange | Authorization Code + PKCE (redirect, code, token) |
-| **Noi code chay** | Edge Functions (server-side) | Client-side SDK (browser) |
-| **Bao mat token** | HMAC-SHA256 signing server-to-server | PKCE (no client secret needed on browser) |
-| **Data sync** | Outbox/Inbox + HMAC dispatcher | DebouncedSyncManager + REST API |
-| **Dependencies** | 0 (tu viet) | `@fun-ecosystem/sso-sdk` (zero deps, 1.1.0) |
-| **Trang thai** | Chua xay | Da publish npm, v1.1.0, co docs + examples |
+- Bang `fun_id_links` da ton tai (angel_user_id, fun_profile_user_id, status, metadata)
+- Edge Function `fun-profile-bridge` da ton tai nhung chi doc data 1 chieu
+- **Chua co secrets**: `FUN_PROFILE_API_URL`, `BRIDGE_SHARED_SECRET` hay bat ky secret lien quan SSO
+- Chua co route `/auth/callback`
+- Chua co SDK `@fun-ecosystem/sso-sdk`
 
 ---
 
-## II. PHAN TICH CHI TIET
+## II. NHUNG GI CAN LAM (5 BUOC)
 
-### A. SSO SDK da co san nhung gi?
+### Buoc 1: Thiet lap Secrets
 
-SDK da implement day du:
+Them 1 secret vao Edge Functions:
+- `FUN_PROFILE_API_URL` = `https://bhtsnervqiwchluwuxki.supabase.co/functions/v1`
 
-1. **OAuth 2.0 + PKCE flow** (`startAuth()` -> redirect -> `handleCallback()`)
-2. **Token management**: auto-refresh, storage adapters (LocalStorage, SessionStorage, Memory)
-3. **User profile**: `getUser()`, `getCachedUser()` tra ve `FunUser` (id, funId, username, email, wallet, soul, rewards)
-4. **Data sync**: `syncData()` + `DebouncedSyncManager` de dong bo data giua platforms
-5. **Financial sync**: `syncFinancial()` cho wallet/transaction data
-6. **OTP auth**: `requestOtp()`, `verifyOtp()` (email/phone)
-7. **Web3 auth**: `web3Auth()` cho wallet login
-8. **Error handling**: `TokenExpiredError`, `RateLimitError`, `NetworkError`, etc.
-9. **Constants**: Da dinh nghia `DOMAINS.funProfile = 'https://fun.rich'`
-10. **Backend endpoints**: Da co san tren Fun Profile Supabase (`bhtsnervqiwchluwuxki.supabase.co/functions/v1/sso-*`)
+(Khong can `FUN_SSO_CLIENT_ID` vi hardcode `angel_ai_client` trong code client-side, khong phai secret)
 
-### B. Ke hoach Bridge cua Cha thieu/thua gi so voi SDK?
+### Buoc 2: Cai SDK + Tao `src/lib/funProfile.ts`
 
-| Diem | Bridge (Cha) | SDK | Nhan xet |
-|---|---|---|---|
-| SSO flow | Custom bridge_code | OAuth 2.0 + PKCE (chuan) | SDK chuan hon, duoc industry chap nhan |
-| Backend endpoints | Can tu xay 3 Edge Functions | **Da co san** tren fun.rich (`sso-authorize`, `sso-token`, `sso-verify`, `sso-refresh`) | SDK khong can xay backend moi |
-| User creation | `admin.createUser()` tren Angel | SDK tra tokens + user data, Angel chi can map | SDK don gian hon |
-| Data sync | Outbox/Inbox pattern (phuc tap, manh) | DebouncedSyncManager (don gian, real-time) | Bridge manh hon cho reliability, SDK don gian hon |
-| Financial data | Chua co | Da co `syncFinancial()`, `FinancialData` types | SDK vuot troi |
-| Web3/Wallet | Chua co | Da co `web3Auth()` | SDK vuot troi |
-| OTP | Chua co | Da co `requestOtp()`, `verifyOtp()` | SDK vuot troi |
+```typescript
+import { FunProfileClient, SessionStorageAdapter } from '@fun-ecosystem/sso-sdk';
 
-### C. SDK thieu gi ma Bridge co?
-
-| Diem | SDK thieu | Bridge co |
-|---|---|---|
-| **Event-driven sync 2 chieu** | Chi co pull-based sync (client goi API) | Outbox/Inbox push + retry + idempotent |
-| **Server-to-server security** | Dua vao access token | HMAC signing + anti-replay |
-| **Audit logs** | Khong co | `bridge_audit_logs` table |
-| **Offline retry** | Khong co (client-side only) | Backoff retry (1m, 5m, 15m, 1h) |
-| **Supabase session integration** | Tra tokens rieng (khong phai Supabase session) | Tao Supabase session cho Angel |
-
----
-
-## III. DE XUAT: KET HOP CA 2 (PHUONG AN TOI UU)
-
-Dung SSO SDK lam tang SSO + user data, bo sung Outbox/Inbox cho event sync reliability.
-
-### Flow moi:
-
-```text
-fun.rich (logged in) 
-    |
-    | 1. User click "Open Angel AI"
-    | 2. SDK startAuth() tao OAuth URL voi PKCE
-    |
-    v
-redirect -> angel.fun.rich/auth/callback?code=XXX&state=YYY
-    |
-    | 3. Angel client goi SDK handleCallback(code, state)
-    | 4. SDK exchange code -> nhan access_token + user data
-    | 5. Angel Edge Function nhan token, verify voi fun.rich
-    | 6. Tim/tao user tren Angel Supabase, tao session
-    |
-    v
-User auto-logged in tren Angel AI
+export const funProfile = new FunProfileClient({
+  clientId: 'angel_ai_client',
+  redirectUri: window.location.origin + '/auth/callback',
+  scopes: ['profile', 'email', 'wallet', 'soul', 'rewards', 'platform_data'],
+  storage: new SessionStorageAdapter('angel_ai_client'),
+});
 ```
 
-### Cac buoc cu the:
+### Buoc 3: Tao route `/auth/callback` + Page component
 
-**Buoc 1: Cai dat SDK**
-- `npm install @fun-ecosystem/sso-sdk`
-- Tao `src/lib/funProfile.ts` khoi tao FunProfileClient voi `clientId: 'angel_ai_client'`
+Tao file `src/pages/AuthCallback.tsx`:
+- Nhan `code` + `state` tu URL params
+- Goi `funProfile.handleCallback(code, state)` de exchange code -> tokens
+- Goi Edge Function `bridge-login` voi `fun_access_token`
+- Nhan Supabase session tokens tu bridge-login
+- Set session cho Angel Supabase client bang `supabase.auth.setSession()`
+- Redirect ve `/` (hoac returnUrl)
+- Hien thi loading spinner trong luc xu ly
 
-**Buoc 2: Tao route `/auth/callback`**
-- Page nhan `code` + `state` tu redirect
-- Goi `funProfile.handleCallback(code, state)`
-- Nhan duoc `AuthResult` (tokens + user info)
-- Goi Edge Function `bridge-login` de tao Supabase session cho Angel
-
-**Buoc 3: Edge Function `bridge-login` (Angel side)**
-- Nhan fun.rich access_token tu client
-- Goi fun.rich `/sso-verify` de xac thuc token (dung SDK endpoint da co)
-- Tim user theo email trong Angel Supabase
-- Neu chua co: `admin.createUser({ email, email_confirm: true })`
-- Upsert `fun_id_links` (angel_user_id <-> fun_user_id)
-- Tao va tra Supabase session tokens
-
-**Buoc 4: Data sync (dung SDK)**
-- Dung `funProfile.getUser()` de lay profile tu fun.rich
-- Dung `funProfile.syncData()` de dong bo Light Score, activity
-- Cap nhat `UnifiedDashboard` va `UnifiedLightScore` dung data thuc
-
-**Buoc 5: Event sync (bo sung Outbox/Inbox)**
-- Chi can cho cac event QUAN TRONG can reliability:
-  - `light_score.updated`
-  - `user.profile.updated`
-- Cac data khac dung SDK pull-based la du
-
-### Secrets can thiet:
-
-| Secret | Mo ta | Ai cung cap |
-|---|---|---|
-| `FUN_SSO_CLIENT_ID` | Client ID cho Angel AI tren fun.rich | Team fun.rich dang ky |
-| `FUN_SSO_CLIENT_SECRET` | Client secret (optional voi PKCE) | Team fun.rich |
-| `FUN_PROFILE_API_URL` | `https://bhtsnervqiwchluwuxki.supabase.co/functions/v1` | Da biet tu SDK constants |
-
-### Database changes (Angel side):
-
-```sql
--- Khong can bang bridge_codes nua (SDK xu ly OAuth flow)
--- Chi can dam bao fun_id_links da co (da ton tai)
--- Them bang outbox/inbox cho event sync (Phase 2)
+Them route vao `App.tsx`:
+```
+<Route path="/auth/callback" element={<AuthCallback />} />
 ```
 
+### Buoc 4: Tao Edge Function `bridge-login`
+
+File: `supabase/functions/bridge-login/index.ts`
+
+Logic:
+1. Nhan `{ fun_access_token }` tu client POST request
+2. Goi `FUN_PROFILE_API_URL/sso-verify` voi `Authorization: Bearer <fun_access_token>` de xac thuc
+3. Nhan identity: `{ sub, fun_id, username, email, avatar_url, wallet_address, scopes }`
+4. Dung Supabase Admin client:
+   - Tim user theo email: `auth.admin.listUsers()` filter by email
+   - Neu chua co: `auth.admin.createUser({ email, email_confirm: true })`
+   - Upsert `fun_id_links` (angel_user_id <-> fun_user_id, status: 'active')
+   - Upsert `profiles` (cap nhat avatar, display_name tu FUN Profile neu co)
+5. Tao session: `auth.admin.generateLink({ type: 'magiclink', email })` hoac tuong duong
+6. Tra ve `{ session: { access_token, refresh_token }, user_id }`
+
+Config trong `supabase/config.toml`:
+```toml
+[functions.bridge-login]
+verify_jwt = false
+```
+
+### Buoc 5: Them nut "Dang nhap tu FUN Profile" tren Auth page
+
+Them 1 button tren `src/pages/Auth.tsx`:
+- Icon FUN Profile + text "Dang nhap bang FUN Profile"
+- onClick: goi `funProfile.startAuth()` -> redirect user sang fun.rich SSO
+- Dat duoi form login hien tai, tren footer text
+
 ---
 
-## IV. SO SANH TONG KET
+## III. NOI DUNG GỬI CHO CHA LOVABLE FUN PROFILE
 
-| Tieu chi | Chi dung Bridge (Cha) | Chi dung SDK | Ket hop (de xuat) |
-|---|---|---|---|
-| Do phuc tap | Cao (tu xay tat ca) | Thap (SDK co san) | Trung binh |
-| Bao mat | Cao (HMAC) | Cao (PKCE) | Cao nhat (PKCE + HMAC cho events) |
-| Thoi gian trien khai | 2-3 tuan | 3-5 ngay | 1 tuan |
-| SSO quality | Tot | Tot nhat (chuan OAuth) | Tot nhat |
-| Data sync reliability | Tot nhat (outbox/inbox) | Trung binh (client-side) | Tot nhat |
-| Maintenance | Cao (tu maintain) | Thap (SDK maintained) | Thap-Trung binh |
+Cha Lovable Angel AI xac nhan:
+
+1. **Client ID**: `angel_ai_client` - OK
+2. **Redirect URIs**: Ca 2 URL deu dung:
+   - `https://angel.fun.rich/auth/callback`
+   - `https://angel999.lovable.app/auth/callback`
+3. **Scopes**: Dung het 6 scopes: `profile, email, wallet, soul, rewards, platform_data`
+4. **PKCE S256**: OK, SDK xu ly
+
+**Yeu cau Cha Lovable FUN Profile thuc hien INSERT vao `oauth_clients` truoc khi Angel AI bat dau test.**
 
 ---
 
-## V. KE HOACH TRIEN KHAI (NEU DUYET)
+## IV. THU TU TRIEN KHAI
 
-**Phase 1 (3-5 ngay): SSO voi SDK**
-1. Cai `@fun-ecosystem/sso-sdk`
-2. Tao `src/lib/funProfile.ts` (khoi tao client)
-3. Tao route `/auth/callback` (handle OAuth redirect)
-4. Tao Edge Function `bridge-login` (verify + create session)
-5. Them nut "Dang nhap tu FUN Profile" tren Auth page
-6. Test E2E
+| # | Viec | Chi tiet |
+|---|---|---|
+| 1 | Them secret `FUN_PROFILE_API_URL` | Yeu cau user nhap gia tri |
+| 2 | Cai `@fun-ecosystem/sso-sdk` + tao `src/lib/funProfile.ts` | Client-side SDK init |
+| 3 | Tao `src/pages/AuthCallback.tsx` + them route | Xu ly OAuth callback |
+| 4 | Tao `supabase/functions/bridge-login/index.ts` + config | Server-side verify + session |
+| 5 | Them nut SSO tren Auth page | UI button |
 
-**Phase 2 (2-3 ngay): Data Integration**
-1. Cap nhat `UnifiedDashboard` dung `funProfile.getUser()` thay vi placeholder 0
-2. Cap nhat `UnifiedLightScore` dung data thuc
-3. Dung `funProfile.syncData()` cho Light Score sync
+---
 
-**Phase 3 (tuy chon): Event Reliability**
-1. Tao `bridge_outbox` + `bridge_inbox` tables
-2. Tao `bridge-events-dispatch` + `bridge-events-receive` Edge Functions
-3. Chi ap dung cho events can guarantee delivery
+## V. LUU Y KY THUAT
 
-> **Luu y**: Truoc khi bat dau, con can lien he team fun.rich de dang ky `clientId` va `redirectUri` cho Angel AI. URL callback se la `https://angel.fun.rich/auth/callback` (hoac `https://angel999.lovable.app/auth/callback`).
+- `bridge-login` dung `SUPABASE_SERVICE_ROLE_KEY` (da co san trong Edge Function env) de goi Admin API
+- Khong can tao bang moi (da co `fun_id_links` va `profiles`)
+- SDK la client-side, Edge Function chi nhan `fun_access_token` de verify server-to-server
+- Session duoc set bang `supabase.auth.setSession()` tren client sau khi nhan tokens tu bridge-login
+- Nut SSO chi hien khi user chua login
