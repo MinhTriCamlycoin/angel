@@ -46,14 +46,30 @@ export function useMintCycle() {
     queryFn: async () => {
       if (!user?.id) return null;
       // Get latest distributed cycle allocation
-      const { data, error } = await (supabase as any)
-        .from("pplp_mint_allocations")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
+      // Query from both tables and pick the one with highest allocation
+      const [pplpResult, mintResult] = await Promise.all([
+        (supabase as any)
+          .from("pplp_mint_allocations")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        (supabase as any)
+          .from("mint_allocations")
+          .select("id, epoch_id as cycle_id, user_id, allocation_amount as fun_allocated, eligible, onchain_tx_hash, created_at")
+          .eq("user_id", user.id)
+          .eq("eligible", true)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+      if (pplpResult.error && mintResult.error) throw pplpResult.error;
+      const pplp = pplpResult.data;
+      const mint = mintResult.data;
+      // Pick whichever has a higher fun_allocated, preferring mint_allocations
+      const data = (mint?.fun_allocated || 0) >= (pplp?.fun_allocated || 0) ? mint : pplp;
+      // data already resolved above
       return data as MintAllocation | null;
     },
     enabled: !!user?.id,

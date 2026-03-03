@@ -24,14 +24,42 @@ export function TransparencyDashboard() {
   const { data: snapshot, isLoading } = useQuery({
     queryKey: ["transparency-snapshot"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      // Try snapshot first
+      const { data: snap } = await (supabase as any)
         .from("transparency_snapshots")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (error) throw error;
-      return data as TransparencySnapshot | null;
+
+      // If snapshot has real data, use it
+      if (snap && (snap.total_light_system > 0 || snap.total_fun_minted > 0)) {
+        return snap as TransparencySnapshot;
+      }
+
+      // Fallback: aggregate from ledger + mint_allocations
+      const [lightRes, funRes, usersRes] = await Promise.all([
+        (supabase as any).from("light_score_ledger").select("final_light_score"),
+        (supabase as any).from("mint_allocations").select("allocation_amount").eq("eligible", true),
+        (supabase as any).from("light_score_ledger").select("user_id"),
+      ]);
+
+      const totalLight = (lightRes.data || []).reduce((s: number, r: any) => s + (r.final_light_score || 0), 0);
+      const totalFun = (funRes.data || []).reduce((s: number, r: any) => s + (r.allocation_amount || 0), 0);
+      const uniqueUsers = new Set((usersRes.data || []).map((r: any) => r.user_id)).size;
+
+      return {
+        id: "fallback",
+        epoch_id: "realtime",
+        total_light_system: totalLight,
+        total_fun_minted: totalFun,
+        allocation_by_level: {},
+        mentor_chains_completed: snap?.mentor_chains_completed || 0,
+        value_loops_completed: snap?.value_loops_completed || 0,
+        active_users: uniqueUsers,
+        rule_version: snap?.rule_version || "",
+        created_at: new Date().toISOString(),
+      } as TransparencySnapshot;
     },
   });
 
