@@ -785,9 +785,11 @@ const Auth = () => {
             Bạn có thể xem nội dung trang chủ mà không cần đăng nhập
           </p>
 
-          {/* FUN Profile SSO Login */}
+          {/* FUN ID SSO Login / Signup */}
           <div className="mt-4 pt-4 border-t border-border/50 text-center">
-            <p className="text-xs text-muted-foreground mb-2">Đăng nhập từ hệ sinh thái FUN</p>
+            <p className="text-xs text-muted-foreground mb-2">
+              {isSignUp ? "Đăng ký tài khoản qua hệ sinh thái FUN" : "Đăng nhập từ hệ sinh thái FUN"}
+            </p>
             <Button
               type="button"
               variant="outline"
@@ -797,9 +799,9 @@ const Auth = () => {
                   const authUrl = await funProfile.startAuth();
                   window.location.href = authUrl;
                 } catch (err) {
-                  console.error("FUN Profile SSO error:", err);
+                  console.error("FUN ID SSO error:", err);
                   toast({
-                    title: "Lỗi kết nối FUN Profile",
+                    title: "Lỗi kết nối FUN ID",
                     description: "Không thể kết nối SSO. Vui lòng thử lại.",
                     variant: "destructive",
                   });
@@ -809,7 +811,7 @@ const Auth = () => {
             >
               <span className="flex items-center gap-3">
                 <Globe className="w-5 h-5 text-divine-gold" />
-                Đăng nhập bằng FUN Profile
+                {isSignUp ? "Đăng ký FUN ID" : "Đăng nhập bằng FUN ID"}
               </span>
             </Button>
           </div>

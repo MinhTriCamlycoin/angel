@@ -1,5 +1,5 @@
-import { LogIn, Sparkles } from "lucide-react";
-import { Link } from "react-router-dom";
+import { LogIn, Globe } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,9 +9,20 @@ import angelLogo from "@/assets/angel-ai-golden-logo.png";
 export function PublicProfileJoinCTA() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const navigate = useNavigate();
 
-  // Don't show CTA if user is already logged in
   if (user) return null;
+
+  const handleFunIdSignup = async () => {
+    try {
+      const { funProfile } = await import("@/lib/funProfile");
+      const authUrl = await funProfile.startAuth();
+      window.location.href = authUrl;
+    } catch (err) {
+      console.error("FUN ID SSO error:", err);
+      navigate("/auth");
+    }
+  };
 
   return (
     <motion.section
@@ -21,7 +32,6 @@ export function PublicProfileJoinCTA() {
       className="mt-10 max-w-lg mx-auto"
     >
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-pale via-card to-accent border border-primary/10 shadow-divine p-6 sm:p-8 text-center">
-        {/* Glow effect */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent animate-pulse pointer-events-none" />
 
         <img
@@ -39,12 +49,10 @@ export function PublicProfileJoinCTA() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link to="/auth">
-            <Button size="lg" className="gap-2 w-full sm:w-auto">
-              <Sparkles className="w-4 h-4" />
-              {t("publicProfile.joinNow") || "Tham gia ngay"}
-            </Button>
-          </Link>
+          <Button size="lg" className="gap-2 w-full sm:w-auto" onClick={handleFunIdSignup}>
+            <Globe className="w-4 h-4" />
+            {t("publicProfile.joinNow") || "Đăng ký FUN ID"}
+          </Button>
           <Link to="/auth">
             <Button variant="outline" size="lg" className="gap-2 w-full sm:w-auto">
               <LogIn className="w-4 h-4" />

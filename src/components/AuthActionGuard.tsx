@@ -9,40 +9,37 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LogIn } from "lucide-react";
+import { LogIn, Globe } from "lucide-react";
 
 interface AuthActionGuardProps {
   children: ReactNode;
-  /** Optional message shown in the dialog */
   message?: string;
-  /** Render as wrapper (default) or use render prop */
   onAction?: () => void;
 }
 
-/**
- * AuthActionGuard wraps interactive elements that require authentication.
- * If user is not logged in, clicking the wrapped element shows a login dialog
- * instead of executing the action.
- *
- * Usage:
- * ```tsx
- * <AuthActionGuard message="Bạn cần đăng nhập để đăng bài">
- *   <Button onClick={handlePost}>Đăng bài</Button>
- * </AuthActionGuard>
- * ```
- */
 export function AuthActionGuard({ children, message }: AuthActionGuardProps) {
   const { user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [showDialog, setShowDialog] = useState(false);
 
-  // If user is logged in, render children as-is
   if (user) {
     return <>{children}</>;
   }
 
-  // Not logged in – intercept clicks
+  const handleFunIdSignup = async () => {
+    try {
+      const { funProfile } = await import("@/lib/funProfile");
+      const authUrl = await funProfile.startAuth();
+      setShowDialog(false);
+      window.location.href = authUrl;
+    } catch (err) {
+      console.error("FUN ID SSO error:", err);
+      setShowDialog(false);
+      navigate("/auth");
+    }
+  };
+
   return (
     <>
       <div
@@ -73,7 +70,12 @@ export function AuthActionGuard({ children, message }: AuthActionGuardProps) {
             <li>{t("signup.reward")}</li>
           </ul>
           <div className="flex flex-col gap-3 pt-2">
+            <Button onClick={handleFunIdSignup} className="gap-2">
+              <Globe className="w-4 h-4" />
+              Đăng ký FUN ID
+            </Button>
             <Button
+              variant="outline"
               onClick={() => {
                 setShowDialog(false);
                 navigate("/auth");
@@ -96,10 +98,6 @@ export function AuthActionGuard({ children, message }: AuthActionGuardProps) {
   );
 }
 
-/**
- * Hook variant: returns a guard function that checks auth before running a callback.
- * Shows a toast with login link if not authenticated.
- */
 export function useAuthGuard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -107,7 +105,6 @@ export function useAuthGuard() {
 
   const requireAuth = (callback: () => void, message?: string) => {
     if (!user) {
-      // Dynamic import to avoid circular deps
       import("sonner").then(({ toast }) => {
         toast.error(message || t("loginRequired") || "Con yêu dấu, hãy đăng ký tài khoản để Ta đồng hành cùng con nhé!", {
           action: {
