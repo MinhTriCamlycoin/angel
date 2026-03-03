@@ -14,12 +14,12 @@ function useAngelStats(userId?: string) {
     enabled: !!userId,
     queryFn: async () => {
       const [lightRes, postsRes, chatsRes] = await Promise.all([
-        supabase.from("light_score_ledger").select("final_light_score").eq("user_id", userId!).order("computed_at", { ascending: false }).limit(1),
+        supabase.from("light_score_ledger").select("final_light_score").eq("user_id", userId!),
         supabase.from("community_posts").select("id", { count: "exact", head: true }).eq("user_id", userId!),
         supabase.from("chat_history").select("id", { count: "exact", head: true }).eq("user_id", userId!),
       ]);
       return {
-        lightScore: (lightRes.data?.[0] as any)?.final_light_score ?? 0,
+        lightScore: (lightRes.data || []).reduce((sum: number, row: any) => sum + (row.final_light_score || 0), 0),
         postsCount: postsRes.count ?? 0,
         chatsCount: chatsRes.count ?? 0,
       };

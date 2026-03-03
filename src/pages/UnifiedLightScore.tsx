@@ -32,10 +32,9 @@ function useTotalLightScore(userId?: string) {
       const { data } = await supabase
         .from("light_score_ledger")
         .select("final_light_score")
-        .eq("user_id", userId!)
-        .order("computed_at", { ascending: false })
-        .limit(1);
-      return (data?.[0] as any)?.final_light_score ?? 0;
+        .eq("user_id", userId!);
+      const total = (data || []).reduce((sum, row: any) => sum + (row.final_light_score || 0), 0);
+      return total;
     },
   });
 }
