@@ -33,13 +33,14 @@ export function MonthlyActionsGroup({ monthLabel, actions, defaultOpen = false }
     return sum + (s?.final_reward || 0);
   }, 0);
 
-  const mintedCount = actions.filter((a) => a.status === "minted").length;
   const passedCount = actions.filter((a) => {
-    if (a.status === "minted") return false;
     const s = resolveOne(a.pplp_scores);
-    return a.status === "scored" && s?.decision === "pass";
+    return (a.status === "scored" && s?.decision === "pass") || a.status === "minted";
   }).length;
-  const pendingCount = actions.filter((a) => a.status === "pending").length;
+  const failedCount = actions.filter((a) => {
+    const s = resolveOne(a.pplp_scores);
+    return (a.status === "scored" && s?.decision !== "pass") || a.status === "failed";
+  }).length;
 
   return (
     <div className="rounded-lg border bg-card overflow-hidden">
@@ -54,19 +55,14 @@ export function MonthlyActionsGroup({ monthLabel, actions, defaultOpen = false }
           <span className="text-xs text-muted-foreground">
             {actions.length} actions
           </span>
-          {mintedCount > 0 && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-              {mintedCount} minted
-            </span>
-          )}
           {passedCount > 0 && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
               {passedCount} đạt
             </span>
           )}
-          {pendingCount > 0 && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
-              {pendingCount} chờ
+          {failedCount > 0 && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+              {failedCount} chưa đạt
             </span>
           )}
         </div>
