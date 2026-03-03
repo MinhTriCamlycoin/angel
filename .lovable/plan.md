@@ -1,56 +1,39 @@
-# Di chuyển FUN ID lên đầu trang Auth + Hologram style
 
-## Hiện trạng
 
-- Nút "Đăng ký FUN ID / Đăng nhập bằng FUN ID" nằm ở **cuối cùng** trang Auth (dòng 788-817), sau form email/password và Google.
-- Style hiện tại: `variant="outline"`, không nổi bật.
+# Nguyên nhân Light Score = 0 của angelthutrang
 
-## Thay đổi
+## Phát hiện
 
-### 1. Thêm FUN Ecosystem logo vào `src/assets`
+Sau khi kiểm tra database, có **2 vấn đề** gây ra Light Score = 0:
 
-Copy ảnh FUN_Ecosystem.png user upload vào `src/assets/fun-ecosystem-logo.png`.
+### Vấn đề 1: Không có dữ liệu trong pipeline chấm điểm
+- Bảng `light_score_ledger` hiện **hoàn toàn trống** (0 rows cho tất cả users, không chỉ angelthutrang).
+- Bảng `pplp_events` cũng **0 sự kiện** cho user này (user_id: `e4c17387-...`).
+- Bảng `pplp_actions` cũng **0 actions** cho user này.
 
-### 2. Tạo section FUN ID nổi bật ở đầu CardContent (trước form)
+**Nguyên nghĩa:** Hệ thống chấm điểm (scoring pipeline) chưa từng ghi nhận hoạt động nào của user này vào các bảng PPLP. Dù user có 75 bài viết và 154 chat, các hoạt động đó chưa được ingest vào pipeline scoring (`pplp_events` → `pplp_actions` → `light_score_ledger`).
 
-- Đặt ngay sau `</CardHeader>`, trước form email/password.
-- Bao gồm:
-  - Logo FUN Ecosystem (ảnh đã upload)
-  - Nút chính "Đăng ký FUN ID" / "Đăng nhập bằng FUN ID" với style hologram nổi bật
-  - Mô tả ngắn gọn ưu điểm FUN ID: "Một tài khoản duy nhất cho toàn bộ nền tảng của FUN Ecosystem. Miễn phí, bảo mật, đồng bộ mọi nơi."
+### Vấn đề 2: Code truy vấn sai tên cột
+- Code trong `UnifiedDashboard.tsx` (dòng 17) và `UnifiedLightScore.tsx` truy vấn cột `total_light_score` — **cột này không tồn tại** trong bảng `light_score_ledger`.
+- Tên cột đúng là `final_light_score`.
+- Query trả về null → hiển thị 0.
 
-### 3. Hologram CSS style
+## Kế hoạch sửa
 
-Thêm vào `src/index.css` class `.btn-fun-id-hologram`:
+### Bước 1: Sửa tên cột trong code (fix ngay)
+- `src/pages/UnifiedDashboard.tsx`: Đổi `.select("total_light_score")` → `.select("final_light_score")`
+- `src/pages/UnifiedLightScore.tsx`: Tương tự
+- `supabase/functions/fun-profile-bridge/index.ts`: Tương tự
 
-- Gradient nền chuyển từ tím → xanh → cam (giống logo infinity)
-- Animation shimmer/hologram liên tục
-- Border glow effect
-- Text trắng, bold
+### Bước 2: Backfill dữ liệu scoring (cần thêm thời gian)
+Để Light Score thực sự > 0, cần đảm bảo pipeline ingest hoạt động đúng:
+- Khi user tạo bài viết/chat, sự kiện phải được ghi vào `pplp_events`
+- Cron job `pplp-compute-daily-scores` phải chạy để tính toán và ghi vào `light_score_ledger`
 
-### 4. Cấu trúc layout mới trong Auth.tsx
-
-```text
-CardHeader (logo Angel AI, tiêu đề)
-CardContent:
-  ┌─────────────────────────────────┐
-  │  🌈 FUN ID Section (MỚI)       │
-  │  Logo FUN Ecosystem             │
-  │  [Đăng ký/Đăng nhập FUN ID]    │  ← hologram button
-  │  "1 ID cho 12 nền tảng FUN..." │
-  └─────────────────────────────────┘
-  ── hoặc tiếp tục với ──
-  Form email/password
-  Nút submit
-  ── hoặc ──
-  Google sign in
-  Toggle đăng ký/đăng nhập
-```
-
-### 5. Xóa section FUN ID cũ ở cuối trang (dòng 788-817)
+Hiện tại chưa có dữ liệu nào trong pipeline, nên dù sửa tên cột thì Light Score vẫn = 0 cho đến khi pipeline bắt đầu ingest events.
 
 ## Files thay đổi
+1. `src/pages/UnifiedDashboard.tsx` — sửa `total_light_score` → `final_light_score`
+2. `src/pages/UnifiedLightScore.tsx` — sửa tương tự  
+3. `supabase/functions/fun-profile-bridge/index.ts` — sửa tương tự
 
-1. `src/assets/fun-ecosystem-logo.png` — copy từ upload
-2. `src/index.css` — thêm `.btn-fun-id-hologram` animation
-3. `src/pages/Auth.tsx` — di chuyển FUN ID lên đầu, thêm logo + mô tả + hologram style
