@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface FUNMoneyStats {
   totalAllocated: number;  // FUN allocated in epochs (ready to claim)
   totalMinted: number;     // FUN already minted on-chain
-  totalPending: number;    // FUN pending epoch allocation
+  totalPending: number;    // Current epoch Light Score (informational)
   totalAmount: number;
   isLoading: boolean;
 }
@@ -25,29 +25,44 @@ export function useFUNMoneyStats(userId?: string) {
     }
 
     try {
-      // Fetch from mint_allocations (epoch-based FUN distribution)
+      // Fetch from pplp_mint_allocations (epoch-based FUN distribution)
       const { data: allocations, error: allocError } = await supabase
-        .from("mint_allocations")
-        .select("fun_allocated, status")
-        .eq("user_id", userId)
-        .eq("eligible", true);
+        .from("pplp_mint_allocations")
+        .select("fun_allocated, status, eligible")
+        .eq("user_id", userId);
 
       if (allocError) throw allocError;
 
       let totalMinted = 0;
       let totalAllocated = 0;
 
-      (allocations || []).forEach((alloc: any) => {
+      (allocations || []).forEach((alloc) => {
+        if (!alloc.eligible) return;
         const amount = alloc.fun_allocated || 0;
         if (alloc.status === "minted" || alloc.status === "onchain") {
           totalMinted += amount;
-        } else if (alloc.status === "allocated" || alloc.status === "approved") {
+        } else if (alloc.status === "allocated" || alloc.status === "approved" || alloc.status === "distributed") {
           totalAllocated += amount;
         }
       });
 
-      // Pending = current epoch Light Score contribution (not yet allocated)
-      // We estimate from current light_score_ledger
+      // Also check mint_allocations table
+      const { data: mintAllocs } = await supabase
+        .from("mint_allocations")
+        .select("allocation_amount, eligible, onchain_tx_hash")
+        .eq("user_id", userId)
+        .eq("eligible", true);
+
+      (mintAllocs || []).forEach((alloc) => {
+        const amount = alloc.allocation_amount || 0;
+        if (alloc.onchain_tx_hash) {
+          totalMinted += amount;
+        } else {
+          totalAllocated += amount;
+        }
+      });
+
+      // Pending = current epoch Light Score contribution (informational)
       const { data: ledgerData } = await supabase
         .from("light_score_ledger")
         .select("final_light_score")
@@ -57,7 +72,6 @@ export function useFUNMoneyStats(userId?: string) {
         (sum: number, row: any) => sum + (row.final_light_score || 0), 0
       );
 
-      // Pending is informational — actual FUN will be calculated at epoch end
       const totalPending = currentLightScore > 0 ? Math.round(currentLightScore) : 0;
 
       setStats({
@@ -77,7 +91,7 @@ export function useFUNMoneyStats(userId?: string) {
     fetchStats();
   }, [fetchStats]);
 
-  // Backwards compatibility: expose totalScored as alias for totalAllocated
+  // Backwards compatibility
   return {
     ...stats,
     totalScored: stats.totalAllocated,

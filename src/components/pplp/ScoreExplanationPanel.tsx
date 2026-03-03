@@ -167,7 +167,7 @@ export function ScoreExplanationPanel() {
               <><CheckCircle className="h-3.5 w-3.5" /> {language === 'vi' ? 'Đủ điều kiện mint FUN' : 'Eligible for FUN mint'}</>
             ) : (
               <><XCircle className="h-3.5 w-3.5" /> {language === 'vi' ? 'Chưa đủ điều kiện: ' : 'Not eligible: '}
-                {eligibility.reason.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
+                {(eligibility.reason || 'unknown').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
               </>
             )}
           </div>
