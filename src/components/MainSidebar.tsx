@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { 
   Home, Info, BookOpen, MessageCircle, Users, 
-  PenLine, ArrowRightLeft, Star, PanelLeft, Gift, History, Shield, User, Crown, Globe, LayoutDashboard
+  PenLine, Star, PanelLeft, Gift, History, Shield, User, Crown, Globe, LayoutDashboard
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { NavLink } from "@/components/NavLink";
@@ -63,7 +63,7 @@ export function MainSidebar() {
     { label: "Dashboard tổng hợp", href: "/unified-dashboard", icon: LayoutDashboard },
     { label: t("nav.community") || "Cộng đồng", href: "/community", icon: Users },
     { label: t("nav.contentWriter"), href: "/content-writer", icon: PenLine },
-    { label: t("nav.swap"), href: "/swap", icon: ArrowRightLeft },
+    
     { label: t("nav.earn"), href: "/earn", icon: Star },
   ];
 
