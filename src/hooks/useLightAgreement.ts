@@ -30,21 +30,33 @@ export function useLightAgreement() {
       );
 
       try {
-        const queryPromise = supabase
-          .from("user_light_agreements")
-          .select("id")
-          .eq("user_id", user.id)
-          .maybeSingle();
+        // Check explicit agreement OR active user (has Light Score activity)
+        const [agreementPromise, activityPromise] = [
+          supabase
+            .from("user_light_agreements")
+            .select("id")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("light_score_ledger")
+            .select("id")
+            .eq("user_id", user.id)
+            .limit(1)
+            .maybeSingle(),
+        ];
 
-        // Race between query and timeout
-        const result = await Promise.race([queryPromise, timeoutPromise]);
-        
-        if ((result as any).error) {
-          console.error("Error checking light agreement:", (result as any).error);
-          // On error, fallback to false - user will be asked to agree again
+        const [agreementResult, activityResult] = await Promise.race([
+          Promise.all([agreementPromise, activityPromise]),
+          timeoutPromise,
+        ]) as any;
+
+        const hasError = agreementResult.error || activityResult.error;
+        if (hasError) {
+          console.error("Error checking light agreement:", agreementResult.error || activityResult.error);
           setHasAgreed(false);
         } else {
-          setHasAgreed(!!(result as any).data);
+          // User agreed explicitly OR has activity = implicit agreement
+          setHasAgreed(!!(agreementResult.data || activityResult.data));
         }
       } catch (error) {
         console.error("Error/timeout checking light agreement:", error);
