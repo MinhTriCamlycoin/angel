@@ -1,73 +1,36 @@
 
 
-# Kế hoạch: Chuyển sang mô hình Hybrid — Light Score per-action, FUN theo Epoch
+# Kế hoạch: Finalize Epoch cho tháng 01 và 02/2026
 
-## Tóm tắt
+## Vấn đề
+- `light_score_ledger` có 355 records (136 users tháng 1, 219 users tháng 2)
+- Nhưng `mint_epochs` và `mint_allocations` đều trống — epoch chưa bao giờ được finalize
+- Users có Light Score nhưng chưa được phân bổ FUN
 
-Sau mỗi action, user thấy "+X Light Score" (phản hồi tức thì). FUN Money chỉ được mint cuối epoch (tháng) dựa trên tỷ lệ Light Score trong pool.
+## Giải pháp
 
-## Thay đổi cần thực hiện
+### Bước 1: Chạy `pplp-epoch-reset` cho tháng 01/2026
+Gọi edge function với body `{ "year": 2026, "month": 1 }`:
+- Tạo `mint_epochs` record cho period "2026-01"
+- Ghi `mint_allocations` cho 136 users dựa trên `light_score_ledger` (tổng 11,594 Light)
+- Trigger `pplp-epoch-allocate` để tính FUN allocation từ pool
 
-### 1. Sửa `pplp-score-action/index.ts` — Loại bỏ Q×I×K FUN reward
+### Bước 2: Chạy `pplp-epoch-reset` cho tháng 02/2026
+Gọi edge function với body `{ "year": 2026, "month": 2 }`:
+- Tạo `mint_epochs` record cho period "2026-02"  
+- Ghi `mint_allocations` cho 219 users dựa trên `light_score_ledger` (tổng 244,873 Light)
+- Trigger `pplp-epoch-allocate` để tính FUN allocation từ pool
 
-**Hiện tại (dòng 354-362):**
-```typescript
-const rawReward = baseReward * multipliers.Q * multipliers.I * multipliers.K;
-const weightedReward = rawReward * reputationWeight * consistencyMultiplier;
-const finalReward = weightedReward - (weightedReward * integrityPenalty/100);
-```
+### Bước 3: Xác minh kết quả
+- Kiểm tra `mint_epochs` có 2 records (finalized)
+- Kiểm tra `mint_allocations` có đủ users
+- Kiểm tra FUN allocation đã được tính đúng theo tỷ lệ contribution_ratio
 
-**Thay bằng:**
-```typescript
-// Hybrid: final_reward = 0 (FUN chỉ mint theo epoch)
-// Light Score contribution = lightScore * reputationWeight * consistencyMultiplier * (1 - penalty)
-const lightContribution = lightScore * reputationWeight * consistencyMultiplier * (1 - integrityPenalty/100);
-const finalReward = 0; // FUN không tính per-action nữa
-```
-
-- Giữ nguyên Q, I, K trong `pplp_scores` để audit/history
-- `final_reward` = 0 cho mọi action mới
-- Thêm cột `light_contribution` vào response để frontend hiển thị
-- Loại bỏ toàn bộ phần auto-mint (section 11, dòng 680-807) — chuyển thành comment/skip
-
-### 2. Sửa `_shared/pplp-helper.ts` — `submitAndScorePPLPAction` response
-
-- Response trả về `light_contribution` thay vì `reward` (FUN)
-- Frontend hiển thị: "Bạn đã đóng góp +X Light Score ✨" thay vì "+X FUN"
-
-### 3. Sửa frontend hooks
-
-**`useFUNMoneyStats.ts`:**
-- Thay đổi nguồn dữ liệu: FUN Money lấy từ `mint_allocations` (epoch-based) thay vì sum `pplp_scores.final_reward`
-- `totalScored` → FUN từ epoch allocation chưa mint
-- `totalMinted` → FUN đã mint on-chain
-
-**`usePPLPScore.ts`:**
-- Thêm `light_contribution` vào interface `PPLPScoreData`
-- Hiển thị Light Score contribution thay vì FUN reward
-
-### 4. Sửa các UI hiển thị reward sau action
-
-Tìm các nơi hiển thị "+X FUN" sau action (toast notifications, chat reward display) → đổi thành "+X Light Score ✨"
-
-### 5. Đảm bảo epoch pipeline hoạt động
-
-- `pplp-epoch-reset` + `pplp-epoch-allocate` đã tồn tại và sử dụng `light_score_ledger` → tính FUN allocation cuối tháng
-- Xác nhận `mint_epochs` và `mint_allocations` tables đang được populate đúng
-
-## Tác động dữ liệu
-
-| Trước | Sau |
-|-------|-----|
-| Mỗi action → `final_reward` = 65-227 FUN | Mỗi action → `final_reward` = 0, `light_contribution` = 55-75 |
-| User thấy "+97 FUN" | User thấy "+62.5 Light Score ✨" |
-| FUN mint per-action (via approve) | FUN mint cuối tháng (epoch allocation) |
-| ~1,700,000 FUN/2 tháng phát tán | 5,000,000 FUN/tháng pool, chia theo tỷ lệ |
+### Lưu ý quan trọng
+- Hàm `pplp-epoch-reset` hiện đọc từ `features_user_day` (không phải `light_score_ledger`) để tính toán. Vì `light_score_ledger` đã có sẵn dữ liệu cho 2 tháng này, cần xác nhận `features_user_day` cũng có dữ liệu tương ứng, nếu không cần điều chỉnh function để đọc trực tiếp từ `light_score_ledger`.
+- Cycle #1 đang mở cho tháng 3 — sẽ không bị ảnh hưởng vì epoch reset chỉ target tháng 1 và 2.
+- Cần set `total_mint_pool` cho 2 epoch cũ (hiện mặc định = 0 trong `mint_epochs`, sẽ cần cập nhật thủ công hoặc qua `pplp-epoch-allocate`).
 
 ## Files thay đổi
-1. `supabase/functions/pplp-score-action/index.ts` — loại bỏ FUN calculation, giữ Light Score
-2. `supabase/functions/_shared/pplp-helper.ts` — response type đổi reward → light_contribution
-3. `src/hooks/useFUNMoneyStats.ts` — lấy FUN từ mint_allocations
-4. `src/hooks/usePPLPScore.ts` — thêm light_contribution
-5. Frontend toasts/notifications — đổi "+X FUN" → "+X Light Score"
+Không cần sửa code. Chỉ cần gọi edge function 2 lần với tham số đúng, sau đó xác minh dữ liệu.
 
