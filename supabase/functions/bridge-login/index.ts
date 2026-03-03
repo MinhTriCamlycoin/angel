@@ -6,6 +6,45 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Normalize identity payload to handle different response shapes
+function normalizeIdentity(raw: Record<string, unknown>) {
+  const r = raw as any;
+
+  const email =
+    r.email ||
+    r.user?.email ||
+    r.profile?.email ||
+    r.data?.email ||
+    null;
+
+  const funUserId =
+    r.sub ||
+    r.fun_id ||
+    r.user?.id ||
+    r.user?.sub ||
+    r.data?.sub ||
+    null;
+
+  const displayName =
+    r.username ||
+    r.display_name ||
+    r.full_name ||
+    r.name ||
+    r.user?.username ||
+    r.user?.display_name ||
+    r.user?.full_name ||
+    r.profile?.display_name ||
+    (typeof email === "string" ? email.split("@")[0] : null);
+
+  const avatarUrl =
+    r.avatar_url ||
+    r.user?.avatar_url ||
+    r.profile?.avatar_url ||
+    null;
+
+  return { email, funUserId, displayName, avatarUrl };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -45,22 +84,40 @@ Deno.serve(async (req) => {
       );
     }
 
-    const identity = await verifyRes.json();
-    // identity: { sub, fun_id, username, email, avatar_url, wallet_address, scopes, ... }
+    const rawIdentity = await verifyRes.json();
 
-    if (!identity.email) {
+    // Safe diagnostic logging (no sensitive data)
+    const topKeys = Object.keys(rawIdentity);
+    console.log("[bridge-login] Identity top-level keys:", topKeys.join(", "));
+    if (rawIdentity.user && typeof rawIdentity.user === "object") {
+      console.log("[bridge-login] Identity.user keys:", Object.keys(rawIdentity.user).join(", "));
+    }
+    if (rawIdentity.profile && typeof rawIdentity.profile === "object") {
+      console.log("[bridge-login] Identity.profile keys:", Object.keys(rawIdentity.profile).join(", "));
+    }
+
+    // 2. Normalize identity
+    const normalized = normalizeIdentity(rawIdentity);
+    console.log("[bridge-login] Normalized: email=", normalized.email ? "present" : "MISSING",
+      ", funUserId=", normalized.funUserId ? "present" : "MISSING",
+      ", displayName=", normalized.displayName || "none");
+
+    if (!normalized.email) {
       return new Response(
-        JSON.stringify({ error: "No email in FUN Profile identity" }),
+        JSON.stringify({
+          error: "Missing email in FUN identity payload",
+          debug_keys: topKeys,
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 2. Initialize Supabase Admin client
+    // 3. Initialize Supabase Admin client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // 3. Find or create user by email
+    // 4. Find or create user by email
     let userId: string;
 
     const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers();
@@ -74,19 +131,18 @@ Deno.serve(async (req) => {
     }
 
     const existingUser = existingUsers.users.find(
-      (u) => u.email?.toLowerCase() === identity.email.toLowerCase()
+      (u) => u.email?.toLowerCase() === normalized.email.toLowerCase()
     );
 
     if (existingUser) {
       userId = existingUser.id;
     } else {
-      // Create new user
       const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-        email: identity.email,
+        email: normalized.email,
         email_confirm: true,
         user_metadata: {
-          display_name: identity.username || identity.full_name || identity.email.split("@")[0],
-          avatar_url: identity.avatar_url || null,
+          display_name: normalized.displayName,
+          avatar_url: normalized.avatarUrl,
           source: "fun_profile_sso",
         },
       });
@@ -102,15 +158,14 @@ Deno.serve(async (req) => {
       userId = newUser.user.id;
     }
 
-    // 4. Upsert fun_id_links
-    const funUserId = identity.sub || identity.fun_id || null;
-    if (funUserId) {
+    // 5. Upsert fun_id_links
+    if (normalized.funUserId) {
       await supabase
         .from("fun_id_links")
         .upsert(
           {
             angel_user_id: userId,
-            fun_profile_user_id: funUserId,
+            fun_profile_user_id: normalized.funUserId,
             status: "active",
             linked_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -119,22 +174,22 @@ Deno.serve(async (req) => {
         );
     }
 
-    // 5. Upsert profile info
+    // 6. Upsert profile info
     const profileUpdate: Record<string, unknown> = {
       user_id: userId,
       updated_at: new Date().toISOString(),
     };
-    if (identity.username) profileUpdate.display_name = identity.username;
-    if (identity.avatar_url) profileUpdate.avatar_url = identity.avatar_url;
+    if (normalized.displayName) profileUpdate.display_name = normalized.displayName;
+    if (normalized.avatarUrl) profileUpdate.avatar_url = normalized.avatarUrl;
 
     await supabase
       .from("profiles")
       .upsert(profileUpdate, { onConflict: "user_id" });
 
-    // 6. Generate session using magic link approach
+    // 7. Generate session using magic link approach
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "magiclink",
-      email: identity.email,
+      email: normalized.email,
     });
 
     if (linkError || !linkData) {
@@ -151,11 +206,9 @@ Deno.serve(async (req) => {
                         linkUrl.hash?.match(/token=([^&]+)/)?.[1] ||
                         linkUrl.searchParams.get("token_hash");
 
-    // Use the OTP verification to get a proper session
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonClient = createClient(supabaseUrl, anonKey);
 
-    // Try to verify the token hash to get session
     let sessionData;
     
     if (token_hash) {
@@ -166,21 +219,17 @@ Deno.serve(async (req) => {
 
       if (otpError || !otpData.session) {
         console.error("OTP verify failed:", otpError);
-        // Fallback: try email OTP approach
       } else {
         sessionData = otpData.session;
       }
     }
 
     if (!sessionData) {
-      // Fallback: use admin to create a direct session via sign in
-      // Generate a temporary password, sign in, then remove it
       const tempPassword = crypto.randomUUID();
-      
       await supabase.auth.admin.updateUser(userId, { password: tempPassword });
       
       const { data: signInData, error: signInError } = await anonClient.auth.signInWithPassword({
-        email: identity.email,
+        email: normalized.email,
         password: tempPassword,
       });
 
