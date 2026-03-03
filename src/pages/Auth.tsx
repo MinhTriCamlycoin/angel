@@ -15,6 +15,7 @@ import { lovable } from "@/integrations/lovable";
 
 
 import angelLogo from "@/assets/angel-ai-logo.png";
+import funEcosystemLogo from "@/assets/fun-ecosystem-logo.png";
 
 // New Light Law Content (PPLP)
 const LightLawContent = () => {
@@ -584,6 +585,49 @@ const Auth = () => {
         </CardHeader>
 
         <CardContent>
+          {/* FUN ID - Primary Auth Method */}
+          <div className="mb-6 p-5 rounded-2xl bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-orange-500/5 border border-purple-400/20">
+            <div className="flex flex-col items-center gap-3">
+              <img 
+                src={funEcosystemLogo} 
+                alt="FUN Ecosystem" 
+                className="w-16 h-16 object-contain"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const { funProfile } = await import("@/lib/funProfile");
+                    const authUrl = await funProfile.startAuth();
+                    window.location.href = authUrl;
+                  } catch (err) {
+                    console.error("FUN ID SSO error:", err);
+                    toast({
+                      title: "Lỗi kết nối FUN ID",
+                      description: "Không thể kết nối SSO. Vui lòng thử lại.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                className="btn-fun-id-hologram w-full py-3 px-6 rounded-xl text-base flex items-center justify-center gap-3 transition-all duration-300 cursor-pointer"
+              >
+                <Globe className="w-5 h-5" />
+                {isSignUp ? "Đăng ký FUN ID" : "Đăng nhập bằng FUN ID"}
+              </button>
+              <p className="text-xs text-center text-muted-foreground leading-relaxed">
+                Một tài khoản duy nhất cho toàn bộ 12 nền tảng FUN Ecosystem.<br/>
+                Miễn phí · Bảo mật · Đồng bộ mọi nơi.
+              </p>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="relative flex items-center gap-4 mb-6">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-xs text-muted-foreground">hoặc tiếp tục với email</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
@@ -785,36 +829,6 @@ const Auth = () => {
             Bạn có thể xem nội dung trang chủ mà không cần đăng nhập
           </p>
 
-          {/* FUN ID SSO Login / Signup */}
-          <div className="mt-4 pt-4 border-t border-border/50 text-center">
-            <p className="text-xs text-muted-foreground mb-2">
-              {isSignUp ? "Đăng ký tài khoản qua hệ sinh thái FUN" : "Đăng nhập từ hệ sinh thái FUN"}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={async () => {
-                try {
-                  const { funProfile } = await import("@/lib/funProfile");
-                  const authUrl = await funProfile.startAuth();
-                  window.location.href = authUrl;
-                } catch (err) {
-                  console.error("FUN ID SSO error:", err);
-                  toast({
-                    title: "Lỗi kết nối FUN ID",
-                    description: "Không thể kết nối SSO. Vui lòng thử lại.",
-                    variant: "destructive",
-                  });
-                }
-              }}
-              className="w-full py-5 border-divine-gold/20 hover:bg-divine-gold/5 hover:border-divine-gold/40 transition-all"
-            >
-              <span className="flex items-center gap-3">
-                <Globe className="w-5 h-5 text-divine-gold" />
-                {isSignUp ? "Đăng ký FUN ID" : "Đăng nhập bằng FUN ID"}
-              </span>
-            </Button>
-          </div>
         </CardContent>
       </Card>
 

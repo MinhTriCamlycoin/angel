@@ -926,3 +926,71 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
 }
+
+/* FUN ID Hologram Button */
+.btn-fun-id-hologram {
+  background: linear-gradient(135deg, 
+    hsl(270 80% 60%), 
+    hsl(220 90% 55%), 
+    hsl(180 70% 50%), 
+    hsl(30 90% 55%)
+  );
+  background-size: 300% 300%;
+  animation: hologram-shimmer 4s ease infinite;
+  color: white;
+  font-weight: 700;
+  border: none;
+  position: relative;
+  overflow: hidden;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.btn-fun-id-hologram::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255,255,255,0.3) 45%,
+    rgba(255,255,255,0.1) 55%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: hologram-shine 3s ease-in-out infinite;
+}
+
+.btn-fun-id-hologram::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, 
+    hsl(270 80% 60% / 0.6), 
+    hsl(220 90% 55% / 0.6), 
+    hsl(180 70% 50% / 0.6), 
+    hsl(30 90% 55% / 0.6)
+  );
+  background-size: 300% 300%;
+  animation: hologram-shimmer 4s ease infinite;
+  z-index: -1;
+  filter: blur(8px);
+}
+
+.btn-fun-id-hologram:hover {
+  transform: translateY(-1px);
+  box-shadow: 
+    0 4px 20px hsl(270 80% 60% / 0.4),
+    0 2px 10px hsl(220 90% 55% / 0.3);
+}
+
+@keyframes hologram-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes hologram-shine {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
