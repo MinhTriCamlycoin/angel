@@ -794,7 +794,8 @@ const Auth = () => {
               onClick={async () => {
                 try {
                   const { funProfile } = await import("@/lib/funProfile");
-                  funProfile.startAuth();
+                  const authUrl = await funProfile.startAuth();
+                  window.location.href = authUrl;
                 } catch (err) {
                   console.error("FUN Profile SSO error:", err);
                   toast({
