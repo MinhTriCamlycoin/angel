@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useLeaderboard, LeaderboardUser } from "@/hooks/useLeaderboard";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { LightLevelBadge } from "@/components/leaderboard/LightLevelBadge";
 import { RainbowTitle } from "@/components/leaderboard/RainbowTitle";
 import { LightLevelsTable } from "@/components/leaderboard/LightLevelsTable";
 import { getProfilePath } from "@/lib/profileUrl";
@@ -12,7 +11,6 @@ import { motion } from "framer-motion";
 import angelAvatar from "@/assets/angel-avatar.png";
 
 function MemberCard({ user, index }: { user: LeaderboardUser; index: number }) {
-  const isAnonymous = !user.display_name || user.display_name.trim() === "";
   const lightIcon = user.light_info?.icon || "🌱";
   const handleText = user.handle ? `@${user.handle}` : null;
 
@@ -23,38 +21,30 @@ function MemberCard({ user, index }: { user: LeaderboardUser; index: number }) {
       transition={{ delay: index * 0.03 }}
     >
       <Link to={getProfilePath(user.user_id, user.handle)} className="group block">
-        <div className="flex items-center gap-4 px-5 py-4 rounded-2xl border border-border/40 bg-gradient-to-r from-muted/20 to-muted/40 hover:from-muted/40 hover:to-muted/60 transition-all shadow-sm">
-          {/* Light icon */}
-          <span className="text-2xl flex-shrink-0">{lightIcon}</span>
-
-          {/* Avatar */}
-          <Avatar className="w-12 h-12 flex-shrink-0 border-2 border-border/50 shadow-sm">
-            <AvatarImage src={user.avatar_url || angelAvatar} />
-            <AvatarFallback className="text-sm font-bold">
-              {user.display_name?.charAt(0) || "U"}
-            </AvatarFallback>
-          </Avatar>
-
-          {/* Name + Handle */}
-          <div className="flex-1 min-w-0">
-            <p className="text-base font-bold text-foreground truncate group-hover:text-primary transition-colors">
-              {user.display_name || "Ẩn danh"}
-            </p>
-            {handleText && (
-              <p className="text-sm text-muted-foreground truncate">
-                {handleText}
-              </p>
-            )}
+        <div className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-[#daa520]/20 bg-gradient-to-b from-card/90 via-[#ffd700]/[0.03] to-card/90 hover:from-[#ffd700]/[0.06] hover:via-[#ffec8b]/[0.08] hover:to-[#ffd700]/[0.06] hover:border-[#daa520]/35 transition-all duration-300 hover:shadow-[0_2px_15px_rgba(218,165,32,0.12)] h-full">
+          {/* Avatar with light icon overlay */}
+          <div className="relative">
+            <Avatar className="w-16 h-16 border-2 border-[#daa520]/40 shadow-[0_0_8px_rgba(255,215,0,0.15)] group-hover:border-[#ffd700]/70 transition-colors duration-300">
+              <AvatarImage src={user.avatar_url || angelAvatar} className="object-cover" />
+              <AvatarFallback className="text-sm font-bold bg-primary-pale text-primary-deep">
+                {user.display_name?.charAt(0) || "✦"}
+              </AvatarFallback>
+            </Avatar>
+            <span className="absolute -bottom-0.5 -right-0.5 text-sm drop-shadow-sm bg-card rounded-full w-5 h-5 flex items-center justify-center">
+              {lightIcon}
+            </span>
           </div>
 
-          {/* Right side: Light Level Badge + Score */}
-          {!isAnonymous && (
-            <div className="flex-shrink-0 flex flex-col items-end gap-1">
-              <LightLevelBadge lightInfo={user.light_info} size="md" showTrend={false} />
-              <span className="text-xs font-semibold text-amber-600">
-                ⚡ {(user.light_info?.total_score ?? 0).toFixed(1)} LS
-              </span>
-            </div>
+          {/* Name */}
+          <p className="w-full text-xs sm:text-sm font-semibold text-foreground truncate text-center group-hover:text-[#b8860b] transition-colors duration-300 leading-tight">
+            {user.display_name || "Ẩn danh"}
+          </p>
+
+          {/* Handle */}
+          {handleText && (
+            <p className="w-full text-[11px] text-muted-foreground truncate text-center -mt-1">
+              {handleText}
+            </p>
           )}
         </div>
       </Link>
@@ -104,21 +94,21 @@ const LightCommunity = () => {
       {/* Light Levels Table */}
       <LightLevelsTable />
 
-      {/* Members list */}
+      {/* Members grid */}
       <div className="max-w-2xl mx-auto px-4 pb-20">
         {isLoading ? (
-          <div className="space-y-3 pt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4">
             {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="h-20 bg-muted rounded-2xl animate-pulse" />
+              <div key={i} className="h-32 bg-muted rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : (
-          <div className="space-y-3 pt-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
             {allUsers.map((user, i) => (
               <MemberCard key={user.user_id} user={user} index={i} />
             ))}
             {allUsers.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
+              <div className="col-span-full text-center py-12 text-muted-foreground">
                 <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
                 <p>{t("common.noData")}</p>
               </div>
