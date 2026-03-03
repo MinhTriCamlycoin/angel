@@ -66,7 +66,7 @@ export function Leaderboard() {
         {/* Member grid */}
         {allUsers.length > 0 ? (
           <>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="flex flex-col gap-2">
               {displayUsers.map((user, i) => (
                 <motion.div
                   key={user.user_id}
