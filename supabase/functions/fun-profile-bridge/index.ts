@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
         // Get local Light Score from Angel AI
         const { data: localLS } = await supabase
           .from("light_score_ledger")
-          .select("total_light_score, computed_at")
+          .select("final_light_score, computed_at")
           .eq("user_id", userId)
           .order("computed_at", { ascending: false })
           .limit(1);
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        const angelLS = (localLS?.[0] as any)?.total_light_score ?? 0;
+        const angelLS = (localLS?.[0] as any)?.final_light_score ?? 0;
 
         return new Response(
           JSON.stringify({
@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
         }
 
         const [lsRes, postsRes, chatsRes] = await Promise.all([
-          supabase.from("light_score_ledger").select("total_light_score").eq("user_id", userId).order("computed_at", { ascending: false }).limit(1),
+          supabase.from("light_score_ledger").select("final_light_score").eq("user_id", userId).order("computed_at", { ascending: false }).limit(1),
           supabase.from("community_posts").select("id", { count: "exact", head: true }).eq("user_id", userId),
           supabase.from("chat_history").select("id", { count: "exact", head: true }).eq("user_id", userId),
         ]);
@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
         return new Response(
           JSON.stringify({
             angel_ai: {
-              light_score: (lsRes.data?.[0] as any)?.total_light_score ?? 0,
+              light_score: (lsRes.data?.[0] as any)?.final_light_score ?? 0,
               posts_count: postsRes.count ?? 0,
               chats_count: chatsRes.count ?? 0,
             },
