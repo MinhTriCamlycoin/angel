@@ -12,15 +12,17 @@ import { CamlyFunRelationship } from "@/components/pplp/CamlyFunRelationship";
 import { LightLevelBadge } from "@/components/pplp/LightLevelBadge";
 import { ScoreExplanationPanel } from "@/components/pplp/ScoreExplanationPanel";
 import { useAuth } from "@/hooks/useAuth";
-import { useUnmintedCount } from "@/hooks/useUnmintedCount";
+import { useMintCycle } from "@/hooks/useMintCycle";
+import { useFUNMoneyStats } from "@/hooks/useFUNMoneyStats";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Coins, Sparkles, Shield, Zap, ExternalLink, Info, Lock, AlertTriangle } from "lucide-react";
+import { Coins, Sparkles, Shield, Zap, ExternalLink, Info, Lock, TrendingUp } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Mint() {
   const { user } = useAuth();
-  const { unmintedCount } = useUnmintedCount(user?.id);
+  const { currentCycle, daysRemaining } = useMintCycle();
+  const { totalPending } = useFUNMoneyStats(user?.id);
  
   return (
     <AppLayout>
@@ -77,16 +79,17 @@ export default function Mint() {
               </AlertDescription>
             </Alert>
 
-            {/* Unminted Actions Banner */}
-            {unmintedCount > 0 && (
-              <Alert className="border-orange-300 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30">
-                <AlertTriangle className="h-4 w-4 text-orange-600" />
-                <AlertTitle className="text-orange-700 dark:text-orange-400">
-                  ⚡ {unmintedCount} Light Actions chưa gửi yêu cầu mint!
+            {/* Epoch Light Score Accumulation Banner */}
+            {totalPending > 0 && (
+              <Alert className="border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30">
+                <TrendingUp className="h-4 w-4 text-emerald-600" />
+                <AlertTitle className="text-emerald-700 dark:text-emerald-400">
+                  ✨ Bạn đã tích lũy {totalPending.toLocaleString()} Light Score trong kỳ này!
                 </AlertTitle>
-                <AlertDescription className="text-orange-600 dark:text-orange-300">
-                  Bạn có {unmintedCount} hành động đã đạt điểm nhưng chưa gửi yêu cầu mint FUN Money.
-                  Cuộn xuống và nhấn <strong>"Gửi tất cả yêu cầu mint"</strong> để Admin duyệt nhé!
+                <AlertDescription className="text-emerald-600 dark:text-emerald-300">
+                  FUN Money sẽ được phân bổ tự động vào cuối chu kỳ
+                  {daysRemaining > 0 && <> (còn <strong>{daysRemaining} ngày</strong>)</>} dựa trên tỷ lệ đóng góp Light Score của bạn.
+                  Hãy tiếp tục tích lũy để nhận nhiều FUN hơn!
                 </AlertDescription>
               </Alert>
             )}
