@@ -1,5 +1,4 @@
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { AppLayout } from "@/components/layouts/AppLayout";
 import { FUNMoneyBalanceCard } from "@/components/mint/FUNMoneyBalanceCard";
 import { MintActionsList } from "@/components/mint/MintActionsList";
 import { TokenLifecyclePanel } from "@/components/mint/TokenLifecyclePanel";
@@ -24,11 +23,8 @@ export default function Mint() {
   const { unmintedCount } = useUnmintedCount(user?.id);
  
   return (
-    <>
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
-
-        <main className="flex-1 container mx-auto px-4 py-8 pt-28">
+    <AppLayout>
+        <main className="container mx-auto px-4 py-8">
           <div className="max-w-6xl mx-auto space-y-8">
 
             {/* FUN Profile Redirect Banner */}
@@ -206,9 +202,6 @@ export default function Mint() {
              </div>
            </div>
          </main>
- 
-         <Footer />
-       </div>
-     </>
-   );
- }
+    </AppLayout>
+  );
+}

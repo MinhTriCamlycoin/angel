@@ -1,5 +1,4 @@
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { AppLayout } from "@/components/layouts/AppLayout";
 import { SwapWidget } from "@/components/SwapWidget";
 import { Web3WalletButton } from "@/components/Web3WalletButton";
 import { useWeb3WalletContext as useWeb3Wallet } from "@/contexts/Web3WalletContext";
@@ -9,10 +8,8 @@ const Swap = () => {
   const { isConnected } = useWeb3Wallet();
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      
-      <main className="pt-24 pb-16">
+    <AppLayout>
+      <main className="pb-16">
         <div className="container mx-auto px-6">
           {/* Hero Section */}
           <div className="text-center mb-12">
@@ -133,9 +130,7 @@ const Swap = () => {
           </div>
         </div>
       </main>
-
-      <Footer />
-    </div>
+    </AppLayout>
   );
 };
 

@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { AppLayout } from "@/components/layouts/AppLayout";
 import { VisionBoardForm } from "@/components/vision/VisionBoardForm";
 import { VisionBoardCard } from "@/components/vision/VisionBoardCard";
 import { useVisionBoard } from "@/hooks/useVisionBoard";
@@ -51,10 +50,8 @@ export default function Vision() {
   const completedBoards = boards.filter(b => b.completed_goals_count === b.total_goals_count && b.total_goals_count > 0).length;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      
-      <main className="flex-1 container mx-auto px-4 py-8 pt-28">
+    <AppLayout>
+      <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
           {/* Header */}
           <div className="text-center space-y-4">
@@ -210,7 +207,6 @@ export default function Vision() {
           )}
         </div>
       </main>
-      <Footer />
-    </div>
+    </AppLayout>
   );
 }

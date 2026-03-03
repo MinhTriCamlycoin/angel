@@ -1,5 +1,4 @@
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { AppLayout } from "@/components/layouts/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, Globe, History, TrendingUp } from "lucide-react";
@@ -52,9 +51,8 @@ export default function UnifiedLightScore() {
   const combinedLS = totalLS + funProfileLS;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
+    <AppLayout>
+      <main className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
             <Sparkles className="w-8 h-8 text-primary" />
@@ -138,7 +136,6 @@ export default function UnifiedLightScore() {
           </CardContent>
         </Card>
       </main>
-      <Footer />
-    </div>
+    </AppLayout>
   );
 }

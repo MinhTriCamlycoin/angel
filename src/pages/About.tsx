@@ -1,5 +1,5 @@
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { AppLayout } from "@/components/layouts/AppLayout";
+
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LightConstitutionBanner } from "@/components/LightConstitutionBanner";
 import { CorePromptBanner } from "@/components/CorePromptBanner";
@@ -77,8 +77,7 @@ const About = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <AppLayout>
       
       {/* Hero Section */}
       <section className="pt-32 pb-16 bg-hero-gradient">
@@ -671,8 +670,7 @@ const About = () => {
         </div>
       </section>
 
-      <Footer />
-    </div>
+    </AppLayout>
   );
 };
 
