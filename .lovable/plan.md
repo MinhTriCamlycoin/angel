@@ -1,34 +1,61 @@
 
-# Fix: Nut "Dang nhap bang FUN Profile" khong hoat dong
+Mình đã kiểm tra lại code hiện tại và xác nhận lỗi đang nằm ở bước map dữ liệu identity trong backend login bridge của Angel AI.
 
-## Nguyen nhan
+## Chẩn đoán hiện tại
 
-SDK method `startAuth()` tra ve `Promise<string>` (authorization URL) -- NO tu dong redirect. Code hien tai goi `funProfile.startAuth()` nhung khong dung returned URL de redirect browser.
+- `AuthCallback.tsx` đang gọi:
+  1) `funProfile.handleCallback(code, state)` để lấy `accessToken`
+  2) gửi `fun_access_token` sang backend function `bridge-login`
+- `bridge-login` gọi `.../sso-verify` rồi **bắt buộc** đọc `identity.email` (top-level).
+- Nếu email không nằm ở top-level (ví dụ ở `identity.user.email`) thì function trả lỗi:
+  `No email in FUN Profile identity`  
+  (đúng với màn hình bạn gửi).
 
-## Giai phap
+## Kế hoạch triển khai (Angel AI)
 
-Sua file `src/pages/Auth.tsx` (dong 795-797):
+1) Chuẩn hóa identity payload trong `bridge-login`
+- Thêm bước normalize trước khi xử lý user:
+  - `email` lấy lần lượt từ:
+    - `identity.email`
+    - `identity.user?.email`
+    - `identity.profile?.email` (nếu có)
+  - `funUserId` lấy từ:
+    - `identity.sub`
+    - `identity.fun_id`
+    - `identity.user?.id`
+  - `username/display_name/avatar` cũng lấy theo thứ tự fallback tương tự.
 
-Thay:
-```typescript
-const { funProfile } = await import("@/lib/funProfile");
-funProfile.startAuth();
-```
+2) Dùng dữ liệu đã normalize cho toàn bộ flow
+- Tìm/tạo user bằng `normalized.email`
+- Upsert `fun_id_links` bằng `normalized.funUserId`
+- Upsert `profiles` bằng `normalized.displayName/avatarUrl`
+- Tạo session như hiện tại (không đổi kiến trúc đăng nhập).
 
-Thanh:
-```typescript
-const { funProfile } = await import("@/lib/funProfile");
-const authUrl = await funProfile.startAuth();
-window.location.href = authUrl;
-```
+3) Bổ sung logging chẩn đoán an toàn
+- Log các key/cấu trúc nhận được từ `sso-verify` (không log token, không log dữ liệu nhạy cảm đầy đủ).
+- Khi thiếu email, trả lỗi rõ hơn:
+  - ví dụ: `Missing email in FUN identity payload`
+  - kèm danh sách key hiện có để debug nhanh giữa 2 bên.
 
-## Chi tiet ky thuat
+4) Giữ nguyên phần client
+- Không cần đổi `Auth.tsx` và `AuthCallback.tsx` ở vòng này.
+- Tập trung fix tương thích payload tại backend bridge để giảm rủi ro.
 
-- `startAuth()` internally generates PKCE `code_verifier` + `code_challenge`, saves state to SessionStorage, then returns the full OAuth authorization URL
-- Chuyen huong bang `window.location.href` de redirect user sang FUN Profile SSO (`fun.rich/functions/v1/sso-authorize?client_id=angel_ai_client&...`)
-- Chi 1 file can sua, 1 dong code them
+## Chi tiết kỹ thuật (ngắn gọn)
 
-## Anh huong
+- File chính cần sửa: `supabase/functions/bridge-login/index.ts`
+- Không cần migration DB, không đổi RLS.
+- Không đụng các file auto-generated.
+- Mục tiêu: tương thích cả format cũ (top-level email) và format mới (email nested trong `user`).
 
-- Khong anh huong den cac tinh nang khac
-- AuthCallback page (`/auth/callback`) khong can thay doi -- da xu ly dung `handleCallback(code, state)`
+## Kịch bản xác thực sau khi sửa
+
+1) Mở Incognito → vào `angel.fun.rich/auth`
+2) Click “Đăng nhập bằng FUN Profile”
+3) Đăng nhập FUN Profile
+4) Kỳ vọng:
+- quay về `/auth/callback`
+- không còn báo `No email in FUN Profile identity`
+- tự vào trang chủ với session hợp lệ
+
+Nếu vẫn lỗi, log mới trong `bridge-login` sẽ cho biết chính xác payload shape để chốt fix với FUN Profile rất nhanh.
