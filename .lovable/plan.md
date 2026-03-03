@@ -1,39 +1,73 @@
 
 
-# Nguyên nhân Light Score = 0 của angelthutrang
+# Kế hoạch: Chuyển sang mô hình Hybrid — Light Score per-action, FUN theo Epoch
 
-## Phát hiện
+## Tóm tắt
 
-Sau khi kiểm tra database, có **2 vấn đề** gây ra Light Score = 0:
+Sau mỗi action, user thấy "+X Light Score" (phản hồi tức thì). FUN Money chỉ được mint cuối epoch (tháng) dựa trên tỷ lệ Light Score trong pool.
 
-### Vấn đề 1: Không có dữ liệu trong pipeline chấm điểm
-- Bảng `light_score_ledger` hiện **hoàn toàn trống** (0 rows cho tất cả users, không chỉ angelthutrang).
-- Bảng `pplp_events` cũng **0 sự kiện** cho user này (user_id: `e4c17387-...`).
-- Bảng `pplp_actions` cũng **0 actions** cho user này.
+## Thay đổi cần thực hiện
 
-**Nguyên nghĩa:** Hệ thống chấm điểm (scoring pipeline) chưa từng ghi nhận hoạt động nào của user này vào các bảng PPLP. Dù user có 75 bài viết và 154 chat, các hoạt động đó chưa được ingest vào pipeline scoring (`pplp_events` → `pplp_actions` → `light_score_ledger`).
+### 1. Sửa `pplp-score-action/index.ts` — Loại bỏ Q×I×K FUN reward
 
-### Vấn đề 2: Code truy vấn sai tên cột
-- Code trong `UnifiedDashboard.tsx` (dòng 17) và `UnifiedLightScore.tsx` truy vấn cột `total_light_score` — **cột này không tồn tại** trong bảng `light_score_ledger`.
-- Tên cột đúng là `final_light_score`.
-- Query trả về null → hiển thị 0.
+**Hiện tại (dòng 354-362):**
+```typescript
+const rawReward = baseReward * multipliers.Q * multipliers.I * multipliers.K;
+const weightedReward = rawReward * reputationWeight * consistencyMultiplier;
+const finalReward = weightedReward - (weightedReward * integrityPenalty/100);
+```
 
-## Kế hoạch sửa
+**Thay bằng:**
+```typescript
+// Hybrid: final_reward = 0 (FUN chỉ mint theo epoch)
+// Light Score contribution = lightScore * reputationWeight * consistencyMultiplier * (1 - penalty)
+const lightContribution = lightScore * reputationWeight * consistencyMultiplier * (1 - integrityPenalty/100);
+const finalReward = 0; // FUN không tính per-action nữa
+```
 
-### Bước 1: Sửa tên cột trong code (fix ngay)
-- `src/pages/UnifiedDashboard.tsx`: Đổi `.select("total_light_score")` → `.select("final_light_score")`
-- `src/pages/UnifiedLightScore.tsx`: Tương tự
-- `supabase/functions/fun-profile-bridge/index.ts`: Tương tự
+- Giữ nguyên Q, I, K trong `pplp_scores` để audit/history
+- `final_reward` = 0 cho mọi action mới
+- Thêm cột `light_contribution` vào response để frontend hiển thị
+- Loại bỏ toàn bộ phần auto-mint (section 11, dòng 680-807) — chuyển thành comment/skip
 
-### Bước 2: Backfill dữ liệu scoring (cần thêm thời gian)
-Để Light Score thực sự > 0, cần đảm bảo pipeline ingest hoạt động đúng:
-- Khi user tạo bài viết/chat, sự kiện phải được ghi vào `pplp_events`
-- Cron job `pplp-compute-daily-scores` phải chạy để tính toán và ghi vào `light_score_ledger`
+### 2. Sửa `_shared/pplp-helper.ts` — `submitAndScorePPLPAction` response
 
-Hiện tại chưa có dữ liệu nào trong pipeline, nên dù sửa tên cột thì Light Score vẫn = 0 cho đến khi pipeline bắt đầu ingest events.
+- Response trả về `light_contribution` thay vì `reward` (FUN)
+- Frontend hiển thị: "Bạn đã đóng góp +X Light Score ✨" thay vì "+X FUN"
+
+### 3. Sửa frontend hooks
+
+**`useFUNMoneyStats.ts`:**
+- Thay đổi nguồn dữ liệu: FUN Money lấy từ `mint_allocations` (epoch-based) thay vì sum `pplp_scores.final_reward`
+- `totalScored` → FUN từ epoch allocation chưa mint
+- `totalMinted` → FUN đã mint on-chain
+
+**`usePPLPScore.ts`:**
+- Thêm `light_contribution` vào interface `PPLPScoreData`
+- Hiển thị Light Score contribution thay vì FUN reward
+
+### 4. Sửa các UI hiển thị reward sau action
+
+Tìm các nơi hiển thị "+X FUN" sau action (toast notifications, chat reward display) → đổi thành "+X Light Score ✨"
+
+### 5. Đảm bảo epoch pipeline hoạt động
+
+- `pplp-epoch-reset` + `pplp-epoch-allocate` đã tồn tại và sử dụng `light_score_ledger` → tính FUN allocation cuối tháng
+- Xác nhận `mint_epochs` và `mint_allocations` tables đang được populate đúng
+
+## Tác động dữ liệu
+
+| Trước | Sau |
+|-------|-----|
+| Mỗi action → `final_reward` = 65-227 FUN | Mỗi action → `final_reward` = 0, `light_contribution` = 55-75 |
+| User thấy "+97 FUN" | User thấy "+62.5 Light Score ✨" |
+| FUN mint per-action (via approve) | FUN mint cuối tháng (epoch allocation) |
+| ~1,700,000 FUN/2 tháng phát tán | 5,000,000 FUN/tháng pool, chia theo tỷ lệ |
 
 ## Files thay đổi
-1. `src/pages/UnifiedDashboard.tsx` — sửa `total_light_score` → `final_light_score`
-2. `src/pages/UnifiedLightScore.tsx` — sửa tương tự  
-3. `supabase/functions/fun-profile-bridge/index.ts` — sửa tương tự
+1. `supabase/functions/pplp-score-action/index.ts` — loại bỏ FUN calculation, giữ Light Score
+2. `supabase/functions/_shared/pplp-helper.ts` — response type đổi reward → light_contribution
+3. `src/hooks/useFUNMoneyStats.ts` — lấy FUN từ mint_allocations
+4. `src/hooks/usePPLPScore.ts` — thêm light_contribution
+5. Frontend toasts/notifications — đổi "+X FUN" → "+X Light Score"
 
