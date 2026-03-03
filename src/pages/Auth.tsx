@@ -614,8 +614,8 @@ const Auth = () => {
                 <Globe className="w-5 h-5" />
                 {isSignUp ? "Đăng ký FUN ID" : "Đăng nhập bằng FUN ID"}
               </button>
-              <p className="text-xs text-center text-muted-foreground leading-relaxed">Một tài khoản duy nhất cho toàn bộ nền tảng của FUN Ecosystem.
-Miễn phí · Bảo mật · Đồng bộ mọi nơi.<br />
+              <p className="text-xs text-center text-muted-foreground leading-relaxed">
+                Một tài khoản duy nhất cho toàn bộ nền tảng của FUN Ecosystem.<br />
                 Miễn phí · Bảo mật · Đồng bộ mọi nơi.
               </p>
             </div>
