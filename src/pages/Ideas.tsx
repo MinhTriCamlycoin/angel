@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { AppLayout } from "@/components/layouts/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -154,11 +153,8 @@ export default function Ideas() {
   };
 
   return (
-    <>
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
-
-        <main className="flex-1 container mx-auto px-4 py-8 pt-28">
+    <AppLayout>
+      <main className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto space-y-8">
             {/* Header */}
             <div className="text-center space-y-4">
@@ -343,8 +339,6 @@ export default function Ideas() {
             </div>
           </div>
         </main>
-        <Footer />
-      </div>
-    </>
+    </AppLayout>
   );
 }

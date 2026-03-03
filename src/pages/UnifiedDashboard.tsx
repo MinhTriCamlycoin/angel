@@ -1,5 +1,4 @@
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { AppLayout } from "@/components/layouts/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,9 +40,8 @@ export default function UnifiedDashboard() {
   const combinedLS = totalLS + funProfileLS;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+    <AppLayout>
+      <main className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
             <BarChart3 className="w-8 h-8 text-primary" />
@@ -187,7 +185,6 @@ export default function UnifiedDashboard() {
           </TabsContent>
         </Tabs>
       </main>
-      <Footer />
-    </div>
+    </AppLayout>
   );
 }

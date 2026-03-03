@@ -1,5 +1,4 @@
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { AppLayout } from "@/components/layouts/AppLayout";
 import { DailyLoginReward } from "@/components/earn/DailyLoginReward";
 import { EarnProgress } from "@/components/earn/EarnProgress";
 import { StreakCalendar } from "@/components/earn/StreakCalendar";
@@ -68,14 +67,11 @@ export default function Earn() {
   }, [user]);
 
   return (
-    <>
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      
+    <AppLayout>
       {/* Daily Login Reward Popup */}
       <DailyLoginReward />
       
-      <main className="flex-1 container mx-auto px-4 py-8 pt-28">
+      <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Header */}
           <div className="text-center space-y-4">
@@ -306,8 +302,6 @@ export default function Earn() {
           </div>
         </div>
       </main>
-      <Footer />
-    </div>
-    </>
+    </AppLayout>
   );
 }
