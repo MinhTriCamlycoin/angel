@@ -140,25 +140,33 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // 4. Find or create user by email
-    let userId: string;
-
-    const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers();
-    
-    if (listError) {
-      console.error("Failed to list users:", listError);
-      return new Response(
-        JSON.stringify({ error: "Failed to look up user" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Helper: paginated user lookup by email
+    async function findUserByEmail(email: string) {
+      const target = email.toLowerCase();
+      let page = 1;
+      const perPage = 100;
+      while (true) {
+        const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+        if (error) {
+          console.error("[bridge-login] listUsers error page", page, error.message);
+          return null;
+        }
+        const match = data.users.find((u: any) => u.email?.toLowerCase() === target);
+        if (match) return match;
+        if (data.users.length < perPage) break;
+        page++;
+      }
+      return null;
     }
 
-    const existingUser = existingUsers.users.find(
-      (u) => u.email?.toLowerCase() === normalized.email.toLowerCase()
-    );
+    // 4. Find or create user by email (paginated + conflict recovery)
+    let userId: string;
+
+    const existingUser = await findUserByEmail(normalized.email);
 
     if (existingUser) {
       userId = existingUser.id;
+      console.log("[bridge-login] Found existing user (paginated)");
     } else {
       const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
         email: normalized.email,
@@ -170,15 +178,38 @@ Deno.serve(async (req) => {
         },
       });
 
-      if (createError || !newUser.user) {
-        console.error("Failed to create user:", createError);
+      if (createError) {
+        // Recover on email_exists conflict
+        if (createError.message?.toLowerCase().includes("email") ||
+            (createError as any).code === "email_exists") {
+          console.log("[bridge-login] createUser conflict (email_exists), recovering...");
+          const recovered = await findUserByEmail(normalized.email);
+          if (recovered) {
+            userId = recovered.id;
+            console.log("[bridge-login] Recovered user after conflict");
+          } else {
+            console.error("[bridge-login] Could not recover user after conflict");
+            return new Response(
+              JSON.stringify({ error: "Failed to resolve user account" }),
+              { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        } else {
+          console.error("Failed to create user:", createError);
+          return new Response(
+            JSON.stringify({ error: "Failed to create user account" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else if (!newUser.user) {
         return new Response(
           JSON.stringify({ error: "Failed to create user account" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      } else {
+        userId = newUser.user.id;
+        console.log("[bridge-login] Created new user");
       }
-
-      userId = newUser.user.id;
     }
 
     // 5. Upsert fun_id_links
