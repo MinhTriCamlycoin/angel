@@ -351,15 +351,16 @@ serve(async (req) => {
       }
     }
 
-    // ========== 7. Calculate base reward (Policy v1.0.1 FUN Money) ==========
+    // ========== 7. HYBRID MODEL: Light Score per-action, FUN via Epoch ==========
+    // Q×I×K multipliers are kept for audit/history but NOT used for FUN reward
     const policyBaseReward = getPolicyBaseReward(action.action_type, action.platform_id);
     const baseReward = policyBaseReward ?? config.base_reward ?? 100;
-    const rawReward = baseReward * multipliers.Q * multipliers.I * multipliers.K;
-    const weightedReward = rawReward * reputationWeight * consistencyMultiplier;
-    const penaltyAmount = weightedReward * (integrityPenalty / 100);
-    let finalReward = decision === 'pass' 
-      ? Math.floor(Math.max(0, weightedReward - penaltyAmount))
+    // Light contribution = weighted Light Score (used for epoch FUN allocation)
+    const lightContribution = decision === 'pass'
+      ? Math.round(lightScore * reputationWeight * consistencyMultiplier * (1 - integrityPenalty / 100) * 100) / 100
       : 0;
+    // FUN reward is always 0 per-action — minted via epoch allocation only
+    let finalReward = 0;
 
     // ========== 7b. Determine reason codes ==========
     const reasonCodes: string[] = [];
@@ -542,7 +543,8 @@ serve(async (req) => {
           top_contributors_json: [{
             action_type: action.action_type,
             light_score: Math.round(lightScore * 100) / 100,
-            reward: finalReward,
+            light_contribution: lightContribution,
+            reward: 0, // Hybrid: FUN via epoch only
           }],
           penalties_json: integrityPenalty > 0 ? [{ type: 'integrity', penalty_pct: integrityPenalty }] : [],
           ai_pillar_scores: aiAnalysis?.pillars || null,
@@ -624,7 +626,7 @@ serve(async (req) => {
       })
       .eq('id', action.id);
 
-    console.log(`[PPLP] Action ${action.id} scored: ${decision.toUpperCase()} - LightScore: ${lightScore.toFixed(2)}, Reward: ${finalReward}`);
+    console.log(`[PPLP] Action ${action.id} scored: ${decision.toUpperCase()} - LightScore: ${lightScore.toFixed(2)}, LightContribution: ${lightContribution}, FUN per-action: 0 (epoch-based)`);
 
     // ========== 9. Detect behavior sequences ==========
     let sequenceResult = null;
@@ -677,117 +679,36 @@ serve(async (req) => {
       console.error('[PPLP] Fraud detection call failed:', fraudError);
     }
 
-    // ========== 11. AUTO-MINT with Caps & Diminishing Returns ==========
+    // ========== 11. HYBRID: No per-action FUN minting — epoch-based only ==========
+    // FUN Money is allocated at end of each epoch based on accumulated Light Score
+    // Per-action: only update user tier stats for tracking
     let mintResult = null;
-    if (decision === 'pass' && finalReward > 0) {
+    if (decision === 'pass') {
       try {
-        // Block if high fraud risk (skip for whitelisted users)
-        const isWLForMint = !!wlEntryScore;
-        if (!isWLForMint && fraudResult && fraudResult.risk_score > 50) {
-          console.warn(`[PPLP Auto-Mint] Blocked for ${action.actor_id}: high fraud risk score ${fraudResult.risk_score}`);
-          mintResult = { 
-            auto_minted: false, 
-            blocked_by_fraud: true, 
-            fraud_risk_score: fraudResult.risk_score,
-            fraud_recommendation: fraudResult.recommendation,
-          };
-        } else if (!isWLForMint) {
-          // Check for unresolved high-severity fraud signals (fallback check)
-          const { count: fraudSignals } = await supabase
-            .from('pplp_fraud_signals')
-            .select('*', { count: 'exact', head: true })
-            .eq('actor_id', action.actor_id)
-            .eq('is_resolved', false)
-            .gte('severity', 4);
+        // Update user tier stats (tracking only, no FUN minting)
+        await supabase
+          .from('pplp_user_tiers')
+          .upsert({
+            user_id: action.actor_id,
+            total_actions_scored: 1,
+            passed_actions: 1,
+            updated_at: new Date().toISOString(),
+          }, { 
+            onConflict: 'user_id',
+            ignoreDuplicates: false 
+          });
+        await supabase.rpc('update_user_tier', { _user_id: action.actor_id });
 
-          if (fraudSignals && fraudSignals > 0) {
-            console.warn(`[PPLP Auto-Mint] Blocked for ${action.actor_id}: ${fraudSignals} unresolved fraud signals`);
-            mintResult = { auto_minted: false, blocked_by_fraud: true, fraud_signal_count: fraudSignals };
-          } else {
-            // ========== Get user tier for cap multiplier ==========
-            const { data: userTier } = await supabase
-              .from('pplp_user_tiers')
-              .select('tier, cap_multiplier, trust_score')
-              .eq('user_id', action.actor_id)
-              .maybeSingle();
-            
-            const capMultiplier = userTier?.cap_multiplier || 1.0;
-
-            // ========== Check caps & apply diminishing returns ==========
-            const { data: capResult, error: capError } = await supabase
-              .rpc('check_user_cap_and_update', {
-                _user_id: action.actor_id,
-                _action_type: action.action_type,
-                _reward_amount: finalReward
-              });
-
-            if (capError) {
-              console.error('[PPLP] Cap check error:', capError);
-              mintResult = { auto_minted: false, error: capError.message };
-            } else if (!capResult.can_mint) {
-              console.warn(`[PPLP Auto-Mint] Blocked: ${capResult.reason}`);
-              mintResult = { 
-                auto_minted: false, 
-                blocked_by_cap: true, 
-                reason: capResult.reason,
-                action_count_today: capResult.action_count_today,
-                max_daily: capResult.max_daily
-              };
-            } else {
-              // Apply diminishing returns, tier multiplier, and sequence bonus
-              const sequenceBonus = (sequenceResult?.sequences_completed > 0) ? sequenceResult.bonus_multiplier : 1.0;
-              const adjustedReward = Math.floor(capResult.adjusted_reward * capMultiplier * sequenceBonus);
-
-              // FUN Money: Keep status as "scored" - do NOT auto-mint Camly Coins
-              // User will claim FUN Money via pplp-authorize-mint -> lockWithPPLP on-chain
-              // Update final_reward in pplp_scores with the adjusted amount
-              await supabase
-                .from('pplp_scores')
-                .update({ final_reward: adjustedReward })
-                .eq('action_id', action.id);
-
-              // Update user tier stats
-              await supabase
-                .from('pplp_user_tiers')
-                .upsert({
-                  user_id: action.actor_id,
-                  total_actions_scored: 1,
-                  passed_actions: 1,
-                  updated_at: new Date().toISOString(),
-                }, { 
-                  onConflict: 'user_id',
-                  ignoreDuplicates: false 
-                });
-
-              // Increment tier counters
-              await supabase.rpc('update_user_tier', { _user_id: action.actor_id });
-
-              // Override finalReward with adjusted value for response
-              finalReward = adjustedReward;
-
-              mintResult = {
-                auto_minted: false,
-                status: 'scored',
-                message: 'FUN Money reward calculated. User can claim via /mint page.',
-                original_reward: Math.floor(baseReward * multipliers.Q * multipliers.I * multipliers.K),
-                adjusted_reward: adjustedReward,
-                diminishing_multiplier: capResult.diminishing_multiplier,
-                tier_multiplier: capMultiplier,
-                user_tier: userTier?.tier || 0,
-                action_count_today: capResult.action_count_today,
-                max_daily: capResult.max_daily,
-              };
-              
-              console.log(`[PPLP Score] ✓ Action ${action.id}: Scored ${adjustedReward} FUN (base: ${baseReward}, Q${multipliers.Q} * I${multipliers.I} * K${multipliers.K}, tier x${capMultiplier}) for ${action.actor_id.slice(0, 8)}...`);
-            }
-          }
-        }
-      } catch (mintError) {
-        console.error('[PPLP Auto-Mint] Error:', mintError);
-        mintResult = { auto_minted: false, error: mintError instanceof Error ? mintError.message : 'Unknown error' };
+        mintResult = {
+          auto_minted: false,
+          status: 'epoch_based',
+          message: 'FUN Money is allocated at end of epoch based on Light Score contribution.',
+          light_contribution: lightContribution,
+        };
+      } catch (tierError) {
+        console.error('[PPLP] Tier update error:', tierError);
       }
     } else if (decision === 'fail') {
-      // Update user tier for failed action
       try {
         await supabase
           .from('pplp_user_tiers')
@@ -812,12 +733,13 @@ serve(async (req) => {
         action_id: action.id,
         pillars,
         light_score: Math.round(lightScore * 100) / 100,
+        light_contribution: lightContribution,
         multipliers,
         reputation_weight: reputationWeight,
         consistency_multiplier: consistencyMultiplier,
         integrity_penalty: integrityPenalty,
         base_reward: baseReward,
-        final_reward: finalReward,
+        final_reward: 0, // Hybrid: FUN via epoch only
         decision,
         fail_reasons: failReasons.length > 0 ? failReasons : null,
         fraud: fraudResult ? {

@@ -316,34 +316,34 @@ export async function submitPPLPAction(
 export async function submitAndScorePPLPAction(
   supabase: SupabaseClient,
   input: PPLPActionInput
-): Promise<PPLPSubmitResult & { scored?: boolean; minted?: boolean; reward?: number }> {
+): Promise<PPLPSubmitResult & { scored?: boolean; minted?: boolean; reward?: number; light_contribution?: number }> {
   const submitResult = await submitPPLPAction(supabase, input);
   
   if (!submitResult.success || !submitResult.action_id) {
     return submitResult;
   }
 
-  // Trigger scoring + auto-mint
+  // Trigger scoring (Hybrid: no per-action FUN minting)
   try {
     const scoreResponse = await supabase.functions.invoke('pplp-score-action', {
       body: { action_id: submitResult.action_id }
     });
 
     if (scoreResponse.data) {
-      const { decision, mint, final_reward } = scoreResponse.data;
+      const { decision, light_contribution } = scoreResponse.data;
       return {
         ...submitResult,
         scored: true,
-        minted: mint?.auto_minted === true,
-        reward: final_reward,
+        minted: false, // Hybrid: FUN only via epoch
+        reward: 0,
+        light_contribution: light_contribution || 0,
       };
     }
   } catch (scoreError) {
-    console.warn('[PPLP Helper] Score/Mint warning:', scoreError);
-    // Action submitted but scoring failed - can be retried
+    console.warn('[PPLP Helper] Score warning:', scoreError);
   }
 
-  return { ...submitResult, scored: false, minted: false };
+  return { ...submitResult, scored: false, minted: false, light_contribution: 0 };
 }
 
 /**

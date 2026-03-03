@@ -18,6 +18,7 @@ export interface PPLPMultipliers {
 
 export interface PPLPScoreData extends PPLPPillarScores, PPLPMultipliers {
   light_score: number;
+  light_contribution: number;
   reward_amount: number;
   decision: "pass" | "fail";
   action_id: string;
