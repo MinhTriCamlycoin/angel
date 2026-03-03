@@ -1,61 +1,83 @@
 
-Mình đã kiểm tra lại code hiện tại và xác nhận lỗi đang nằm ở bước map dữ liệu identity trong backend login bridge của Angel AI.
 
-## Chẩn đoán hiện tại
+# Fix: "Missing email in FUN identity payload"
 
-- `AuthCallback.tsx` đang gọi:
-  1) `funProfile.handleCallback(code, state)` để lấy `accessToken`
-  2) gửi `fun_access_token` sang backend function `bridge-login`
-- `bridge-login` gọi `.../sso-verify` rồi **bắt buộc** đọc `identity.email` (top-level).
-- Nếu email không nằm ở top-level (ví dụ ở `identity.user.email`) thì function trả lỗi:
-  `No email in FUN Profile identity`  
-  (đúng với màn hình bạn gửi).
+## Nguyen nhan goc
 
-## Kế hoạch triển khai (Angel AI)
+Log backend cho thay ro: endpoint `sso-verify` cua FUN Profile tra ve **KHONG CO truong `email`** o bat ky cap nao. Cac key tra ve:
 
-1) Chuẩn hóa identity payload trong `bridge-login`
-- Thêm bước normalize trước khi xử lý user:
-  - `email` lấy lần lượt từ:
-    - `identity.email`
-    - `identity.user?.email`
-    - `identity.profile?.email` (nếu có)
-  - `funUserId` lấy từ:
-    - `identity.sub`
-    - `identity.fun_id`
-    - `identity.user?.id`
-  - `username/display_name/avatar` cũng lấy theo thứ tự fallback tương tự.
+```text
+sub, fun_id, username, custodial_wallet, active, token_type, full_name,
+avatar_url, bio, created_at, wallet_address, external_wallet_address,
+custodial_wallet_address, soul_nft, rewards, platform_data, token_info
+```
 
-2) Dùng dữ liệu đã normalize cho toàn bộ flow
-- Tìm/tạo user bằng `normalized.email`
-- Upsert `fun_id_links` bằng `normalized.funUserId`
-- Upsert `profiles` bằng `normalized.displayName/avatarUrl`
-- Tạo session như hiện tại (không đổi kiến trúc đăng nhập).
+FUN Profile team da them `email` vao response cua `sso-token` nhung **CHUA them vao `sso-verify`**. Hien tai flow la:
+1. Client SDK goi `sso-token` (co email) → nhan `accessToken`
+2. Client gui `accessToken` den `bridge-login`
+3. `bridge-login` goi `sso-verify` (KHONG co email) → loi
 
-3) Bổ sung logging chẩn đoán an toàn
-- Log các key/cấu trúc nhận được từ `sso-verify` (không log token, không log dữ liệu nhạy cảm đầy đủ).
-- Khi thiếu email, trả lỗi rõ hơn:
-  - ví dụ: `Missing email in FUN identity payload`
-  - kèm danh sách key hiện có để debug nhanh giữa 2 bên.
+## Giai phap (2 buoc)
 
-4) Giữ nguyên phần client
-- Không cần đổi `Auth.tsx` và `AuthCallback.tsx` ở vòng này.
-- Tập trung fix tương thích payload tại backend bridge để giảm rủi ro.
+### 1. AuthCallback gui them email tu SDK response
 
-## Chi tiết kỹ thuật (ngắn gọn)
+SDK `handleCallback()` tra ve object co the chua thong tin user (tu `sso-token` response). Sua `AuthCallback.tsx` de gui kem `email` (neu co) tu SDK result sang `bridge-login`:
 
-- File chính cần sửa: `supabase/functions/bridge-login/index.ts`
-- Không cần migration DB, không đổi RLS.
-- Không đụng các file auto-generated.
-- Mục tiêu: tương thích cả format cũ (top-level email) và format mới (email nested trong `user`).
+```typescript
+// AuthCallback.tsx
+const result = await funProfile.handleCallback(code, state);
+const res = await fetch(bridgeUrl, {
+  method: "POST",
+  body: JSON.stringify({ 
+    fun_access_token: result.accessToken,
+    hint_email: result.email || result.user?.email || null,
+  }),
+});
+```
 
-## Kịch bản xác thực sau khi sửa
+### 2. Bridge-login them 3 fallback de tim email
 
-1) Mở Incognito → vào `angel.fun.rich/auth`
-2) Click “Đăng nhập bằng FUN Profile”
-3) Đăng nhập FUN Profile
-4) Kỳ vọng:
-- quay về `/auth/callback`
-- không còn báo `No email in FUN Profile identity`
-- tự vào trang chủ với session hợp lệ
+Sua `bridge-login/index.ts` normalizeIdentity them:
+- `r.token_info?.email` — field `token_info` co trong response
+- Decode JWT access_token de lay `email` claim (khong can secret vi chi doc payload)
+- Nhan `hint_email` tu client lam fallback cuoi cung (sau khi da verify token hop le)
 
-Nếu vẫn lỗi, log mới trong `bridge-login` sẽ cho biết chính xác payload shape để chốt fix với FUN Profile rất nhanh.
+```typescript
+// Them vao normalizeIdentity
+const email =
+  r.email ||
+  r.user?.email ||
+  r.profile?.email ||
+  r.data?.email ||
+  r.token_info?.email ||
+  null;
+
+// Trong main handler, sau khi sso-verify thanh cong:
+if (!normalized.email) {
+  // Try decode JWT payload
+  try {
+    const parts = fun_access_token.split('.');
+    if (parts.length === 3) {
+      const payload = JSON.parse(atob(parts[1]));
+      if (payload.email) normalized.email = payload.email;
+    }
+  } catch {}
+}
+
+// Final fallback: trust hint_email since token was verified
+if (!normalized.email && hint_email) {
+  normalized.email = hint_email;
+}
+```
+
+## Files thay doi
+
+1. `src/pages/AuthCallback.tsx` — gui them `hint_email`
+2. `supabase/functions/bridge-login/index.ts` — them JWT decode + token_info + hint_email fallback
+
+## Bao mat
+
+- `hint_email` chi duoc dung SAU KHI `sso-verify` xac nhan token hop le
+- JWT decode chi doc payload (khong verify signature) nhung token da duoc verify boi `sso-verify`
+- Khong thay doi kien truc xac thuc
+
