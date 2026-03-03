@@ -21,28 +21,26 @@ function MemberCard({ user, index }: { user: LeaderboardUser; index: number }) {
       transition={{ delay: index * 0.03 }}
     >
       <Link to={getProfilePath(user.user_id, user.handle)} className="group block">
-        <div className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-[#daa520]/20 bg-gradient-to-b from-card/90 via-[#ffd700]/[0.03] to-card/90 hover:from-[#ffd700]/[0.06] hover:via-[#ffec8b]/[0.08] hover:to-[#ffd700]/[0.06] hover:border-[#daa520]/35 transition-all duration-300 hover:shadow-[0_2px_15px_rgba(218,165,32,0.12)] h-full">
-          {/* Avatar with light icon overlay */}
-          <div className="relative">
-            <Avatar className="w-16 h-16 border-2 border-[#daa520]/40 shadow-[0_0_8px_rgba(255,215,0,0.15)] group-hover:border-[#ffd700]/70 transition-colors duration-300">
-              <AvatarImage src={user.avatar_url || angelAvatar} className="object-cover" />
-              <AvatarFallback className="text-sm font-bold bg-primary-pale text-primary-deep">
-                {user.display_name?.charAt(0) || "✦"}
-              </AvatarFallback>
-            </Avatar>
-            <span className="absolute -bottom-0.5 -right-0.5 text-sm drop-shadow-sm bg-card rounded-full w-5 h-5 flex items-center justify-center">
-              {lightIcon}
-            </span>
-          </div>
+        <div className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-[#daa520]/20 bg-gradient-to-b from-card/90 via-[#ffd700]/[0.03] to-card/90 hover:from-[#ffd700]/[0.06] hover:via-[#ffec8b]/[0.08] hover:to-[#ffd700]/[0.06] hover:border-[#daa520]/35 transition-all duration-300 hover:shadow-[0_2px_15px_rgba(218,165,32,0.12)]">
+          {/* Light icon */}
+          <span className="text-lg drop-shadow-sm">{lightIcon}</span>
+
+          {/* Avatar */}
+          <Avatar className="w-16 h-16 border-2 border-[#daa520]/40 shadow-[0_0_8px_rgba(255,215,0,0.15)] group-hover:border-[#ffd700]/70 transition-colors duration-300">
+            <AvatarImage src={user.avatar_url || angelAvatar} className="object-cover" />
+            <AvatarFallback className="text-sm font-bold bg-primary-pale text-primary-deep">
+              {user.display_name?.charAt(0) || "✦"}
+            </AvatarFallback>
+          </Avatar>
 
           {/* Name */}
-          <p className="w-full text-xs sm:text-sm font-semibold text-foreground truncate text-center group-hover:text-[#b8860b] transition-colors duration-300 leading-tight">
+          <p className="w-full text-sm font-semibold text-foreground truncate text-center group-hover:text-[#b8860b] transition-colors duration-300 leading-tight">
             {user.display_name || "Ẩn danh"}
           </p>
 
           {/* Handle */}
           {handleText && (
-            <p className="w-full text-[11px] text-muted-foreground truncate text-center -mt-1">
+            <p className="w-full text-xs text-muted-foreground truncate text-center -mt-1">
               {handleText}
             </p>
           )}
@@ -97,18 +95,18 @@ const LightCommunity = () => {
       {/* Members grid */}
       <div className="max-w-2xl mx-auto px-4 pb-20">
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4">
+          <div className="flex flex-col gap-3 pt-4">
             {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="h-32 bg-muted rounded-2xl animate-pulse" />
+              <div key={i} className="h-28 bg-muted rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+          <div className="flex flex-col gap-3 pt-2">
             {allUsers.map((user, i) => (
               <MemberCard key={user.user_id} user={user} index={i} />
             ))}
             {allUsers.length === 0 && (
-              <div className="col-span-full text-center py-12 text-muted-foreground">
+              <div className="text-center py-12 text-muted-foreground">
                 <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
                 <p>{t("common.noData")}</p>
               </div>
