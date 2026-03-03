@@ -31,11 +31,11 @@ function useTotalLightScore(userId?: string) {
     queryFn: async () => {
       const { data } = await supabase
         .from("light_score_ledger")
-        .select("total_light_score")
+        .select("final_light_score")
         .eq("user_id", userId!)
         .order("computed_at", { ascending: false })
         .limit(1);
-      return (data?.[0] as any)?.total_light_score ?? 0;
+      return (data?.[0] as any)?.final_light_score ?? 0;
     },
   });
 }
