@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFUNMoneyStats } from "@/hooks/useFUNMoneyStats";
 import { Link } from "react-router-dom";
-import { Coins, CheckCircle, Lock, ArrowRight } from "lucide-react";
+import { Coins, CheckCircle, Sparkles, ArrowRight } from "lucide-react";
 import funMoneyLogo from "@/assets/fun-money-logo.png";
 
 interface FUNMoneyStatsBannerProps {
@@ -32,11 +32,12 @@ export function FUNMoneyStatsBanner({ userId }: FUNMoneyStatsBannerProps) {
       bgColor: "bg-blue-500/20",
     },
     {
-      label: t("earn.funMoney.pending"),
+      label: t("earn.funMoney.lightScore"),
       value: totalPending,
-      icon: Lock,
+      icon: Sparkles,
       color: "text-yellow-400",
       bgColor: "bg-yellow-500/20",
+      suffix: "LS",
     },
   ];
 
@@ -81,7 +82,7 @@ export function FUNMoneyStatsBanner({ userId }: FUNMoneyStatsBannerProps) {
               </p>
               {totalPending > 0 && (
                 <p className="text-white/60 text-xs mt-1">
-                  +{totalPending.toLocaleString()} Light Score (epoch hiện tại)
+                  +{totalPending.toLocaleString()} {t("earn.funMoney.lightScoreEpoch")}
                 </p>
               )}
             </>
@@ -110,7 +111,7 @@ export function FUNMoneyStatsBanner({ userId }: FUNMoneyStatsBannerProps) {
                   <Skeleton className="h-5 w-16 mx-auto bg-white/20" />
                 ) : (
                   <p className="font-bold text-sm">
-                    {item.value.toLocaleString()}
+                    {item.value.toLocaleString()} {(item as any).suffix || ""}
                   </p>
                 )}
               </div>

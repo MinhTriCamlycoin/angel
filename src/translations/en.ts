@@ -260,11 +260,12 @@ const translations: Record<string, string> = {
   // FUN Money Stats
   "earn.funMoney.title": "FUN Money (On-chain)",
   "earn.funMoney.total": "Total FUN Money",
-  "earn.funMoney.scored": "Ready to Claim",
+  "earn.funMoney.scored": "Allocated",
   "earn.funMoney.minted": "Minted",
-  "earn.funMoney.pending": "Pending",
+  "earn.funMoney.lightScore": "Light Score",
+  "earn.funMoney.lightScoreEpoch": "Light Score (current epoch)",
   "earn.funMoney.viewDetails": "View Details & Mint",
-  "earn.funMoney.emptyMessage": "You don't have any FUN Money yet. Start contributing to mint!",
+  "earn.funMoney.emptyMessage": "You don't have any FUN Money yet. Contribute to earn Light Score and receive FUN at epoch end!",
 
   // Daily Login Reward
   "earn.login.title": "Daily Login Reward",

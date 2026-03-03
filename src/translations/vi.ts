@@ -260,11 +260,12 @@ const translations: Record<string, string> = {
   // FUN Money Stats
   "earn.funMoney.title": "FUN Money (On-chain)",
   "earn.funMoney.total": "Tổng FUN Money",
-  "earn.funMoney.scored": "Sẵn sàng claim",
+  "earn.funMoney.scored": "Đã phân bổ",
   "earn.funMoney.minted": "Đã mint",
-  "earn.funMoney.pending": "Đang chờ",
+  "earn.funMoney.lightScore": "Light Score",
+  "earn.funMoney.lightScoreEpoch": "Light Score (epoch hiện tại)",
   "earn.funMoney.viewDetails": "Xem chi tiết & Mint",
-  "earn.funMoney.emptyMessage": "Bạn chưa có FUN Money nào. Bắt đầu đóng góp để mint!",
+  "earn.funMoney.emptyMessage": "Bạn chưa có FUN Money nào. Đóng góp để tích lũy Light Score và nhận FUN cuối tháng!",
 
   // Daily Login Reward
   "earn.login.title": "Phần thưởng đăng nhập hàng ngày",
