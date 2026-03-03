@@ -1,36 +1,46 @@
 
 
-# Kế hoạch: Finalize Epoch cho tháng 01 và 02/2026
+# Kế hoạch: Cập nhật dữ liệu Transparency Dashboard & MintCycleStatus
 
-## Vấn đề
-- `light_score_ledger` có 355 records (136 users tháng 1, 219 users tháng 2)
-- Nhưng `mint_epochs` và `mint_allocations` đều trống — epoch chưa bao giờ được finalize
-- Users có Light Score nhưng chưa được phân bổ FUN
+## Vấn đề phát hiện
+
+Từ screenshot (fun.rich) và dữ liệu thực tế:
+
+1. **Transparency Dashboard hiển thị toàn bộ = 0** vì `transparency_snapshots` chỉ có 1 record với tất cả giá trị = 0. Trong khi dữ liệu thực tế:
+   - Tổng Light toàn hệ: **256,467**
+   - FUN đã phân bổ: **3,987,400** (315 users eligible)
+   - Users hoạt động: **229**
+
+2. **MintCycleStatus "Phân bổ gần nhất: 0 FUN"** — hook `useMintCycle` query `pplp_mint_allocations` (bảng cũ) thay vì `mint_allocations` (bảng thực tế có dữ liệu).
+
+3. **Banner "18 Light Actions chưa gửi yêu cầu mint"** — đây là trên fun.rich (ảnh đính kèm), app Lovable đã được sửa rồi ở lần trước. Không cần thay đổi thêm ở đây.
 
 ## Giải pháp
 
-### Bước 1: Chạy `pplp-epoch-reset` cho tháng 01/2026
-Gọi edge function với body `{ "year": 2026, "month": 1 }`:
-- Tạo `mint_epochs` record cho period "2026-01"
-- Ghi `mint_allocations` cho 136 users dựa trên `light_score_ledger` (tổng 11,594 Light)
-- Trigger `pplp-epoch-allocate` để tính FUN allocation từ pool
+### 1. Cập nhật `transparency_snapshots` với dữ liệu thực
 
-### Bước 2: Chạy `pplp-epoch-reset` cho tháng 02/2026
-Gọi edge function với body `{ "year": 2026, "month": 2 }`:
-- Tạo `mint_epochs` record cho period "2026-02"  
-- Ghi `mint_allocations` cho 219 users dựa trên `light_score_ledger` (tổng 244,873 Light)
-- Trigger `pplp-epoch-allocate` để tính FUN allocation từ pool
+Chạy SQL update record hiện có:
+```sql
+UPDATE transparency_snapshots 
+SET total_light_system = 256467,
+    total_fun_minted = 3987400,
+    active_users = 229
+WHERE epoch_id = 'Epoch-2026-03';
+```
 
-### Bước 3: Xác minh kết quả
-- Kiểm tra `mint_epochs` có 2 records (finalized)
-- Kiểm tra `mint_allocations` có đủ users
-- Kiểm tra FUN allocation đã được tính đúng theo tỷ lệ contribution_ratio
+### 2. Sửa TransparencyDashboard fallback
 
-### Lưu ý quan trọng
-- Hàm `pplp-epoch-reset` hiện đọc từ `features_user_day` (không phải `light_score_ledger`) để tính toán. Vì `light_score_ledger` đã có sẵn dữ liệu cho 2 tháng này, cần xác nhận `features_user_day` cũng có dữ liệu tương ứng, nếu không cần điều chỉnh function để đọc trực tiếp từ `light_score_ledger`.
-- Cycle #1 đang mở cho tháng 3 — sẽ không bị ảnh hưởng vì epoch reset chỉ target tháng 1 và 2.
-- Cần set `total_mint_pool` cho 2 epoch cũ (hiện mặc định = 0 trong `mint_epochs`, sẽ cần cập nhật thủ công hoặc qua `pplp-epoch-allocate`).
+Thay vì chỉ đọc từ `transparency_snapshots` (có thể stale), thêm fallback query trực tiếp từ `light_score_ledger` và `mint_allocations` khi snapshot = 0 hoặc không tồn tại. Hiển thị dữ liệu aggregate realtime.
 
-## Files thay đổi
-Không cần sửa code. Chỉ cần gọi edge function 2 lần với tham số đúng, sau đó xác minh dữ liệu.
+### 3. Sửa `useMintCycle` hook — `myAllocation`
+
+Hook hiện query `pplp_mint_allocations` nhưng dữ liệu thực nằm trong `mint_allocations`. Cần sửa để query từ `mint_allocations` (hoặc cả hai bảng rồi merge).
+
+### 4. Tóm tắt thay đổi
+
+| File | Thay đổi |
+|------|----------|
+| SQL migration | Update `transparency_snapshots` với dữ liệu thực |
+| `src/components/pplp/TransparencyDashboard.tsx` | Thêm fallback aggregate khi snapshot trống/stale |
+| `src/hooks/useMintCycle.ts` | Sửa `myAllocation` query từ `mint_allocations` thay vì `pplp_mint_allocations` |
 
