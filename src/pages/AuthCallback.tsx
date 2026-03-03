@@ -31,12 +31,19 @@ const AuthCallback = () => {
           return;
         }
 
-        // Send token to bridge-login edge function
+        // Send token to bridge-login edge function (include hint_email from SDK)
+        const hintEmail = (result as any).email
+          || (result as any).user?.email
+          || null;
+
         const bridgeUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bridge-login`;
         const res = await fetch(bridgeUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fun_access_token: result.accessToken }),
+          body: JSON.stringify({
+            fun_access_token: result.accessToken,
+            hint_email: hintEmail,
+          }),
         });
 
         if (!res.ok) {
