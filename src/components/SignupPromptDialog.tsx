@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LogIn } from "lucide-react";
+import { LogIn, Globe } from "lucide-react";
 
 interface SignupPromptDialogProps {
   open: boolean;
@@ -17,6 +17,19 @@ interface SignupPromptDialogProps {
 export function SignupPromptDialog({ open, onOpenChange }: SignupPromptDialogProps) {
   const navigate = useNavigate();
   const { t } = useLanguage();
+
+  const handleFunIdSignup = async () => {
+    try {
+      const { funProfile } = await import("@/lib/funProfile");
+      const authUrl = await funProfile.startAuth();
+      onOpenChange(false);
+      window.location.href = authUrl;
+    } catch (err) {
+      console.error("FUN ID SSO error:", err);
+      onOpenChange(false);
+      navigate("/auth");
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -34,6 +47,14 @@ export function SignupPromptDialog({ open, onOpenChange }: SignupPromptDialogPro
         </ul>
         <div className="flex flex-col gap-3 pt-2">
           <Button
+            onClick={handleFunIdSignup}
+            className="gap-2"
+          >
+            <Globe className="w-4 h-4" />
+            Đăng ký FUN ID
+          </Button>
+          <Button
+            variant="outline"
             onClick={() => {
               onOpenChange(false);
               navigate("/auth");
