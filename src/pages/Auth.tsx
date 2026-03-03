@@ -615,8 +615,7 @@ const Auth = () => {
                 {isSignUp ? "Đăng ký FUN ID" : "Đăng nhập bằng FUN ID"}
               </button>
               <p className="text-xs text-center text-muted-foreground leading-relaxed">
-                Một tài khoản duy nhất cho toàn bộ nền tảng của FUN Ecosystem.<br />
-                Miễn phí · Bảo mật · Đồng bộ mọi nơi.
+                Một tài khoản duy nhất cho toàn bộ nền tảng của FUN Ecosystem. Miễn phí · Bảo mật · Đồng bộ mọi nơi.
               </p>
             </div>
           </div>
