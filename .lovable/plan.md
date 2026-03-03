@@ -1,104 +1,38 @@
 
 
-## Kế hoạch sáp nhập Angel AI + FUN Profile
+## Thiết kế lại Cộng Đồng Ánh Sáng — Lưới cuộn dọc
 
-### Bối cảnh
-Angel AI (angel.fun.rich) và FUN Profile (fun.rich) hiện là 2 dự án Lovable **riêng biệt** với database riêng. Việc "sáp nhập" thực chất là tạo **cầu nối liên kết (Bridge)** giữa 2 nền tảng, vì mỗi project có backend riêng.
+### Phân tích hiện trạng
+- `Leaderboard.tsx`: Hiển thị horizontal scroll, dùng `RankingRow` với card `w-[140px]`
+- `RankingRow.tsx`: Card ngang (avatar + badge cùng hàng, tên bên dưới)
+- `LightCommunity.tsx` (trang full list): Hiển thị danh sách dọc với Light Score, LS points chi tiết
 
-### Giới hạn kỹ thuật quan trọng
-- Angel AI **không thể truy cập trực tiếp** database của FUN Profile và ngược lại
-- Để chia sẻ dữ liệu (Light Score, History, Dashboard), cần **Bridge API** (Edge Functions gọi qua HTTP giữa 2 project)
-- Auth thống nhất cần cả 2 project cùng cấu hình
+### Thay đổi cần làm
 
----
+#### 1. Cập nhật `Leaderboard.tsx` — Chuyển sang grid cuộn dọc
+- Thay `flex overflow-x-auto` thành `grid grid-cols-3` (hoặc 2 trên mobile)
+- Hiển thị tối đa 6 user (2 hàng x 3 cột)
+- Giữ nguyên style gold Angel AI (border, shadow, gradient)
+- Nút "Xem thêm" vẫn navigate đến `/light-community`
 
-### 1. Thêm "FUN Profile" vào Left Sidebar
+#### 2. Cập nhật `RankingRow.tsx` — Avatar trên, tên dưới (centered)
+- Layout: Avatar ở giữa trên, tên user căn giữa bên dưới
+- Light level badge nhỏ nằm overlay góc avatar (không chiếm dòng riêng)
+- Handle `@username` hiển thị dưới tên
+- Giữ gold border + hover effects
 
-**Vị trí**: Ngay trên "Cộng đồng" trong `MainSidebar.tsx`
+#### 3. Cập nhật `LightCommunity.tsx` — Ẩn điểm Light Score
+- Chuyển từ list sang **grid cuộn dọc** (3 cột desktop, 2 cột mobile)
+- Card giống `RankingRow` nhưng lớn hơn: avatar centered + tên dưới + handle
+- **Ẩn hoàn toàn**: Light Level Badge, LS points (`⚡ xxx LS`), trend icon
+- Chỉ hiển thị: avatar, light icon nhỏ overlay, tên, handle
+- Giữ nguyên `LightLevelsTable` ở trên
 
-- Thêm icon FUN Profile (dùng `Globe` hoặc icon riêng)
-- Logic: Nếu user đã có `handle` trong profiles -> link đến `https://fun.rich/@{handle}`
-- Nếu chưa có handle -> link đến `https://fun.rich`
-- Click sẽ mở tab mới (`window.open`)
+### Tóm tắt files thay đổi
 
-### 2. Redirect Mint FUN sang FUN Profile
-
-**File**: Trang `/mint` hiện tại
-
-- Thay vì hiển thị giao diện mint nội bộ, redirect user đến `https://fun.rich/wallet/fun_money`
-- Giữ nguyên trang mint cũ như một fallback hoặc hiển thị thông báo "Chuyển đến FUN Profile để mint"
-
-### 3. Redirect Auth sang FUN Profile
-
-**File**: Trang `/auth`
-
-- Thêm option "Đăng ký qua FUN Profile" -> redirect đến `https://fun.rich/auth`
-- Sau khi đăng ký trên fun.rich, user quay lại Angel AI với cross-domain auth flow (tương tự Google OAuth redirect chain đã có)
-- Giữ nguyên auth hiện tại của Angel AI như phương án song song
-
-### 4. Bảng Light Score chung (Cross-Platform)
-
-**Tạo mới**: `src/pages/UnifiedLightScore.tsx`
-
-- Dashboard hiển thị Light Score từ **cả 2 platform**
-- Gọi Edge Function bridge để lấy dữ liệu từ FUN Profile
-- Hiển thị: LS trên Angel AI (local DB) + LS trên FUN Profile (qua API) = Tổng LS
-- Bảng history gộp từ cả 2 nguồn, sắp xếp theo thời gian
-
-### 5. Dashboard tổng chung
-
-**Tạo mới**: `src/pages/UnifiedDashboard.tsx`
-
-- Route: `/unified-dashboard`
-- Hiển thị tổng quan từ cả 2 platform:
-  - Tổng Light Score (Angel AI + FUN Profile)
-  - Tổng FUN đã mint
-  - Tổng hoạt động (posts, chats, interactions)
-  - So sánh hoạt động giữa 2 platform
-- Thêm vào sidebar và admin navigation
-
-### 6. Edge Function Bridge API
-
-**Tạo mới**: `supabase/functions/fun-profile-bridge/index.ts`
-
-- Endpoint trung gian để giao tiếp với FUN Profile API
-- Các chức năng:
-  - `GET /light-score?user_id=...` - Lấy LS từ FUN Profile
-  - `GET /activity-history?user_id=...` - Lấy history từ FUN Profile
-  - `GET /dashboard-stats?user_id=...` - Lấy thống kê tổng
-- Xác thực qua shared JWT hoặc API key giữa 2 project
-
-### 7. Bảng `fun_id_links` (Database)
-
-Migration tạo bảng liên kết ID giữa 2 platform:
-
-```text
-fun_id_links
-- id (uuid, PK)
-- angel_user_id (uuid, FK -> auth.users)
-- fun_profile_user_id (text) -- ID bên FUN Profile
-- wallet_address (text) -- ví chung
-- linked_at (timestamptz)
-- status (text: active/pending)
-```
-
----
-
-### Tóm tắt thay đổi
-
-| Thành phần | Hành động |
+| File | Thay đổi |
 |---|---|
-| `MainSidebar.tsx` | Thêm "FUN Profile" link trước Community |
-| `/mint` page | Redirect đến fun.rich/wallet/fun_money |
-| `/auth` page | Thêm option đăng ký qua fun.rich |
-| `UnifiedLightScore.tsx` | Trang mới: LS chung 2 platform |
-| `UnifiedDashboard.tsx` | Trang mới: Dashboard tổng hợp |
-| Edge Function `fun-profile-bridge` | API bridge giao tiếp FUN Profile |
-| DB migration | Tạo bảng `fun_id_links` |
-| Sidebar + Routes | Thêm navigation items mới |
-
-### Lưu ý
-- Tất cả bảng/trang hiện tại được **giữ nguyên** (chỉ thêm, không bớt)
-- FUN Profile (fun.rich) cũng cần cấu hình tương ứng để nhận API calls từ Angel AI
-- Cross-domain auth cần cả 2 bên cùng triển khai
+| `src/components/Leaderboard.tsx` | `flex overflow-x-auto` → `grid grid-cols-3 gap-2` |
+| `src/components/leaderboard/RankingRow.tsx` | Avatar centered trên, tên centered dưới |
+| `src/pages/LightCommunity.tsx` | Grid layout, ẩn LightLevelBadge + LS score |
 
