@@ -60,15 +60,18 @@ export function MintActionsList() {
   };
 
   const totalActions = actions?.length || 0;
-  const mintedCount = actions?.filter((a: any) => a.status === "minted").length || 0;
   const passedCount = actions?.filter((a: any) => {
-    if (a.status === "scored") {
-      const score = resolveScore(a);
-      return score?.decision === "pass";
-    }
-    return false;
+    const score = resolveScore(a);
+    return (a.status === "scored" && score?.decision === "pass") || a.status === "minted";
   }).length || 0;
-  const pendingCount = actions?.filter((a: any) => a.status === "pending").length || 0;
+  const failedCount = actions?.filter((a: any) => {
+    const score = resolveScore(a);
+    return (a.status === "scored" && score?.decision !== "pass") || a.status === "failed";
+  }).length || 0;
+  const totalLightScore = actions?.reduce((sum: number, a: any) => {
+    const score = resolveScore(a);
+    return sum + (score?.light_score || 0);
+  }, 0) || 0;
 
   if (!user) {
     return (
@@ -130,12 +133,12 @@ export function MintActionsList() {
           <p className="text-[10px] text-muted-foreground">Đạt</p>
         </div>
         <div className="rounded-lg border bg-card p-2 text-center">
-          <p className="text-lg font-bold text-blue-600">{mintedCount}</p>
-          <p className="text-[10px] text-muted-foreground">Đã mint</p>
+          <p className="text-lg font-bold text-red-500">{failedCount}</p>
+          <p className="text-[10px] text-muted-foreground">Chưa đạt</p>
         </div>
         <div className="rounded-lg border bg-card p-2 text-center">
-          <p className="text-lg font-bold text-yellow-600">{pendingCount}</p>
-          <p className="text-[10px] text-muted-foreground">Chờ</p>
+          <p className="text-lg font-bold text-amber-600">{Math.round(totalLightScore).toLocaleString()}</p>
+          <p className="text-[10px] text-muted-foreground">Light Score</p>
         </div>
       </div>
 

@@ -104,7 +104,7 @@ const ACTION_LABELS: Record<string, string> = {
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
   pending: { label: "Đang xử lý", className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400", icon: Clock },
   scored: { label: "Đạt", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400", icon: CheckCircle2 },
-  minted: { label: "Đã mint", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400", icon: CheckCircle2 },
+  minted: { label: "Đã ghi nhận", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400", icon: CheckCircle2 },
   failed: { label: "Không đạt", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400", icon: AlertCircle },
 };
 
@@ -210,8 +210,8 @@ export function MintActionRow({ action }: Props) {
               <div className="flex items-center gap-2 text-xs">
                 <span className="text-muted-foreground">Light Score:</span>
                 <span className="font-bold text-amber-600">{score.light_score}/100</span>
-                <span className="text-muted-foreground ml-2">Reward:</span>
-                <span className="font-bold text-amber-600">+{score.final_reward.toLocaleString()} FUN</span>
+                <span className="text-muted-foreground ml-2">Camly Coin:</span>
+                <span className="font-bold text-amber-600">+{score.final_reward.toLocaleString()}</span>
               </div>
               {/* 5 Pillars full */}
               <div className="grid grid-cols-5 gap-1.5 text-xs">
@@ -231,13 +231,7 @@ export function MintActionRow({ action }: Props) {
             </>
           )}
 
-          {/* Mint status */}
-          {mintRequest?.status === "pending" && (
-            <p className="text-xs text-yellow-600">⏳ Đang chờ Admin phê duyệt</p>
-          )}
-          {mintRequest?.status === "signed" && !hasTxHash && (
-            <p className="text-xs text-blue-600">✍️ Đã ký, đang chờ giao dịch on-chain</p>
-          )}
+          {/* On-chain link */}
           {hasTxHash && (
             <Button
               variant="ghost"
