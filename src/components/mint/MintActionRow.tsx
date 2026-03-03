@@ -210,7 +210,7 @@ export function MintActionRow({ action }: Props) {
               <div className="flex items-center gap-2 text-xs">
                 <span className="text-muted-foreground">Light Score:</span>
                 <span className="font-bold text-amber-600">{score.light_score}/100</span>
-                <span className="text-muted-foreground ml-2">Camly Coin:</span>
+                <span className="text-muted-foreground ml-2">FUN:</span>
                 <span className="font-bold text-amber-600">+{score.final_reward.toLocaleString()}</span>
               </div>
               {/* 5 Pillars full */}
