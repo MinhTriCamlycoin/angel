@@ -15,6 +15,7 @@ function normalizeIdentity(raw: Record<string, unknown>) {
     r.user?.email ||
     r.profile?.email ||
     r.data?.email ||
+    r.token_info?.email ||
     null;
 
   const funUserId =
@@ -51,7 +52,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { fun_access_token } = await req.json();
+    const { fun_access_token, hint_email } = await req.json();
 
     if (!fun_access_token) {
       return new Response(
@@ -101,6 +102,28 @@ Deno.serve(async (req) => {
     console.log("[bridge-login] Normalized: email=", normalized.email ? "present" : "MISSING",
       ", funUserId=", normalized.funUserId ? "present" : "MISSING",
       ", displayName=", normalized.displayName || "none");
+
+    // Fallback 1: decode JWT payload for email claim
+    if (!normalized.email) {
+      try {
+        const parts = fun_access_token.split(".");
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1]));
+          if (payload.email) {
+            normalized.email = payload.email;
+            console.log("[bridge-login] Email recovered from JWT payload");
+          }
+        }
+      } catch (_e) {
+        // ignore decode errors
+      }
+    }
+
+    // Fallback 2: trust hint_email from client (token already verified above)
+    if (!normalized.email && hint_email && typeof hint_email === "string") {
+      normalized.email = hint_email;
+      console.log("[bridge-login] Email recovered from hint_email");
+    }
 
     if (!normalized.email) {
       return new Response(
