@@ -1,83 +1,48 @@
 
+Mình đã xác định được nguyên nhân chính từ log runtime:
 
-# Fix: "Missing email in FUN identity payload"
+- Lỗi hiện tại không còn là “Missing email”.
+- Lỗi mới là: `Failed to create user account` với mã `email_exists`.
+- Log backend xác nhận:
+  - `Email recovered from hint_email` (email đã có)
+  - Sau đó `createUser` fail vì email đã tồn tại.
 
-## Nguyen nhan goc
+Nguyên nhân gốc:
+- `bridge-login` đang tìm user bằng `auth.admin.listUsers()` 1 lần rồi `.find(...)`.
+- Hệ thống hiện có 415 users, nên 1 lần gọi list không đảm bảo chứa user cần tìm.
+- Khi không thấy user do giới hạn phân trang, code đi tạo mới -> đụng unique email -> `email_exists`.
 
-Log backend cho thay ro: endpoint `sso-verify` cua FUN Profile tra ve **KHONG CO truong `email`** o bat ky cap nao. Cac key tra ve:
+Kế hoạch sửa (không đổi DB/RLS):
 
-```text
-sub, fun_id, username, custodial_wallet, active, token_type, full_name,
-avatar_url, bio, created_at, wallet_address, external_wallet_address,
-custodial_wallet_address, soul_nft, rewards, platform_data, token_info
-```
+1) Sửa logic tìm user theo email trong `supabase/functions/bridge-login/index.ts`
+- Tạo helper `findUserByEmail(email)` có phân trang:
+  - gọi `listUsers({ page, perPage })` theo vòng lặp
+  - so khớp email lowercase
+  - dừng khi hết dữ liệu hoặc đã tìm thấy.
 
-FUN Profile team da them `email` vao response cua `sso-token` nhung **CHUA them vao `sso-verify`**. Hien tai flow la:
-1. Client SDK goi `sso-token` (co email) → nhan `accessToken`
-2. Client gui `accessToken` den `bridge-login`
-3. `bridge-login` goi `sso-verify` (KHONG co email) → loi
+2) Đổi flow “find or create” thành “find (paginated) -> create -> recover on conflict”
+- Bước A: tìm user bằng helper phân trang.
+- Bước B: nếu chưa có thì `createUser`.
+- Bước C: nếu `createUser` trả `email_exists`, gọi lại helper phân trang để lấy đúng user id thay vì fail 500.
+- Chỉ trả lỗi nếu thật sự không resolve được user sau conflict.
 
-## Giai phap (2 buoc)
+3) Giữ nguyên phần normalize email đã làm
+- Vẫn giữ fallback `token_info`, JWT decode, `hint_email`.
+- Không thay đổi client callback ở vòng này.
 
-### 1. AuthCallback gui them email tu SDK response
+4) Nâng chất lượng log/chẩn đoán
+- Log rõ nhánh xử lý:
+  - found existing (paginated)
+  - created new
+  - recovered after email_exists
+- Không log token/email thô (chỉ masked/boolean).
 
-SDK `handleCallback()` tra ve object co the chua thong tin user (tu `sso-token` response). Sua `AuthCallback.tsx` de gui kem `email` (neu co) tu SDK result sang `bridge-login`:
+5) Kiểm thử sau khi sửa
+- Case 1: user đã tồn tại email trước đó -> đăng nhập FUN phải thành công, không còn “Failed to create user account”.
+- Case 2: user mới hoàn toàn -> tạo account + login thành công.
+- Case 3: đăng nhập lặp lại nhiều lần -> luôn map đúng cùng một user_id.
+- Xác nhận trên flow thực tế `/auth -> FUN Profile -> /auth/callback`.
 
-```typescript
-// AuthCallback.tsx
-const result = await funProfile.handleCallback(code, state);
-const res = await fetch(bridgeUrl, {
-  method: "POST",
-  body: JSON.stringify({ 
-    fun_access_token: result.accessToken,
-    hint_email: result.email || result.user?.email || null,
-  }),
-});
-```
-
-### 2. Bridge-login them 3 fallback de tim email
-
-Sua `bridge-login/index.ts` normalizeIdentity them:
-- `r.token_info?.email` — field `token_info` co trong response
-- Decode JWT access_token de lay `email` claim (khong can secret vi chi doc payload)
-- Nhan `hint_email` tu client lam fallback cuoi cung (sau khi da verify token hop le)
-
-```typescript
-// Them vao normalizeIdentity
-const email =
-  r.email ||
-  r.user?.email ||
-  r.profile?.email ||
-  r.data?.email ||
-  r.token_info?.email ||
-  null;
-
-// Trong main handler, sau khi sso-verify thanh cong:
-if (!normalized.email) {
-  // Try decode JWT payload
-  try {
-    const parts = fun_access_token.split('.');
-    if (parts.length === 3) {
-      const payload = JSON.parse(atob(parts[1]));
-      if (payload.email) normalized.email = payload.email;
-    }
-  } catch {}
-}
-
-// Final fallback: trust hint_email since token was verified
-if (!normalized.email && hint_email) {
-  normalized.email = hint_email;
-}
-```
-
-## Files thay doi
-
-1. `src/pages/AuthCallback.tsx` — gui them `hint_email`
-2. `supabase/functions/bridge-login/index.ts` — them JWT decode + token_info + hint_email fallback
-
-## Bao mat
-
-- `hint_email` chi duoc dung SAU KHI `sso-verify` xac nhan token hop le
-- JWT decode chi doc payload (khong verify signature) nhung token da duoc verify boi `sso-verify`
-- Khong thay doi kien truc xac thuc
-
+Ghi chú kỹ thuật quan trọng:
+- Đây là bug xử lý phân trang + race-safe provisioning, không phải lỗi từ FUN payload ở thời điểm hiện tại.
+- Không cần migration database.
