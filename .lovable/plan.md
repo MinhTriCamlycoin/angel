@@ -1,52 +1,41 @@
 
 
-# Kiểm tra & Mô phỏng tấn công hệ thống PPLP + Light Score
+# Mô phỏng tấn công hacker toàn diện: 4 vector cùng lúc
 
-## Tổng quan hiện trạng
+## Kịch bản
 
-Hệ thống PPLP hiện có **0 bài test tự động**. Toàn bộ logic scoring, fraud detection, và mint authorization chưa được kiểm thử bằng code. Đây là rủi ro lớn.
+Tạo một test file mới `supabase/functions/pplp-detect-fraud/attack-simulation.test.ts` mô phỏng **1 hacker điều khiển nhiều tài khoản giả** tấn công đồng thời 4 vector:
 
-## Kế hoạch: 3 bộ test
+### Phase 1: Tạo đội quân Sybil (5 fake accounts cùng device_hash + IP)
+- Gọi `pplp-detect-fraud` cho 5 actor_id khác nhau nhưng cùng `device_hash` và `ip_hash`
+- Verify: Hệ thống phát hiện SYBIL signal cho các account trùng fingerprint
 
-### Test Suite 1: Scoring Engine (Unit Tests — Frontend)
-**File:** `src/lib/__tests__/scoring-engine.test.ts`
+### Phase 2: Bot Spam từ 1 account (content_length < 10, lặp lại)
+- Gửi liên tục 3 request với `content_length: 2` từ cùng 1 actor
+- Verify: SPAM signal triggered mỗi lần, risk_score tích lũy qua `historical_unresolved_signals`
 
-Kiểm tra pure functions trong `scoring-engine.ts`:
-- Reputation Weight: clip đúng [0.5, 2.0], log scaling
-- Content Score: gamma normalization, type multipliers  
-- Consistency Multiplier: streak 0 → 1.0, streak 30 → ~1.36
-- Sequence Multiplier: tanh saturation
-- Integrity Penalty: cap 50%, scaling θ=0.8
-- Daily Light Score: kết hợp đúng ω_B=0.4, ω_C=0.6
-- Mint Allocation: anti-whale cap 3%
-- Eligibility: PPLP not accepted, high risk, low score, unresolved review
+### Phase 3: Content Farming (duplicate content_hash)
+- Gửi cùng `content_hash` từ 2 account khác nhau trong đội quân Sybil
+- Verify: SPAM signal cho duplicate content
 
-### Test Suite 2: Edge Function — pplp-score-action (Integration Test)
-**File:** `supabase/functions/pplp-score-action/index.test.ts`
+### Phase 4: Combined Attack — tất cả vector cùng lúc
+- 1 request chứa **cả 4 tín hiệu**: `device_hash` trùng + `ip_hash` trùng + `content_length: 3` + `content_hash` trùng + `action_id` (cho collusion check)
+- Verify: Nhiều signals cùng lúc → `risk_score` cao → `recommendation` = MONITOR/REWARDS_FROZEN/AUTO_SUSPENDED
+- Verify: `auto_action` được trigger khi risk > 25
 
-Gọi edge function thực tế qua HTTP:
-- Action không tồn tại → 404
-- Action đã scored → idempotent response
-- Missing action_id → 400
-- Validate response schema (pillar scores, multipliers, decision)
+### Phase 5: Whitelist immunity
+- Gửi **cùng payload tấn công** cho 1 user whitelisted
+- Verify: `risk_score = 0`, `recommendation = WHITELISTED` — hệ thống miễn nhiễm hoàn toàn
 
-### Test Suite 3: Mô phỏng tấn công Hacker (Security Tests)
-**File:** `supabase/functions/pplp-detect-fraud/index.test.ts`
-
-Mô phỏng các kịch bản tấn công thực tế:
-1. **Sybil Attack**: Gửi device_hash trùng → phải phát hiện SYBIL signal
-2. **Bot Spam**: Gửi action_type lặp lại nhanh → phải phát hiện BOT signal  
-3. **Content Farming**: Gửi content_hash trùng → phải phát hiện SPAM signal
-4. **Collusion Ring**: Tập trung tương tác 1 target → phải phát hiện COLLUSION
-5. **Whitelist Bypass**: User whitelisted → risk_score = 0, bỏ qua mọi check
-6. **Missing actor_id** → 400 error
+### Phase 6: Báo cáo tổng kết
+- In bảng tổng hợp kết quả tất cả phases
+- So sánh risk_score giữa attacker vs whitelisted user
 
 ## Chi tiết kỹ thuật
 
-- Unit tests chạy qua `vitest` (đã cấu hình sẵn)
-- Edge function tests chạy qua Deno test runner, dùng `dotenv/load.ts` để load `.env`
-- Tất cả tests gọi functions thật (deployed) — không mock
-- Response body luôn được consume (`await response.text()`) để tránh resource leak
-
-## Tổng cộng: ~25-30 test cases
+- File mới: `supabase/functions/pplp-detect-fraud/attack-simulation.test.ts`
+- Dùng Deno test runner, gọi edge function thật (deployed)
+- ~8 test cases, chạy tuần tự (Phase 1→6) để mô phỏng timeline tấn công thực tế
+- Tất cả dùng fake UUID để không ảnh hưởng user thật
+- Response body luôn consume (`await res.text()`)
 
