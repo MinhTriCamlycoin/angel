@@ -1,61 +1,52 @@
 
 
-# Thống kê chi tiết: Mỗi Action được bao nhiêu FUN?
+# Kiểm tra & Mô phỏng tấn công hệ thống PPLP + Light Score
 
-## Mô hình hiện tại (Hybrid Model)
+## Tổng quan hiện trạng
 
-Theo mô hình Hybrid hiện hành, **mỗi action KHÔNG trực tiếp mint FUN**. Thay vào đó:
-1. Mỗi action tạo ra **Light Score** (đóng góp vào tổng tích lũy tháng)
-2. Cuối Epoch (tháng), FUN Money được phân bổ theo tỷ lệ: `FUN_user = Pool × (Light_user / Light_total)`
+Hệ thống PPLP hiện có **0 bài test tự động**. Toàn bộ logic scoring, fraud detection, và mint authorization chưa được kiểm thử bằng code. Đây là rủi ro lớn.
 
-Tuy nhiên, trường `final_reward` trong DB hiện **vẫn ghi nhận giá trị khác 0** (tính theo công thức `base_reward × Q × I × K × consistency`). Đây là **ước tính FUN tương đương** cho mỗi action, dùng để hiển thị cho user biết giá trị đóng góp.
+## Kế hoạch: 3 bộ test
 
----
+### Test Suite 1: Scoring Engine (Unit Tests — Frontend)
+**File:** `src/lib/__tests__/scoring-engine.test.ts`
 
-## Bảng thống kê đầy đủ từ dữ liệu thực tế
+Kiểm tra pure functions trong `scoring-engine.ts`:
+- Reputation Weight: clip đúng [0.5, 2.0], log scaling
+- Content Score: gamma normalization, type multipliers  
+- Consistency Multiplier: streak 0 → 1.0, streak 30 → ~1.36
+- Sequence Multiplier: tanh saturation
+- Integrity Penalty: cap 50%, scaling θ=0.8
+- Daily Light Score: kết hợp đúng ω_B=0.4, ω_C=0.6
+- Mint Allocation: anti-whale cap 3%
+- Eligibility: PPLP not accepted, high risk, low score, unresolved review
 
-### A. Cấu hình Base Reward (Policy v1.0.1) — ĐÃ CẬP NHẬT ✅
+### Test Suite 2: Edge Function — pplp-score-action (Integration Test)
+**File:** `supabase/functions/pplp-score-action/index.test.ts`
 
-| Action Type | Base Reward | Nền tảng | Max/ngày | Max/tuần | Có trong DB caps? |
-|---|---|---|---|---|---|
-| MENTOR_HELP | 150 | FUN Profile | — | — | Có (150) |
-| IDEA_SUBMIT | 150 | FUN Profile | — | — | Không |
-| HELP_COMMUNITY | 120 | FUN Profile | — | — | Không |
-| DONATE_SUPPORT | 120 | FUN Charity | **5** | **20** | ✅ Đã thêm |
-| POST_CREATE | 70 | FUN Profile | **5** | **25** | ✅ Đã thêm |
-| CONTENT_CREATE | 70 | FUN Profile | 5 | 50 | Có (70) |
-| FEEDBACK_GIVE | 60 | Angel AI | — | — | Không |
-| QUESTION_ASK | 50 | Angel AI | 10 | 50 | Có (50) |
-| COMMENT_CREATE | 40 | FUN Profile | **10** | **50** | ✅ Đã thêm |
-| POST_ENGAGEMENT | 40 | FUN Profile | — | — | **Không** |
-| SHARE_CONTENT | 40 | FUN Profile | — | — | **Không** |
-| JOURNAL_WRITE | 20 | FUNLife | **3** | **15** | ✅ Đã thêm |
-| GRATITUDE_PRACTICE | 20 | FUNLife | **3** | **15** | ✅ Đã thêm |
+Gọi edge function thực tế qua HTTP:
+- Action không tồn tại → 404
+- Action đã scored → idempotent response
+- Missing action_id → 400
+- Validate response schema (pillar scores, multipliers, decision)
 
-### B. Thống kê thực tế (từ dữ liệu production)
+### Test Suite 3: Mô phỏng tấn công Hacker (Security Tests)
+**File:** `supabase/functions/pplp-detect-fraud/index.test.ts`
 
-| Action Type | Tổng actions | Đạt (pass) | Thất bại | Avg Light | Avg FUN (pass) | Min FUN | Max FUN | Tổng FUN |
-|---|---|---|---|---|---|---|---|---|
-| QUESTION_ASK | 11,389 | 9,165 (80%) | 2,224 | 78.0 | 82 | 47 | 256 | 749,736 |
-| POST_CREATE | 4,033 | 3,962 (98%) | 71 | 81.1 | 139 | 95 | 216 | 551,779 |
-| COMMENT_CREATE | 2,475 | 2,475 (100%) | 0 | 80.4 | 75 | 29 | 105 | 185,837 |
-| GRATITUDE_PRACTICE | 1,649 | 996 (60%) | 653 | 69.9 | 39 | 26 | 58 | 38,593 |
-| DONATE_SUPPORT | 273 | 273 (100%) | 0 | 79.8 | 227 | 114 | 300 | 61,964 |
-| JOURNAL_WRITE | 36 | 34 (94%) | 2 | 83.4 | 43 | 41 | 56 | 1,459 |
-| POST_ENGAGEMENT | 8 | 8 (100%) | 0 | 79.8 | 73 | 65 | 74 | 583 |
-| CONTENT_CREATE | 2 | 2 (100%) | 0 | 80.3 | 124 | 124 | 124 | 248 |
-| LEARN_COMPLETE | 1 | 0 (0%) | 1 | 54.3 | — | — | — | 0 |
+Mô phỏng các kịch bản tấn công thực tế:
+1. **Sybil Attack**: Gửi device_hash trùng → phải phát hiện SYBIL signal
+2. **Bot Spam**: Gửi action_type lặp lại nhanh → phải phát hiện BOT signal  
+3. **Content Farming**: Gửi content_hash trùng → phải phát hiện SPAM signal
+4. **Collusion Ring**: Tập trung tương tác 1 target → phải phát hiện COLLUSION
+5. **Whitelist Bypass**: User whitelisted → risk_score = 0, bỏ qua mọi check
+6. **Missing actor_id** → 400 error
 
-### C. Trạng thái sửa lỗi
+## Chi tiết kỹ thuật
 
-✅ **Đã bổ sung `pplp_action_caps` cho 5 action types** (2026-03-03):
-- `POST_CREATE` — max 5/ngày, 25/tuần
-- `COMMENT_CREATE` — max 10/ngày, 50/tuần
-- `GRATITUDE_PRACTICE` — max 3/ngày, 15/tuần
-- `DONATE_SUPPORT` — max 5/ngày, 20/tuần
-- `JOURNAL_WRITE` — max 3/ngày, 15/tuần
+- Unit tests chạy qua `vitest` (đã cấu hình sẵn)
+- Edge function tests chạy qua Deno test runner, dùng `dotenv/load.ts` để load `.env`
+- Tất cả tests gọi functions thật (deployed) — không mock
+- Response body luôn được consume (`await response.text()`) để tránh resource leak
 
-⏳ **Còn lại:**
-- Xác nhận logic `final_reward` — cần check edge function deployed vs code repo
-- Thêm VISION_CREATE vào policy base reward mapping
-- Bổ sung POST_ENGAGEMENT, SHARE_CONTENT vào `pplp_action_caps`
+## Tổng cộng: ~25-30 test cases
+
