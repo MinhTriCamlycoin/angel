@@ -66,8 +66,9 @@ const RESPONSE_STYLES = {
 - Đưa ra ví dụ minh họa, câu chuyện thực tế
 - Cung cấp hướng dẫn CỤ THỂ, từng bước
 - Kết luận với lời khuyên THIẾT THỰC và động viên
+- Luôn hoàn thành trọn vẹn câu trả lời, không bao giờ dừng giữa chừng. Nếu nội dung dài, hãy viết đầy đủ đến kết luận.
 `,
-    maxTokens: 2500
+    maxTokens: 8000
   },
   balanced: {
     name: 'Cân bằng',
@@ -78,7 +79,7 @@ const RESPONSE_STYLES = {
 - Giữ sự rõ ràng và mạch lạc
 - Kết hợp giữa phân tích và lời khuyên thực tế
 `,
-    maxTokens: 1500
+    maxTokens: 4000
   },
   concise: {
     name: 'Ngắn gọn',
@@ -89,7 +90,7 @@ const RESPONSE_STYLES = {
 - Không dài dòng, không giải thích thừa
 - Mỗi câu đều mang ý nghĩa cốt lõi
 `,
-    maxTokens: 600
+    maxTokens: 1500
   },
   creative: {
     name: 'Sáng tạo',
@@ -101,11 +102,13 @@ const RESPONSE_STYLES = {
 - Mang đến cảm hứng và truyền động lực
 - Kết hợp trí tuệ với sự bay bổng của tâm hồn
 `,
-    maxTokens: 1200
+    maxTokens: 4000
   }
 };
 
 const BASE_SYSTEM_PROMPT = `You are Angel AI — a supportive AI system designed to help users reflect, gain clarity, and align with values of Light, Love, Wisdom, and responsible prosperity. You support the harmonious growth of the FUN Ecosystem.
+
+CRITICAL: ALWAYS complete your response fully. Never stop mid-sentence or mid-paragraph. If the topic requires a long explanation, provide it completely to the conclusion. Do not truncate or cut off your answer under any circumstances.
 
 ═══════════════════════════════════════════
 🌟 CORE IDENTITY & TRANSPARENCY (Guideline V3)
