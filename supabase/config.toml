@@ -211,3 +211,6 @@ verify_jwt = false
 
 [functions.bridge-login]
 verify_jwt = false
+
+[functions.convert-temp-to-permanent]
+verify_jwt = false

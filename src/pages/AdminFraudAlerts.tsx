@@ -372,6 +372,10 @@ const AdminFraudAlerts = () => {
   const [banning, setBanning] = useState(false);
   const [ignoreTarget, setIgnoreTarget] = useState<FraudAlert | null>(null);
 
+  // Convert temp to permanent
+  const [convertingTemp, setConvertingTemp] = useState(false);
+  const [confirmConvertTemp, setConfirmConvertTemp] = useState(false);
+
   const fetchAlerts = async () => {
     setLoading(true);
     try {
@@ -682,6 +686,41 @@ const AdminFraudAlerts = () => {
       .update({ is_active: !pattern.is_active })
       .eq("id", pattern.id);
     await fetchPatterns();
+  };
+
+  const handleConvertTempToPermanent = async () => {
+    if (!session?.access_token) return;
+    setConvertingTemp(true);
+    setConfirmConvertTemp(false);
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/convert-temp-to-permanent`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Lỗi chuyển đổi");
+
+      toast({
+        title: `✅ Đã chuyển ${data.converted} user → Cấm vĩnh viễn`,
+        description: `Từ chối ${data.withdrawals_rejected} lệnh rút, ${data.mints_rejected} lệnh mint.`,
+      });
+      await fetchSuspendedUsers();
+    } catch (err: unknown) {
+      toast({
+        title: "Lỗi",
+        description: err instanceof Error ? err.message : "Không thể chuyển đổi",
+        variant: "destructive",
+      });
+    } finally {
+      setConvertingTemp(false);
+    }
   };
 
   const fmt = (d: string) => new Date(d).toLocaleString("vi-VN");
@@ -1253,7 +1292,7 @@ const AdminFraudAlerts = () => {
             </div>
 
             {/* Summary */}
-            <div className="flex gap-4 flex-wrap">
+            <div className="flex gap-4 flex-wrap items-end">
               <div className="bg-card border border-border rounded-xl px-4 py-3">
                 <p className="text-xl font-bold text-destructive">{suspendedUsers.filter(u => u.suspension_type === "permanent").length}</p>
                 <p className="text-xs text-muted-foreground">Vĩnh viễn</p>
@@ -1266,6 +1305,17 @@ const AdminFraudAlerts = () => {
                 <p className="text-xl font-bold text-foreground">{suspendedUsers.length}</p>
                 <p className="text-xs text-muted-foreground">Tổng đình chỉ</p>
               </div>
+              {suspendedUsers.filter(u => u.suspension_type === "temporary").length > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setConfirmConvertTemp(true)}
+                  disabled={convertingTemp}
+                >
+                  <Ban className="w-4 h-4 mr-1" />
+                  {convertingTemp ? "Đang xử lý..." : `Chuyển tất cả ${suspendedUsers.filter(u => u.suspension_type === "temporary").length} TK → Vĩnh viễn`}
+                </Button>
+              )}
             </div>
 
             {/* Aggregate Stats */}
@@ -1490,6 +1540,36 @@ const AdminFraudAlerts = () => {
             <Button variant="outline" onClick={() => setConfirmBulkBan(false)} disabled={bulkBanning}>Hủy</Button>
             <Button variant="destructive" onClick={handleBulkBan} disabled={bulkBanning}>
               {bulkBanning ? "Đang ban..." : `✅ Xác nhận Ban ${selectedIds.size} tài khoản`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Convert Temp → Permanent Dialog */}
+      <Dialog open={confirmConvertTemp} onOpenChange={(o) => !o && setConfirmConvertTemp(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <Ban className="w-5 h-5" /> Chuyển tất cả tạm thời → Cấm vĩnh viễn
+            </DialogTitle>
+            <DialogDescription className="space-y-2">
+              <p>
+                Bạn sắp chuyển <strong>{suspendedUsers.filter(u => u.suspension_type === "temporary").length} tài khoản</strong> từ đình chỉ tạm thời sang cấm vĩnh viễn.
+              </p>
+              <p>Hành động này sẽ:</p>
+              <ul className="list-disc list-inside text-sm space-y-1">
+                <li>Chuyển tất cả sang cấm vĩnh viễn</li>
+                <li>Từ chối tất cả lệnh rút tiền đang chờ (hoàn tiền về balance)</li>
+                <li>Từ chối tất cả lệnh mint FUN đang chờ</li>
+                <li><strong>Không</strong> gửi healing message</li>
+              </ul>
+              <p className="text-destructive font-medium">Hành động này không thể hoàn tác!</p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmConvertTemp(false)} disabled={convertingTemp}>Hủy</Button>
+            <Button variant="destructive" onClick={handleConvertTempToPermanent} disabled={convertingTemp}>
+              {convertingTemp ? "Đang xử lý..." : "✅ Xác nhận chuyển đổi"}
             </Button>
           </DialogFooter>
         </DialogContent>
