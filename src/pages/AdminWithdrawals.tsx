@@ -62,6 +62,7 @@ interface Withdrawal {
   retry_count?: number;
   error_message?: string | null;
   user_email?: string;
+  user_handle?: string | null;
   // Anti-fraud fields
   lifetime_earned?: number;
   chat_count?: number;
@@ -152,7 +153,7 @@ const AdminWithdrawals = () => {
       const userIds = [...new Set(data?.map(w => w.user_id) || [])];
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("user_id, display_name")
+        .select("user_id, display_name, handle")
         .in("user_id", userIds);
 
       // Fetch balance data for anti-fraud detection
@@ -222,7 +223,7 @@ const AdminWithdrawals = () => {
         walletUserMap.set(w.wallet_address, users);
       });
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p.display_name]) || []);
+      const profileMap = new Map(profiles?.map(p => [p.user_id, { name: p.display_name, handle: p.handle }]) || []);
       const balanceMap = new Map(balances?.map(b => [b.user_id, b.lifetime_earned]) || []);
       
       const withdrawalsWithData = data?.map(w => {
@@ -263,7 +264,8 @@ const AdminWithdrawals = () => {
 
         return {
           ...w,
-          user_email: profileMap.get(w.user_id) || w.user_id.slice(0, 8) + "...",
+          user_email: profileMap.get(w.user_id)?.name || w.user_id.slice(0, 8) + "...",
+          user_handle: profileMap.get(w.user_id)?.handle || null,
           lifetime_earned: lifetimeEarned,
           chat_count: chatCount,
           coins_per_chat: chatCount > 0 ? lifetimeEarned / chatCount : 0,
@@ -857,7 +859,12 @@ const AdminWithdrawals = () => {
                     </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex flex-col gap-1.5">
-                        <span className="font-semibold">{withdrawal.user_email}</span>
+                        <Link
+                          to={withdrawal.user_handle ? `/${withdrawal.user_handle}` : `/user/${withdrawal.user_id}`}
+                          className="font-semibold text-primary hover:underline"
+                        >
+                          {withdrawal.user_email}
+                        </Link>
                         
                         {/* Earning Breakdown - always show */}
                         {withdrawal.earning_breakdown && (
