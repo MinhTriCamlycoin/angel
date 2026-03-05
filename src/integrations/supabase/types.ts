@@ -3964,6 +3964,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          effective_after: string | null
           effective_from: string
           effective_to: string | null
           formula_json: Json
@@ -3977,6 +3978,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          effective_after?: string | null
           effective_from?: string
           effective_to?: string | null
           formula_json?: Json
@@ -3990,6 +3992,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          effective_after?: string | null
           effective_from?: string
           effective_to?: string | null
           formula_json?: Json
