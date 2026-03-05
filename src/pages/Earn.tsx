@@ -214,6 +214,28 @@ export default function Earn() {
           {/* Coin Breakdown */}
           <EarnBreakdown />
 
+          {/* Withdrawal CTA */}
+          <Card className="border-amber-300 dark:border-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
+            <CardContent className="flex items-center justify-between p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                  <Wallet className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">{t("earn.withdrawTitle") || "Rút thưởng Camly Coin"}</h3>
+                  <p className="text-sm text-muted-foreground">{t("earn.withdrawDesc") || "Rút Camly Coin về ví Web3 của bạn (tối thiểu 200,000)"}</p>
+                </div>
+              </div>
+              <Link to="/profile#withdrawal">
+                <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white gap-2">
+                  <Wallet className="h-4 w-4" />
+                  {t("earn.withdrawButton") || "Rút thưởng"}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
           {/* Quick Actions */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer group">
