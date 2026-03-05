@@ -41,10 +41,13 @@ let MATH_PARAMS: Record<string, number> = {};
 
 async function loadScoringParams(supabase: ReturnType<typeof createClient>) {
   try {
+    // TIMELOCK: Only load rules where effective_after has passed (or is null for legacy rules)
     const { data: rule } = await supabase
       .from('scoring_rules')
       .select('formula_json')
       .eq('status', 'active')
+      .or('effective_after.is.null,effective_after.lte.' + new Date().toISOString())
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
     if (rule?.formula_json) {
@@ -95,9 +98,18 @@ function calculatePillarScores(action: ActionData): { S: number; T: number; H: n
   if (impact.healing_effect) H += 25;
 
   // C - Contribution durability
+  // SERVER-SIDE VALIDATION: Calculate content_length from actual content
+  // instead of trusting client-provided metadata.content_length
   let C = 50;
-  if (metadata.content_length && typeof metadata.content_length === 'number') {
-    C = Math.min(100, 50 + Math.min(metadata.content_length / 100, 30));
+  let verifiedContentLength = 0;
+  if (metadata.content && typeof metadata.content === 'string') {
+    verifiedContentLength = (metadata.content as string).length;
+  } else if (metadata.content_length && typeof metadata.content_length === 'number') {
+    // Fallback to client-provided value but cap it at 5000 to prevent inflation
+    verifiedContentLength = Math.min(metadata.content_length as number, 5000);
+  }
+  if (verifiedContentLength > 0) {
+    C = Math.min(100, 50 + Math.min(verifiedContentLength / 100, 30));
   }
   if (metadata.is_educational) C += 20;
   if (impact.creates_asset) C += 25;
@@ -259,6 +271,30 @@ serve(async (req) => {
           decision: action.status === 'minted' ? 'pass' : 'pass',
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ========== STALE ACTION REJECT (Oracle Integrity Layer) ==========
+    // Reject actions older than 24 hours to prevent delayed replay attacks
+    const actionCreatedAt = new Date(action.created_at).getTime();
+    const now = Date.now();
+    const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
+    if (now - actionCreatedAt > STALE_THRESHOLD_MS) {
+      // Mark action as rejected in DB
+      await supabase
+        .from('pplp_actions')
+        .update({ status: 'rejected', updated_at: new Date().toISOString() })
+        .eq('id', action_id);
+      
+      console.warn(`[PPLP] Stale action rejected: ${action_id}, age=${Math.round((now - actionCreatedAt) / 3600000)}h`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Action is stale (older than 24 hours)',
+          action_id: action.id,
+          created_at: action.created_at,
+          age_hours: Math.round((now - actionCreatedAt) / 3600000),
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
