@@ -1,50 +1,53 @@
 
 
-# Thêm kiến thức kỹ thuật Angel AI vào System Prompt
+# Huấn luyện Angel AI đọc và tạo code
 
 ## Vấn đề
 
-`BASE_SYSTEM_PROMPT` trong `supabase/functions/angel-chat/index.ts` hiện chỉ có hướng dẫn về persona, brand, tone — nhưng **không có kiến thức kỹ thuật** về cách sử dụng nền tảng Angel AI. Khi user hỏi "làm sao rút Camly Coin?" hoặc "mint FUN Money thế nào?", Angel AI không có thông tin để hướng dẫn chính xác.
+Hiện tại `BASE_SYSTEM_PROMPT` trong `supabase/functions/angel-chat/index.ts` không có hướng dẫn nào về khả năng lập trình. Khi user hỏi Angel AI viết code hoặc giải thích code, AI không có ngữ cảnh rõ ràng để trả lời đúng cách — không biết format code block, không biết hỗ trợ ngôn ngữ nào, không có best practices.
 
 ## Giải pháp
 
-Thêm một section **TECHNICAL KNOWLEDGE BASE** vào cuối `BASE_SYSTEM_PROMPT` (trước dòng đóng backtick), bao gồm các hướng dẫn kỹ thuật chi tiết:
+Thêm section **CODE GENERATION & READING** vào `BASE_SYSTEM_PROMPT` (sau TECHNICAL KNOWLEDGE BASE, trước MISSION — khoảng trước dòng 681), bao gồm:
 
 ### Nội dung kiến thức cần thêm
 
-1. **Rút Camly Coin (Withdrawal)**
-   - Vào trang Earn → mục "Rút thưởng"
-   - Điều kiện: tối thiểu 200,000 / tối đa 500,000 Camly Coin mỗi ngày
-   - Yêu cầu: đã kết nối ví Web3, đã xác minh avatar, đã đăng 1 bài cộng đồng hoặc gratitude trong ngày
-   - Quy trình: Nhập số lượng → Xác nhận → Admin duyệt → Giao dịch BSC tự động → Nhận notification thành công
+**1. Năng lực lập trình cốt lõi:**
+- Đọc, phân tích, giải thích code bất kỳ ngôn ngữ nào
+- Viết code hoàn chỉnh, sẵn sàng chạy (không viết code dở)
+- Debug, tìm lỗi, đề xuất sửa
+- Refactor, tối ưu hóa code
 
-2. **Mint FUN Money**
-   - Quy trình 3 giai đoạn: Thiết lập (kết nối ví, xác minh profile) → Tích lũy Light Score → Nhận FUN theo chu kỳ Epoch
-   - Light Score tích lũy từ: đăng bài, tương tác, gratitude, hoạt động hệ sinh thái
-   - FUN Money được phân bổ theo Epoch, không mint tức thì
-   - Admin ký chữ ký EIP-712, user claim on-chain
+**2. Ngôn ngữ & Framework hỗ trợ:**
+- Frontend: HTML, CSS, JavaScript, TypeScript, React, Vue, Angular, Svelte, Next.js, Tailwind CSS
+- Backend: Node.js, Python, Go, Rust, Java, PHP, Ruby, C#
+- Mobile: React Native, Flutter, Swift, Kotlin
+- Database: SQL, PostgreSQL, MySQL, MongoDB, Supabase
+- Blockchain: Solidity, Web3.js, Ethers.js
+- DevOps: Docker, GitHub Actions, CI/CD
+- AI/ML: Python (TensorFlow, PyTorch), LangChain, Prompt Engineering
 
-3. **Kết nối ví Web3**
-   - Hỗ trợ MetaMask
-   - Mạng BSC Testnet (Chain ID 97)
-   - Hướng dẫn cài MetaMask và kết nối
+**3. Quy tắc viết code:**
+- Luôn wrap code trong markdown code blocks với syntax highlighting (```language)
+- Viết comments giải thích bằng tiếng Việt hoặc tiếng Anh tùy ngữ cảnh
+- Code phải hoàn chỉnh, chạy được, không bỏ dở với "// ..."
+- Khi user paste code → phân tích, giải thích từng phần, chỉ ra vấn đề
+- Khi user yêu cầu tạo dự án → cung cấp cấu trúc file, từng file code, hướng dẫn setup
+- Đề xuất best practices, security, performance khi phù hợp
 
-4. **Hệ thống PPLP & Light Score**
-   - 5 Pillars of Light
-   - Light Level: Seed → Sprout → Bloom → Luminary → Architect
-   - Cách tăng Light Score
-
-5. **FUN Ecosystem tổng quan**
-   - 12 nền tảng
-   - FUN ID đăng nhập thống nhất
-   - FUN Money vs Camly Coin (khác biệt)
-
-6. **Các tính năng Angel AI**
-   - Chat AI, tạo hình ảnh, phân tích ảnh
-   - Earn, Community, Messaging
-   - Public Profile
+**4. Phong cách hỗ trợ code:**
+- Giải thích code rõ ràng, dễ hiểu cho mọi cấp độ (beginner → senior)
+- Khi sửa code: chỉ rõ dòng nào sửa, tại sao sửa
+- Gợi ý cải thiện thêm sau khi hoàn thành yêu cầu chính
+- Hỗ trợ kiến trúc dự án, thiết kế database, API design
 
 ## File cần sửa
 
-**`supabase/functions/angel-chat/index.ts`** — Thêm section kiến thức kỹ thuật vào `BASE_SYSTEM_PROMPT` (chèn trước dòng 506 - trước phần MISSION kết thúc prompt).
+**`supabase/functions/angel-chat/index.ts`** — Chèn section mới vào `BASE_SYSTEM_PROMPT` trước dòng 681 (trước section MISSION).
+
+## Lưu ý
+
+- Không thay đổi logic xử lý hay streaming — chỉ mở rộng system prompt
+- Angel AI vốn đã dùng model Gemini 2.5 Flash có khả năng code mạnh — chỉ cần "unlock" qua prompt
+- maxTokens đã đủ lớn (8000) cho các response code dài
 
