@@ -63,6 +63,7 @@ interface Withdrawal {
   error_message?: string | null;
   user_email?: string;
   user_handle?: string | null;
+  is_banned?: boolean;
   // Anti-fraud fields
   lifetime_earned?: number;
   chat_count?: number;
@@ -223,6 +224,15 @@ const AdminWithdrawals = () => {
         walletUserMap.set(w.wallet_address, users);
       });
 
+      // Fetch banned users from user_suspensions
+      const { data: suspensions } = await supabase
+        .from("user_suspensions")
+        .select("user_id")
+        .in("user_id", userIds)
+        .is("lifted_at", null);
+      
+      const bannedSet = new Set(suspensions?.map(s => s.user_id) || []);
+
       const profileMap = new Map(profiles?.map(p => [p.user_id, { name: p.display_name, handle: p.handle }]) || []);
       const balanceMap = new Map(balances?.map(b => [b.user_id, b.lifetime_earned]) || []);
       
@@ -266,6 +276,7 @@ const AdminWithdrawals = () => {
           ...w,
           user_email: profileMap.get(w.user_id)?.name || w.user_id.slice(0, 8) + "...",
           user_handle: profileMap.get(w.user_id)?.handle || null,
+          is_banned: bannedSet.has(w.user_id),
           lifetime_earned: lifetimeEarned,
           chat_count: chatCount,
           coins_per_chat: chatCount > 0 ? lifetimeEarned / chatCount : 0,
@@ -785,6 +796,50 @@ const AdminWithdrawals = () => {
             </div>
           </div>
         </div>
+        {/* Banned users bulk reject */}
+        {(() => {
+          const bannedPending = withdrawals.filter(w => w.is_banned && w.status === 'pending');
+          if (bannedPending.length === 0) return null;
+          return (
+            <div className="bg-red-50 rounded-2xl p-4 border border-red-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+                <span className="text-sm text-red-700 font-medium">
+                  {bannedPending.length} yêu cầu rút từ user bị cấm vĩnh viễn
+                </span>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={async () => {
+                  if (!confirm(`Từ chối ${bannedPending.length} yêu cầu rút từ user bị cấm?`)) return;
+                  try {
+                    const ids = bannedPending.map(w => w.id);
+                    const { error } = await supabase
+                      .from("coin_withdrawals")
+                      .update({
+                        status: "failed",
+                        admin_notes: "Tài khoản bị cấm vĩnh viễn",
+                        processed_at: new Date().toISOString(),
+                        processed_by: user?.id,
+                      })
+                      .in("id", ids);
+                    if (error) throw error;
+                    toast.success(`Đã từ chối ${bannedPending.length} yêu cầu rút từ user bị cấm`);
+                    fetchWithdrawals();
+                    fetchStats();
+                  } catch (err) {
+                    console.error(err);
+                    toast.error("Lỗi khi từ chối hàng loạt");
+                  }
+                }}
+              >
+                <XCircle className="w-4 h-4 mr-1" />
+                Từ chối tất cả user bị cấm
+              </Button>
+            </div>
+          );
+        })()}
 
         {/* Withdrawals Table */}
         <div className="bg-white rounded-2xl shadow-soft border border-primary-pale/30 overflow-hidden">
@@ -859,12 +914,19 @@ const AdminWithdrawals = () => {
                     </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex flex-col gap-1.5">
-                        <Link
-                          to={withdrawal.user_handle ? `/${withdrawal.user_handle}` : `/user/${withdrawal.user_id}`}
-                          className="font-semibold text-primary hover:underline"
-                        >
-                          {withdrawal.user_email}
-                        </Link>
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            to={withdrawal.user_handle ? `/${withdrawal.user_handle}` : `/user/${withdrawal.user_id}`}
+                            className="font-semibold text-primary hover:underline"
+                          >
+                            {withdrawal.user_email}
+                          </Link>
+                          {withdrawal.is_banned && (
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                              🚫 Đã cấm
+                            </Badge>
+                          )}
+                        </div>
                         
                         {/* Earning Breakdown - always show */}
                         {withdrawal.earning_breakdown && (
