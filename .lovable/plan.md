@@ -1,26 +1,50 @@
 
 
-# Lọc user bị cấm vĩnh viễn khỏi danh sách rút thưởng
+# Thêm kiến thức kỹ thuật Angel AI vào System Prompt
 
 ## Vấn đề
 
-Trong `fetchWithdrawals()` tại `src/pages/AdminWithdrawals.tsx`, hệ thống query tất cả `coin_withdrawals` mà không kiểm tra trạng thái đình chỉ của user. Do đó, các user đã bị cấm vĩnh viễn vẫn xuất hiện trong danh sách pending.
+`BASE_SYSTEM_PROMPT` trong `supabase/functions/angel-chat/index.ts` hiện chỉ có hướng dẫn về persona, brand, tone — nhưng **không có kiến thức kỹ thuật** về cách sử dụng nền tảng Angel AI. Khi user hỏi "làm sao rút Camly Coin?" hoặc "mint FUN Money thế nào?", Angel AI không có thông tin để hướng dẫn chính xác.
 
 ## Giải pháp
 
-Sửa `src/pages/AdminWithdrawals.tsx` trong hàm `fetchWithdrawals()`:
+Thêm một section **TECHNICAL KNOWLEDGE BASE** vào cuối `BASE_SYSTEM_PROMPT` (trước dòng đóng backtick), bao gồm các hướng dẫn kỹ thuật chi tiết:
 
-1. **Sau khi lấy danh sách userIds**, query thêm bảng `user_suspensions` để lấy danh sách user đang bị đình chỉ (có `lifted_at IS NULL`).
-2. **Đánh dấu trực quan** các withdrawal từ user bị ban bằng badge đỏ "Đã cấm" bên cạnh tên.
-3. **Thêm nút tự động từ chối** tất cả pending withdrawals từ user bị ban — gọi bulk update `status = 'failed'` với ghi chú "Tài khoản bị cấm vĩnh viễn".
-4. Thêm field `is_banned` vào interface `Withdrawal` để lưu trạng thái.
+### Nội dung kiến thức cần thêm
 
-## Thay đổi cụ thể
+1. **Rút Camly Coin (Withdrawal)**
+   - Vào trang Earn → mục "Rút thưởng"
+   - Điều kiện: tối thiểu 200,000 / tối đa 500,000 Camly Coin mỗi ngày
+   - Yêu cầu: đã kết nối ví Web3, đã xác minh avatar, đã đăng 1 bài cộng đồng hoặc gratitude trong ngày
+   - Quy trình: Nhập số lượng → Xác nhận → Admin duyệt → Giao dịch BSC tự động → Nhận notification thành công
 
-**File: `src/pages/AdminWithdrawals.tsx`**
+2. **Mint FUN Money**
+   - Quy trình 3 giai đoạn: Thiết lập (kết nối ví, xác minh profile) → Tích lũy Light Score → Nhận FUN theo chu kỳ Epoch
+   - Light Score tích lũy từ: đăng bài, tương tác, gratitude, hoạt động hệ sinh thái
+   - FUN Money được phân bổ theo Epoch, không mint tức thì
+   - Admin ký chữ ký EIP-712, user claim on-chain
 
-- Thêm field `is_banned?: boolean` vào interface `Withdrawal`
-- Trong `fetchWithdrawals()`: query `user_suspensions` để tạo `bannedSet`, gắn `is_banned` vào mỗi withdrawal
-- Hiển thị badge "🚫 Đã cấm" bên cạnh tên user nếu `is_banned`
-- Thêm nút "Từ chối tất cả user bị cấm" phía trên bảng, tự động reject tất cả pending withdrawals của user bị ban
+3. **Kết nối ví Web3**
+   - Hỗ trợ MetaMask
+   - Mạng BSC Testnet (Chain ID 97)
+   - Hướng dẫn cài MetaMask và kết nối
+
+4. **Hệ thống PPLP & Light Score**
+   - 5 Pillars of Light
+   - Light Level: Seed → Sprout → Bloom → Luminary → Architect
+   - Cách tăng Light Score
+
+5. **FUN Ecosystem tổng quan**
+   - 12 nền tảng
+   - FUN ID đăng nhập thống nhất
+   - FUN Money vs Camly Coin (khác biệt)
+
+6. **Các tính năng Angel AI**
+   - Chat AI, tạo hình ảnh, phân tích ảnh
+   - Earn, Community, Messaging
+   - Public Profile
+
+## File cần sửa
+
+**`supabase/functions/angel-chat/index.ts`** — Thêm section kiến thức kỹ thuật vào `BASE_SYSTEM_PROMPT` (chèn trước dòng 506 - trước phần MISSION kết thúc prompt).
 
