@@ -34,8 +34,11 @@ export default function Mint() {
               <ExternalLink className="h-4 w-4 text-primary" />
               <AlertTitle className="text-primary font-semibold">Mint FUN trên FUN Profile</AlertTitle>
               <AlertDescription className="mt-2">
-                <p className="text-foreground-muted mb-3">
+                <p className="text-foreground-muted mb-2">
                   Hệ thống Mint FUN đã được tích hợp vào FUN Profile. Bạn có thể mint trực tiếp tại đó với cùng một bảng PPLP.
+                </p>
+                <p className="text-foreground-muted text-sm mb-3 italic">
+                  📌 Dữ liệu Light Score, lịch sử mint và số dư FUN Money của bạn là chung giữa Angel AI và FUN Profile. Bạn có thể mint ở bất kỳ đâu — kết quả đều được ghi nhận trên cùng một hệ thống.
                 </p>
                 <Button
                   onClick={() => window.open("https://fun.rich/wallet/fun_money", "_blank")}
