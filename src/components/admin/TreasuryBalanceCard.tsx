@@ -22,6 +22,13 @@ export const TreasuryBalanceCard = () => {
     setError(null);
     
     try {
+      // Check if user is authenticated before calling
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setIsLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('get-treasury-balance');
       
       if (error) throw error;
