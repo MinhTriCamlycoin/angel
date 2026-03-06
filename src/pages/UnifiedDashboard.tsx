@@ -50,6 +50,14 @@ export default function UnifiedDashboard() {
           <p className="text-muted-foreground mt-1">Tổng quan hoạt động trên Angel AI & FUN Profile</p>
         </div>
 
+        {/* Guest CTA */}
+        {!user && (
+          <GuestCTABanner
+            title="Đăng ký để xem Dashboard cá nhân"
+            description="Tạo tài khoản miễn phí để theo dõi Light Score, FUN Money và hoạt động của bạn trên Angel AI ✨"
+          />
+        )}
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card className="border-primary/20">

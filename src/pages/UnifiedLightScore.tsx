@@ -60,6 +60,14 @@ export default function UnifiedLightScore() {
           <p className="text-muted-foreground mt-1">Điểm Ánh Sáng từ Angel AI & FUN Profile</p>
         </div>
 
+        {/* Guest CTA */}
+        {!user && (
+          <GuestCTABanner
+            title="Đăng ký để xem Light Score cá nhân"
+            description="Tạo tài khoản miễn phí để tích lũy Điểm Ánh Sáng và theo dõi hành trình của bạn ✨"
+          />
+        )}
+
         {/* Score Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card className="border-primary/20">

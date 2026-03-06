@@ -1,4 +1,6 @@
 import { AppLayout } from "@/components/layouts/AppLayout";
+import { GuestCTABanner } from "@/components/guest/GuestCTABanner";
+import { AuthActionGuard } from "@/components/AuthActionGuard";
 import { DailyLoginReward } from "@/components/earn/DailyLoginReward";
 import { EarnProgress } from "@/components/earn/EarnProgress";
 import { StreakCalendar } from "@/components/earn/StreakCalendar";
