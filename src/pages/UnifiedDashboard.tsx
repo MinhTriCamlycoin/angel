@@ -6,7 +6,7 @@ import { BarChart3, Globe, Sparkles, TrendingUp, Users, Coins } from "lucide-rea
 import { useFUNMoneyStats } from "@/hooks/useFUNMoneyStats";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Navigate } from "react-router-dom";
+import { GuestCTABanner } from "@/components/guest/GuestCTABanner";
 
 function useAngelStats(userId?: string) {
   return useQuery({

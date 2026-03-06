@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, Globe, History, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Navigate } from "react-router-dom";
+import { GuestCTABanner } from "@/components/guest/GuestCTABanner";
 import { format } from "date-fns";
 
 function useLightScoreHistory(userId?: string) {
