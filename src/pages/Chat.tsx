@@ -73,7 +73,7 @@ const Chat = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, session, isLoading: authLoading } = useAuth();
   const { t } = useLanguage();
   const { dailyStatus, refreshBalance } = useCamlyCoin();
   const { sharesRewarded, sharesRemaining, refreshStatus: refreshExtendedStatus } = useExtendedRewardStatus();
@@ -398,7 +398,7 @@ const Chat = () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
       body: JSON.stringify({ 
         messages: userMessages.map(m => ({ role: m.role, content: m.content })),
@@ -472,7 +472,7 @@ const Chat = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({ 
             messages: userMessages.map(m => ({ role: m.role, content: m.content })),
