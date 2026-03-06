@@ -1,4 +1,5 @@
 import { AppLayout } from "@/components/layouts/AppLayout";
+import { GuestCTABanner } from "@/components/guest/GuestCTABanner";
 import { FUNMoneyBalanceCard } from "@/components/mint/FUNMoneyBalanceCard";
 import { MintActionsList } from "@/components/mint/MintActionsList";
 import { TokenLifecyclePanel } from "@/components/mint/TokenLifecyclePanel";
