@@ -190,7 +190,7 @@ const Chat = () => {
 
   const handleCopyMessage = async (content: string) => {
     try {
-      await navigator.clipboard.writeText(content);
+      await navigator.clipboard.writeText(stripMarkdown(content));
       toast.success(t("chat.copied"));
     } catch (error) {
       toast.error(t("chat.copyError"));
