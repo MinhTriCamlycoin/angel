@@ -1,53 +1,32 @@
 
 
-# Huấn luyện Angel AI đọc và tạo code
+# Strip Markdown khi Copy tin nhắn Angel AI
 
 ## Vấn đề
 
-Hiện tại `BASE_SYSTEM_PROMPT` trong `supabase/functions/angel-chat/index.ts` không có hướng dẫn nào về khả năng lập trình. Khi user hỏi Angel AI viết code hoặc giải thích code, AI không có ngữ cảnh rõ ràng để trả lời đúng cách — không biết format code block, không biết hỗ trợ ngôn ngữ nào, không có best practices.
+Khi user nhấn nút **Copy** trong chat, hàm `handleCopyMessage` copy nguyên `message.content` (chứa markdown `**bold**`, `*italic*`, `###`...) vào clipboard. Khi paste lên Facebook/Telegram, các ký tự `*` hiện ra rối mắt.
+
+Hiện tại `stripMarkdown` đã được dùng để **hiển thị** text sạch trên UI, nhưng **chưa được áp dụng khi copy**.
 
 ## Giải pháp
 
-Thêm section **CODE GENERATION & READING** vào `BASE_SYSTEM_PROMPT` (sau TECHNICAL KNOWLEDGE BASE, trước MISSION — khoảng trước dòng 681), bao gồm:
+Sửa 1 dòng trong `src/pages/Chat.tsx`:
 
-### Nội dung kiến thức cần thêm
+**Hàm `handleCopyMessage` (dòng ~191-198):** Áp dụng `stripMarkdown` trước khi copy vào clipboard.
 
-**1. Năng lực lập trình cốt lõi:**
-- Đọc, phân tích, giải thích code bất kỳ ngôn ngữ nào
-- Viết code hoàn chỉnh, sẵn sàng chạy (không viết code dở)
-- Debug, tìm lỗi, đề xuất sửa
-- Refactor, tối ưu hóa code
+```typescript
+// Trước:
+await navigator.clipboard.writeText(content);
 
-**2. Ngôn ngữ & Framework hỗ trợ:**
-- Frontend: HTML, CSS, JavaScript, TypeScript, React, Vue, Angular, Svelte, Next.js, Tailwind CSS
-- Backend: Node.js, Python, Go, Rust, Java, PHP, Ruby, C#
-- Mobile: React Native, Flutter, Swift, Kotlin
-- Database: SQL, PostgreSQL, MySQL, MongoDB, Supabase
-- Blockchain: Solidity, Web3.js, Ethers.js
-- DevOps: Docker, GitHub Actions, CI/CD
-- AI/ML: Python (TensorFlow, PyTorch), LangChain, Prompt Engineering
+// Sau:
+await navigator.clipboard.writeText(stripMarkdown(content));
+```
 
-**3. Quy tắc viết code:**
-- Luôn wrap code trong markdown code blocks với syntax highlighting (```language)
-- Viết comments giải thích bằng tiếng Việt hoặc tiếng Anh tùy ngữ cảnh
-- Code phải hoàn chỉnh, chạy được, không bỏ dở với "// ..."
-- Khi user paste code → phân tích, giải thích từng phần, chỉ ra vấn đề
-- Khi user yêu cầu tạo dự án → cung cấp cấu trúc file, từng file code, hướng dẫn setup
-- Đề xuất best practices, security, performance khi phù hợp
+Chỉ cần sửa 1 dòng duy nhất. `stripMarkdown` đã được import sẵn trong file.
 
-**4. Phong cách hỗ trợ code:**
-- Giải thích code rõ ràng, dễ hiểu cho mọi cấp độ (beginner → senior)
-- Khi sửa code: chỉ rõ dòng nào sửa, tại sao sửa
-- Gợi ý cải thiện thêm sau khi hoàn thành yêu cầu chính
-- Hỗ trợ kiến trúc dự án, thiết kế database, API design
+## Kết quả
 
-## File cần sửa
-
-**`supabase/functions/angel-chat/index.ts`** — Chèn section mới vào `BASE_SYSTEM_PROMPT` trước dòng 681 (trước section MISSION).
-
-## Lưu ý
-
-- Không thay đổi logic xử lý hay streaming — chỉ mở rộng system prompt
-- Angel AI vốn đã dùng model Gemini 2.5 Flash có khả năng code mạnh — chỉ cần "unlock" qua prompt
-- maxTokens đã đủ lớn (8000) cho các response code dài
+- Copy → Paste lên Facebook: text thường, sạch sẽ, không có dấu `*`
+- Copy → Paste lên Telegram: text thường, sạch sẽ
+- Hiển thị trong app: vẫn giữ nguyên (đã strip sẵn)
 
