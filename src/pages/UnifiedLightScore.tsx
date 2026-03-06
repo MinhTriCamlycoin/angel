@@ -44,7 +44,7 @@ export default function UnifiedLightScore() {
   const { data: history = [], isLoading: historyLoading } = useLightScoreHistory(user?.id);
   const { data: totalLS = 0 } = useTotalLightScore(user?.id);
 
-  if (!isLoading && !user) return <Navigate to="/auth" replace />;
+  // Guest access allowed - show preview UI
 
   const funProfileLS = 0; // Will come from bridge API
   const combinedLS = totalLS + funProfileLS;

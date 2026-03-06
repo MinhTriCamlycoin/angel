@@ -32,7 +32,7 @@ export default function UnifiedDashboard() {
   const funStats = useFUNMoneyStats(user?.id);
   const { data: angelStats, isLoading: angelLoading } = useAngelStats(user?.id);
 
-  if (!isLoading && !user) return <Navigate to="/auth" replace />;
+  // Guest access allowed - show preview UI
 
   const totalLS = (angelStats?.lightScore ?? 0);
   // FUN Profile LS will come from bridge API once configured
