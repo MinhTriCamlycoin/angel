@@ -6,7 +6,7 @@ import { BarChart3, Globe, Sparkles, TrendingUp, Users, Coins } from "lucide-rea
 import { useFUNMoneyStats } from "@/hooks/useFUNMoneyStats";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Navigate } from "react-router-dom";
+import { GuestCTABanner } from "@/components/guest/GuestCTABanner";
 
 function useAngelStats(userId?: string) {
   return useQuery({
@@ -32,7 +32,7 @@ export default function UnifiedDashboard() {
   const funStats = useFUNMoneyStats(user?.id);
   const { data: angelStats, isLoading: angelLoading } = useAngelStats(user?.id);
 
-  if (!isLoading && !user) return <Navigate to="/auth" replace />;
+  // Guest access allowed - show preview UI
 
   const totalLS = (angelStats?.lightScore ?? 0);
   // FUN Profile LS will come from bridge API once configured
@@ -49,6 +49,14 @@ export default function UnifiedDashboard() {
           </h1>
           <p className="text-muted-foreground mt-1">Tổng quan hoạt động trên Angel AI & FUN Profile</p>
         </div>
+
+        {/* Guest CTA */}
+        {!user && (
+          <GuestCTABanner
+            title="Đăng ký để xem Dashboard cá nhân"
+            description="Tạo tài khoản miễn phí để theo dõi Light Score, FUN Money và hoạt động của bạn trên Angel AI ✨"
+          />
+        )}
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

@@ -1,4 +1,5 @@
 import { AppLayout } from "@/components/layouts/AppLayout";
+import { GuestCTABanner } from "@/components/guest/GuestCTABanner";
 import { FUNMoneyBalanceCard } from "@/components/mint/FUNMoneyBalanceCard";
 import { MintActionsList } from "@/components/mint/MintActionsList";
 import { TokenLifecyclePanel } from "@/components/mint/TokenLifecyclePanel";
@@ -63,6 +64,14 @@ export default function Mint() {
                 Claim FUN Money token (BEP-20) về ví của bạn từ các Light Actions đã được Angel AI xác nhận.
               </p>
             </div>
+
+            {/* Guest CTA */}
+            {!user && (
+              <GuestCTABanner
+                title="Đăng ký để Mint FUN Money"
+                description="Tạo tài khoản miễn phí để tích lũy Light Score và claim FUN Money token về ví của bạn ✨"
+              />
+            )}
 
 
             {/* Important Notice */}

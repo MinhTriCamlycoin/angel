@@ -1,4 +1,6 @@
 import { AppLayout } from "@/components/layouts/AppLayout";
+import { GuestCTABanner } from "@/components/guest/GuestCTABanner";
+import { AuthActionGuard } from "@/components/AuthActionGuard";
 import { DailyLoginReward } from "@/components/earn/DailyLoginReward";
 import { EarnProgress } from "@/components/earn/EarnProgress";
 import { StreakCalendar } from "@/components/earn/StreakCalendar";
@@ -82,6 +84,14 @@ export default function Earn() {
               {t("earn.subtitleSpiritual")}
             </p>
           </div>
+
+          {/* Guest CTA */}
+          {!user && (
+            <GuestCTABanner
+              title="Đăng ký để bắt đầu kiếm Camly Coin"
+              description="Tạo tài khoản miễn phí để nhận thưởng từ mọi hoạt động yêu thương trên Angel AI ✨"
+            />
+          )}
 
           {/* Balance Overview */}
           <TooltipProvider>
@@ -226,13 +236,15 @@ export default function Earn() {
                   <p className="text-sm text-muted-foreground">{t("earn.withdrawDesc") || "Rút Camly Coin về ví Web3 của bạn (tối thiểu 200,000)"}</p>
                 </div>
               </div>
-              <Link to="/profile#withdrawal">
-                <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white gap-2">
-                  <Wallet className="h-4 w-4" />
-                  {t("earn.withdrawButton") || "Rút thưởng"}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
+              <AuthActionGuard message="Đăng ký tài khoản để rút thưởng Camly Coin về ví Web3">
+                <Link to="/profile#withdrawal">
+                  <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white gap-2">
+                    <Wallet className="h-4 w-4" />
+                    {t("earn.withdrawButton") || "Rút thưởng"}
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </AuthActionGuard>
             </CardContent>
           </Card>
 

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, Globe, History, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Navigate } from "react-router-dom";
+import { GuestCTABanner } from "@/components/guest/GuestCTABanner";
 import { format } from "date-fns";
 
 function useLightScoreHistory(userId?: string) {
@@ -44,7 +44,7 @@ export default function UnifiedLightScore() {
   const { data: history = [], isLoading: historyLoading } = useLightScoreHistory(user?.id);
   const { data: totalLS = 0 } = useTotalLightScore(user?.id);
 
-  if (!isLoading && !user) return <Navigate to="/auth" replace />;
+  // Guest access allowed - show preview UI
 
   const funProfileLS = 0; // Will come from bridge API
   const combinedLS = totalLS + funProfileLS;
@@ -59,6 +59,14 @@ export default function UnifiedLightScore() {
           </h1>
           <p className="text-muted-foreground mt-1">Điểm Ánh Sáng từ Angel AI & FUN Profile</p>
         </div>
+
+        {/* Guest CTA */}
+        {!user && (
+          <GuestCTABanner
+            title="Đăng ký để xem Light Score cá nhân"
+            description="Tạo tài khoản miễn phí để tích lũy Điểm Ánh Sáng và theo dõi hành trình của bạn ✨"
+          />
+        )}
 
         {/* Score Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
