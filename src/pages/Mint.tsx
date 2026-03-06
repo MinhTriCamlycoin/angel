@@ -65,6 +65,14 @@ export default function Mint() {
               </p>
             </div>
 
+            {/* Guest CTA */}
+            {!user && (
+              <GuestCTABanner
+                title="Đăng ký để Mint FUN Money"
+                description="Tạo tài khoản miễn phí để tích lũy Light Score và claim FUN Money token về ví của bạn ✨"
+              />
+            )}
+
 
             {/* Important Notice */}
             <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/30">
