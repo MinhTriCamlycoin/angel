@@ -1,8 +1,12 @@
 /**
- * PPLP Light Score Scoring Engine — LS-Math v1.0
+ * PPLP Light Score Scoring Engine — LS-Math v1.0 + Dimension Scores v2.0
  * Pure functions for calculating Light Score components.
  * Used in both frontend simulation and backend edge functions.
  */
+
+// ============================================================
+// LS-Math v1.0 — Original scoring (kept intact)
+// ============================================================
 
 export interface ScoringConfig {
   weights: { base_action_weight: number; content_weight: number };
@@ -145,4 +149,161 @@ export function checkMintEligibility(params: {
   if (params.hasUnresolvedReview) return { eligible: false, reason: "UNRESOLVED_REVIEW" };
 
   return { eligible: true };
+}
+
+// ============================================================
+// Dimension Scores v2.0 — 5 Pillar Web3 Reputation System
+// ============================================================
+
+export interface DimensionWeights {
+  identity: number;
+  activity: number;
+  onchain: number;
+  transparency: number;
+  ecosystem: number;
+}
+
+export const DEFAULT_DIMENSION_WEIGHTS: DimensionWeights = {
+  identity: 0.20,
+  activity: 0.20,
+  onchain: 0.20,
+  transparency: 0.20,
+  ecosystem: 0.20,
+};
+
+export interface IdentityParams {
+  hasDisplayName: boolean;
+  hasAvatar: boolean;
+  hasBio: boolean;
+  hasHandle: boolean;
+  emailVerified: boolean;
+  walletLinked: boolean;
+  accountAgeDays: number;
+  hasDID: boolean;
+}
+
+/** Identity Score (max 100) */
+export function computeIdentityScore(params: IdentityParams): number {
+  let score = 0;
+  if (params.hasDisplayName) score += 5;
+  if (params.hasAvatar) score += 10;
+  if (params.hasBio) score += 5;
+  if (params.hasHandle) score += 10;
+  if (params.emailVerified) score += 20;
+  if (params.walletLinked) score += 30;
+  if (params.accountAgeDays > 30) score += 10;
+  if (params.hasDID) score += 10;
+  return Math.min(100, score);
+}
+
+export interface OnChainParams {
+  walletLinked: boolean;
+  accountAgeDays: number;
+  hasCompletedWithdrawals: boolean;
+  hasWeb3Gifts: boolean;
+}
+
+/** On-Chain History Score (max 100) */
+export function computeOnChainScore(params: OnChainParams): number {
+  if (!params.walletLinked) return 0;
+  let score = 20; // wallet linked
+  if (params.accountAgeDays > 365) score += 30;
+  else if (params.accountAgeDays > 180) score += 20;
+  else if (params.accountAgeDays > 90) score += 10;
+  if (params.hasCompletedWithdrawals) score += 20;
+  if (params.hasWeb3Gifts) score += 30;
+  return Math.min(100, score);
+}
+
+/** Wallet Transparency Score (max 100) — starts at 100, decreases with fraud signals */
+export function computeTransparencyScore(unresolvedFraudCount: number): number {
+  return Math.max(30, 100 - unresolvedFraudCount * 15);
+}
+
+export interface EcosystemParams {
+  hasCamlyBalance: boolean;
+  platformUsageDays: number;
+  hasPostsOrComments: boolean;
+  hasSentGifts: boolean;
+  holdingOver30Days: boolean;
+}
+
+/** Ecosystem Alignment Score (max 100) */
+export function computeEcosystemScore(params: EcosystemParams): number {
+  let score = 0;
+  if (params.hasCamlyBalance) score += 20;
+  if (params.platformUsageDays > 7) score += 20;
+  if (params.hasPostsOrComments) score += 20;
+  if (params.hasSentGifts) score += 20;
+  if (params.holdingOver30Days) score += 20;
+  return Math.min(100, score);
+}
+
+/** Decay factor based on inactive days */
+export function computeDecayFactor(inactiveDays: number): number {
+  if (inactiveDays >= 180) return 0;
+  if (inactiveDays >= 90) return 0.3;
+  if (inactiveDays >= 60) return 0.6;
+  if (inactiveDays >= 30) return 0.85;
+  return 1.0;
+}
+
+/** Streak bonus percentage */
+export function computeStreakBonus(streakDays: number): number {
+  if (streakDays >= 90) return 0.10;
+  if (streakDays >= 30) return 0.05;
+  if (streakDays >= 7) return 0.02;
+  return 0;
+}
+
+/** Risk penalty from fraud signals severity */
+export function computeRiskPenalty(signals: Array<{ severity: number }>): number {
+  const total = signals.reduce((sum, s) => {
+    if (s.severity >= 4) return sum + 35;
+    if (s.severity >= 3) return sum + 20;
+    if (s.severity >= 2) return sum + 10;
+    return sum + 5;
+  }, 0);
+  return Math.min(80, total);
+}
+
+export interface DimensionScores {
+  identity: number;
+  activity: number;
+  onchain: number;
+  transparency: number;
+  ecosystem: number;
+}
+
+/** Total Light Score from 5 dimensions + streak - penalty */
+export function computeTotalDimensionScore(
+  dimensions: DimensionScores,
+  streakBonus: number,
+  riskPenalty: number,
+): { total: number; level: string } {
+  const raw = dimensions.identity + dimensions.activity + dimensions.onchain +
+    dimensions.transparency + dimensions.ecosystem;
+  const total = Math.max(0, raw * (1 + streakBonus) - riskPenalty);
+
+  let level: string;
+  if (total >= 800) level = "Cosmic Contributor";
+  else if (total >= 500) level = "Light Leader";
+  else if (total >= 250) level = "Light Guardian";
+  else if (total >= 100) level = "Light Builder";
+  else level = "Light Seed";
+
+  return { total, level };
+}
+
+/** Level info for display */
+export const LIGHT_LEVELS = [
+  { name: "Light Seed", emoji: "🌱", min: 0, max: 99, color: "hsl(var(--muted-foreground))" },
+  { name: "Light Builder", emoji: "🔨", min: 100, max: 249, color: "hsl(var(--primary))" },
+  { name: "Light Guardian", emoji: "🛡️", min: 250, max: 499, color: "hsl(210, 80%, 55%)" },
+  { name: "Light Leader", emoji: "⭐", min: 500, max: 799, color: "hsl(45, 90%, 50%)" },
+  { name: "Cosmic Contributor", emoji: "🌟", min: 800, max: Infinity, color: "hsl(280, 70%, 60%)" },
+] as const;
+
+export function getLightLevelInfo(totalScore: number) {
+  return LIGHT_LEVELS.find(l => totalScore >= l.min && totalScore <= l.max) ?? LIGHT_LEVELS[0];
 }

@@ -1,223 +1,215 @@
-# LIGHT SCORE MATHEMATICAL SPEC (PPLP) — FUN PROFILE
+# LIGHT SCORE MATHEMATICAL SPEC (PPLP) — FUN Ecosystem
 
-**Version:** LS-Math v1.0  
-**Scope:** Tính Light Score cá nhân theo ngày/tuần/tháng + điều kiện mint FUN Money theo epoch  
-**Core rule:** PPLP thưởng cho Ánh Sáng thật, không thưởng cho ồn ào.
-
----
-
-## 1. Định nghĩa tập hợp & ký hiệu
-
-- **Người dùng:** u ∈ U
-- **Nội dung:** c ∈ C
-- **Thời gian rời rạc theo ngày:** t ∈ T (UTC)
-- **Epoch mint (chu kỳ):** e ∈ E (tuần/tháng)
-
-### 5 Cột Trụ (Pillars)
-
-| k | Pillar |
-|---|--------|
-| 1 | Truth & Transparency (T) |
-| 2 | Sustainable Contribution (S) |
-| 3 | Healing & Love (H) |
-| 4 | Service to Life (C) |
-| 5 | Unity with Source (U) |
+**Version:** LS-Math v2.0  
+**Scope:** 5 Dimension Scores + Daily LS-Math + Mint Eligibility + Decay + Streak  
 
 ---
 
-## 2. Dữ liệu đầu vào
+## 1. Tổng quan kiến trúc
 
-### 2.1 Event stream
-Mỗi event i: actor a(i)=u, time t(i), type τ(i), payload features **x**_i
-
-### 2.2 Community ratings
-Mỗi rating của rater r cho content c: s_{r,c,k} ∈ {0,1,2} cho mỗi cột trụ k
+```
+┌──────────────────────────────────────────────────┐
+│           LIGHT SCORE (Tổng hợp 0-500)           │
+│  = Identity + Activity + OnChain                 │
+│    + Transparency + Ecosystem                    │
+│    × (1 + Streak) - Risk Penalty                 │
+├──────────────────────────────────────────────────┤
+│  Identity (0-100)     │ Profile, email, wallet,  │
+│                       │ DID, account age         │
+│  Activity (0-100)     │ LS-Math v1.0 normalized  │
+│  OnChain (0-100)      │ Wallet, tx, contracts    │
+│  Transparency (0-100) │ 100 - fraud signals      │
+│  Ecosystem (0-100)    │ Camly, usage, community  │
+└──────────────────────────────────────────────────┘
+```
 
 ---
 
-## 3. Trọng số uy tín (Reputation Weight)
+## 2. Dimension 1: Identity Score (max 100)
 
-```
-w_u(t) = clip(w_min, w_max, 1 + α · log(1 + R_u(t)))
-```
-
-- w_min = 0.5, w_max = 2.0, α = 0.25
-- R_u = contribution_days × pass_rate × (1 + streak_bonus)
-
-**RPC:** `compute_reputation_weight_v2(_user_id, _w_min, _w_max, _alpha)`
-
----
-
-## 4. Điểm nội dung theo 5 cột trụ (Content Pillar Score)
-
-```
-P_{c,k} = Σ(w_r · s_{r,c,k}) / (Σw_r + ε)
-P_c = Σ P_{c,k}  (range 0→10)
-```
-
-**Cold-start fallback (§10):** Khi ratings < N_min:
-```
-P̃_c = μ_topic · φ_u
-```
-- μ_topic: điểm trung bình theo chủ đề cộng đồng (30 ngày gần nhất)
-- φ_u: hệ số tin cậy theo lịch sử user (0.8–1.1)
-
-**RPC:** `compute_content_pillar_score(_content_id, _min_ratings, _gamma)`
+| Tiêu chí | Điểm |
+|----------|------|
+| display_name | +5 |
+| avatar | +10 |
+| bio (>10 ký tự) | +5 |
+| handle | +10 |
+| Email verified | +20 |
+| Wallet linked | +30 |
+| Account age >30d | +10 |
+| DID active | +10 |
 
 ---
 
-## 5. Điểm hành động (Action Base Score)
+## 3. Dimension 2: Activity Score (max 100)
+
+Tái sử dụng LS-Math v1.0 hiện tại (§3-§11 bên dưới).
 
 ```
-B_u(t) = Σ b_τ(i) · g(x_i)
+Activity = min(100, Σ final_light_score trong 30 ngày) × decay_factor
 ```
-- b_τ: base_reward từ `pplp_action_caps`
-- g(x_i) ∈ [0, 1.5]: quality_score từ payload
+
+### LS-Math v1.0 Components
+
+**§3 Reputation Weight:** `w = clip(0.5, 2.0, 1 + 0.25 × log(1 + R))`
+
+**§4 Content Quality:** `h(P_c) = (P_c / 10)^1.3`
+
+**§6 Content Score:** `C_u(t) = Σ ρ(type) × h(P_c)`
+
+**§7 Consistency:** `M_cons = 1 + 0.6 × (1 - e^(-S/30))`
+
+**§8 Sequence:** `M_seq = 1 + 0.5 × tanh(Q/5)`
+
+**§9 Integrity:** `Π = 1 - min(0.5, 0.8 × avgRisk)`
+
+**§11 Daily:** `L(t) = (0.4×B + 0.6×C) × M_cons × M_seq × Π`
 
 ---
 
-## 6. Điểm nội dung theo ngày
+## 4. Dimension 3: On-Chain History Score (max 100)
 
-```
-C_u(t) = Σ ρ(type(c)) · h(P_c)
-h(P_c) = (P_c / 10)^γ    (γ = 1.3)
-```
-
-| Content Type | ρ |
-|---|---|
-| ANALYSIS_POST | 1.5 |
-| POST_CREATE | 1.0 |
-| SHARE_CONTENT | 0.5 |
-| COMMENT_CREATE | 0.3 |
+| Tiêu chí | Điểm |
+|----------|------|
+| Wallet linked | +20 |
+| Account >365d | +30 (>180d: +20, >90d: +10) |
+| Completed withdrawals | +20 |
+| Web3 gifts (sent/received) | +30 |
 
 ---
 
-## 7. Consistency Multiplier
+## 5. Dimension 4: Wallet Transparency Score (max 100)
 
 ```
-M^cons_u(t) = 1 + β · (1 - e^(-S/λ))
+Transparency = max(30, 100 - unresolvedFraudCount × 15)
 ```
-- β = 0.6, λ = 30
-- S = consistency_streak từ features_user_day
+
+Bắt đầu 100, giảm 15 điểm/mỗi fraud signal chưa resolved. Sàn 30.
 
 ---
 
-## 8. Sequence Multiplier
+## 6. Dimension 5: Ecosystem Alignment Score (max 100)
 
-```
-M^seq_u(t) = 1 + η · tanh(Q/κ)
-```
-- η = 0.5, κ = 5
-- Q = Σ δ_q từ completed sequences
-
----
-
-## 9. Integrity Penalty
-
-```
-Π_u(t) = 1 - min(π_max, θ · r_u(t))
-```
-- π_max = 0.5, θ = 0.8
-- r_u = avg(severity/5) từ pplp_fraud_signals unresolved
+| Tiêu chí | Điểm |
+|----------|------|
+| Camly balance > 0 | +20 |
+| Platform usage > 7 ngày | +20 |
+| Có posts/comments | +20 |
+| Đã gửi gifts | +20 |
+| Holding > 30 ngày | +20 |
 
 ---
 
-## 11. Light Score theo ngày
+## 7. Decay Factor (Reputation Decay)
 
-```
-L^raw_u(t) = ω_B · B_u(t) + ω_C · C_u(t)
-L_u(t) = L^raw · M^cons · M^seq · Π
-```
-- ω_B = 0.4, ω_C = 0.6
+| Inactive Days | Multiplier |
+|--------------|-----------|
+| < 30 | 1.0 |
+| 30-59 | 0.85 |
+| 60-89 | 0.6 |
+| 90-179 | 0.3 |
+| ≥ 180 | 0 (ngủ đông) |
 
-**RPC:** `compute_daily_light_score(_user_id, _date)`
-
----
-
-## 12. Light Score theo epoch
-
-```
-L_u(e) = Σ L_u(t)  for t ∈ e
-```
-
-**RPC:** `compute_epoch_light_score(_user_id, _epoch_start, _epoch_end)`
+Áp dụng cho Activity Score: `Activity × decay_factor`
 
 ---
 
-## 13. Điều kiện đủ để nhận mint (Eligibility)
+## 8. Streak Bonus
+
+| Streak Days | Bonus |
+|------------|-------|
+| < 7 | 0% |
+| 7-29 | +2% |
+| 30-89 | +5% |
+| ≥ 90 | +10% |
+
+---
+
+## 9. Risk Penalty
+
+| Severity | Penalty |
+|----------|---------|
+| 1 (nhẹ) | -5 |
+| 2 | -10 |
+| 3 | -20 |
+| ≥ 4 (mạnh) | -35 |
+
+**Max penalty**: 80 điểm. Tính từ `pplp_fraud_signals` chưa resolved.
+
+---
+
+## 10. Công thức tổng
 
 ```
-I_u(e) = 1 iff:
+Light Score = (Identity + Activity + OnChain + Transparency + Ecosystem)
+              × (1 + streak_bonus)
+              - risk_penalty
+
+Light Score = max(0, result)
+```
+
+---
+
+## 11. Level Mapping
+
+| Level | Score | Emoji |
+|-------|-------|-------|
+| Light Seed | 0-99 | 🌱 |
+| Light Builder | 100-249 | 🔨 |
+| Light Guardian | 250-499 | 🛡️ |
+| Light Leader | 500-799 | ⭐ |
+| Cosmic Contributor | 800+ | 🌟 |
+
+---
+
+## 12. Mint Eligibility (giữ nguyên)
+
+```
+Eligible iff:
   1. PPLP accepted
-  2. avg_risk ≤ r_threshold (0.7)
-  3. L_u(e) ≥ L_min (10)
+  2. avg_risk ≤ 0.7
+  3. epoch_light_score ≥ 10
   4. No unresolved cluster review
 ```
 
-**RPC:** `check_mint_eligibility(_user_id, _epoch_start, _epoch_end)`
-
 ---
 
-## 14. Mint allocation theo epoch
+## 13. Mint Allocation (giữ nguyên)
 
 ```
-A_u(e) = I_u(e) · M(e) · L_u(e) / (T(e) + ε)
+A_u(e) = I_u(e) × M(e) × L_u(e) / (T(e) + ε)
 ```
 
-Anti-whale cap: `A_u(e) ≤ cap · M(e)` (cap = 3%)  
-Excess redistributed iteratively until convergence.
+Anti-whale cap: 3%. Excess redistributed.
 
 ---
 
-## 15. Level mapping
-
-| Level | Threshold |
-|---|---|
-| Seed | L < 10 |
-| Sprout | 10 ≤ L < 30 |
-| Builder | 30 ≤ L < 60 |
-| Guardian | 60 ≤ L < 100 |
-| Architect | L ≥ 100 |
-
----
-
-## 16. Explainability
-
-Mỗi L_u(e) sinh object giải thích:
-- Top 5 contributors (action_type, light_score, reward)
-- Reason codes: CONSISTENCY_STRONG, VALUE_LOOP_ACTIVE, HIGH_REPUTATION, TEMPORARY_WEIGHT_ADJUSTMENT
-- Trend: stable / growing / reflecting
-
----
-
-## 17. Tham số mặc định (v1.0)
+## 14. Tham số mặc định v2.0
 
 | Param | Value | Description |
-|---|---|---|
-| w_min | 0.5 | Min reputation weight |
-| w_max | 2.0 | Max reputation weight |
-| α | 0.25 | Reputation scaling |
-| γ | 1.3 | Content quality exponent |
-| β | 0.6 | Max consistency bonus (+60%) |
-| λ | 30 | Consistency saturation (days) |
-| η | 0.5 | Sequence bonus scale |
-| κ | 5 | Sequence saturation |
-| π_max | 0.5 | Max integrity penalty (50%) |
-| θ | 0.8 | Penalty scaling |
-| ω_B | 0.4 | Action weight |
-| ω_C | 0.6 | Content weight |
-| cap | 0.03 | Anti-whale cap (3%) |
-| min_ratings | 3 | Min ratings for P_c |
-| L_min | 10 | Min epoch score for mint |
-| r_threshold | 0.7 | Max avg risk for eligibility |
+|-------|-------|-------------|
+| Dimension weights | 20% each | 5 trụ cột đều nhau |
+| decay_30d | 0.85 | Activity decay 30d |
+| decay_60d | 0.6 | Activity decay 60d |
+| decay_90d | 0.3 | Activity decay 90d |
+| decay_180d | 0 | Ngủ đông |
+| streak_7d | +2% | Bonus streak 7d |
+| streak_30d | +5% | Bonus streak 30d |
+| streak_90d | +10% | Bonus streak 90d |
+| max_risk_penalty | 80 | Max penalty |
+| fraud_signal_cost | 15 | Transparency deduction |
+| ω_B | 0.4 | Action weight (LS-Math) |
+| ω_C | 0.6 | Content weight (LS-Math) |
+| cap | 0.03 | Anti-whale cap |
 
 ---
 
-## 19. A.I. Support (không quyết định tiền)
+## 15. Database & RPC
 
-AI chỉ xuất:
-- `ego_risk(c) ∈ [0,1]`
-- `pillar_suggest_{c,k} ∈ {0,1,2}`
-- `spam_risk(u,t) ∈ [0,1]`
-
-AI không trực tiếp thay P_c nếu chưa có rating cộng đồng.
+| Resource | Description |
+|----------|-------------|
+| `user_dimension_scores` | Bảng lưu 5 dimension scores |
+| `compute_user_dimensions(_user_id)` | SQL function tính toàn bộ |
+| `pplp-compute-dimensions` | Edge function cron daily |
+| `light_score_ledger` | LS-Math v1.0 data source |
+| `features_user_day` | Activity & streak data |
+| `pplp_fraud_signals` | Fraud data source |

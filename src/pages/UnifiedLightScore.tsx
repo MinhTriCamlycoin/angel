@@ -1,11 +1,15 @@
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, Globe, History, TrendingUp } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Sparkles, Globe, History, TrendingUp, Shield, User, Activity, Link2, Eye, Leaf, AlertTriangle, Flame } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { GuestCTABanner } from "@/components/guest/GuestCTABanner";
 import { format } from "date-fns";
+import { useDimensionScores } from "@/hooks/useDimensionScores";
+import { getLightLevelInfo } from "@/lib/scoring-engine";
+import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from "recharts";
 
 function useLightScoreHistory(userId?: string) {
   return useQuery({
@@ -24,43 +28,42 @@ function useLightScoreHistory(userId?: string) {
   });
 }
 
-function useTotalLightScore(userId?: string) {
-  return useQuery({
-    queryKey: ["total-light-score", userId],
-    enabled: !!userId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("light_score_ledger")
-        .select("final_light_score")
-        .eq("user_id", userId!);
-      const total = (data || []).reduce((sum, row: any) => sum + (row.final_light_score || 0), 0);
-      return total;
-    },
-  });
-}
+const DIMENSION_CONFIG = [
+  { key: "identity_score" as const, label: "Identity", icon: User, radarLabel: "Identity" },
+  { key: "activity_score" as const, label: "Activity", icon: Activity, radarLabel: "Activity" },
+  { key: "onchain_score" as const, label: "On-Chain", icon: Link2, radarLabel: "OnChain" },
+  { key: "transparency_score" as const, label: "Transparency", icon: Eye, radarLabel: "Transparency" },
+  { key: "ecosystem_score" as const, label: "Ecosystem", icon: Leaf, radarLabel: "Ecosystem" },
+];
 
 export default function UnifiedLightScore() {
   const { user, isLoading } = useAuth();
   const { data: history = [], isLoading: historyLoading } = useLightScoreHistory(user?.id);
-  const { data: totalLS = 0 } = useTotalLightScore(user?.id);
+  const { data: dimensions, isLoading: dimLoading } = useDimensionScores();
 
-  // Guest access allowed - show preview UI
+  const totalScore = dimensions?.total_light_score ?? 0;
+  const levelInfo = getLightLevelInfo(totalScore);
 
-  const funProfileLS = 0; // Will come from bridge API
-  const combinedLS = totalLS + funProfileLS;
+  const radarData = DIMENSION_CONFIG.map((d) => ({
+    dimension: d.radarLabel,
+    value: dimensions?.[d.key] ?? 0,
+    fullMark: 100,
+  }));
 
   return (
     <AppLayout>
       <main className="container mx-auto px-4 py-8 max-w-5xl">
+        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
             <Sparkles className="w-8 h-8 text-primary" />
-            Light Score Tổng Hợp
+            Light Score
           </h1>
-          <p className="text-muted-foreground mt-1">Điểm Ánh Sáng từ Angel AI & FUN Profile</p>
+          <p className="text-muted-foreground mt-1">
+            Web3 Reputation System — 5 Trụ Cột Ánh Sáng
+          </p>
         </div>
 
-        {/* Guest CTA */}
         {!user && (
           <GuestCTABanner
             title="Đăng ký để xem Light Score cá nhân"
@@ -68,30 +71,86 @@ export default function UnifiedLightScore() {
           />
         )}
 
-        {/* Score Summary */}
+        {/* Total Score + Level */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card className="border-primary/20">
+          <Card className="md:col-span-1 border-primary/20 bg-primary/5">
             <CardContent className="pt-6 text-center">
-              <Sparkles className="w-8 h-8 text-primary mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Angel AI</p>
-              <p className="text-3xl font-bold text-foreground">{Number(totalLS).toFixed(1)}</p>
+              <div className="text-4xl mb-1">{levelInfo.emoji}</div>
+              <p className="text-sm text-muted-foreground">Level</p>
+              <p className="text-xl font-bold text-foreground">{dimensions?.level_name ?? "Light Seed"}</p>
+              <p className="text-3xl font-bold text-primary mt-2">{totalScore.toFixed(0)}</p>
+              <p className="text-xs text-muted-foreground">/ 500 điểm tối đa</p>
+
+              {/* Streak & Decay indicators */}
+              {dimensions && (
+                <div className="mt-4 space-y-2">
+                  {(dimensions.streak_bonus_pct ?? 0) > 0 && (
+                    <div className="flex items-center justify-center gap-1 text-xs text-green-500">
+                      <Flame className="w-3 h-3" />
+                      Streak +{((dimensions.streak_bonus_pct ?? 0) * 100).toFixed(0)}%
+                    </div>
+                  )}
+                  {dimensions.decay_applied && (
+                    <div className="flex items-center justify-center gap-1 text-xs text-amber-500">
+                      <AlertTriangle className="w-3 h-3" />
+                      Decay: {dimensions.inactive_days}d inactive
+                    </div>
+                  )}
+                  {(dimensions.risk_penalty ?? 0) > 0 && (
+                    <div className="flex items-center justify-center gap-1 text-xs text-destructive">
+                      <Shield className="w-3 h-3" />
+                      Risk Penalty: -{dimensions.risk_penalty}
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
-          <Card className="border-primary/20">
-            <CardContent className="pt-6 text-center">
-              <Globe className="w-8 h-8 text-primary mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">FUN Profile</p>
-              <p className="text-3xl font-bold text-foreground">{funProfileLS}</p>
-              <p className="text-xs text-amber-500 mt-1">Đang kết nối Bridge...</p>
+
+          {/* Radar Chart */}
+          <Card className="md:col-span-2">
+            <CardContent className="pt-6">
+              <ResponsiveContainer width="100%" height={280}>
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="hsl(var(--border))" />
+                  <PolarAngleAxis
+                    dataKey="dimension"
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                  />
+                  <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
+                  <Radar
+                    name="Light Score"
+                    dataKey="value"
+                    stroke="hsl(var(--primary))"
+                    fill="hsl(var(--primary))"
+                    fillOpacity={0.25}
+                    strokeWidth={2}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
-          <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="pt-6 text-center">
-              <TrendingUp className="w-8 h-8 text-primary mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Tổng cộng</p>
-              <p className="text-3xl font-bold text-primary">{combinedLS.toFixed(1)}</p>
-            </CardContent>
-          </Card>
+        </div>
+
+        {/* 5 Dimension Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-8">
+          {DIMENSION_CONFIG.map((dim) => {
+            const score = dimensions?.[dim.key] ?? 0;
+            const Icon = dim.icon;
+            return (
+              <Card key={dim.key} className="border-border/50">
+                <CardContent className="pt-4 pb-3 px-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icon className="w-4 h-4 text-primary" />
+                    <span className="text-xs font-medium text-muted-foreground">{dim.label}</span>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{score.toFixed(0)}</p>
+                  <Progress value={score} className="h-1.5 mt-2" />
+                  <p className="text-[10px] text-muted-foreground mt-1">/ 100</p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* History Table */}
@@ -99,7 +158,7 @@ export default function UnifiedLightScore() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <History className="w-5 h-5 text-primary" />
-              Lịch sử Light Score (Angel AI)
+              Lịch sử Light Score (Activity)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -118,7 +177,6 @@ export default function UnifiedLightScore() {
                       <th className="text-right py-3 px-2 text-muted-foreground font-medium">Bài viết</th>
                       <th className="text-right py-3 px-2 text-muted-foreground font-medium">Bình luận</th>
                       <th className="text-right py-3 px-2 text-muted-foreground font-medium">Giúp đỡ</th>
-                      <th className="text-left py-3 px-2 text-muted-foreground font-medium">Nguồn</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -130,16 +188,12 @@ export default function UnifiedLightScore() {
                         <td className="text-right py-2 px-2">{row.count_posts ?? 0}</td>
                         <td className="text-right py-2 px-2">{row.count_comments ?? 0}</td>
                         <td className="text-right py-2 px-2">{row.count_help ?? 0}</td>
-                        <td className="py-2 px-2"><span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Angel AI</span></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-4 italic">
-              * Lịch sử từ FUN Profile sẽ được hiển thị khi Bridge API kết nối.
-            </p>
           </CardContent>
         </Card>
       </main>

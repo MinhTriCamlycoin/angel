@@ -4343,6 +4343,63 @@ export type Database = {
         }
         Relationships: []
       }
+      user_dimension_scores: {
+        Row: {
+          activity_score: number
+          computed_at: string
+          created_at: string
+          decay_applied: boolean
+          ecosystem_score: number
+          id: string
+          identity_score: number
+          inactive_days: number
+          level_name: string
+          onchain_score: number
+          risk_penalty: number
+          streak_bonus_pct: number
+          total_light_score: number
+          transparency_score: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_score?: number
+          computed_at?: string
+          created_at?: string
+          decay_applied?: boolean
+          ecosystem_score?: number
+          id?: string
+          identity_score?: number
+          inactive_days?: number
+          level_name?: string
+          onchain_score?: number
+          risk_penalty?: number
+          streak_bonus_pct?: number
+          total_light_score?: number
+          transparency_score?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_score?: number
+          computed_at?: string
+          created_at?: string
+          decay_applied?: boolean
+          ecosystem_score?: number
+          id?: string
+          identity_score?: number
+          inactive_days?: number
+          level_name?: string
+          onchain_score?: number
+          risk_penalty?: number
+          streak_bonus_pct?: number
+          total_light_score?: number
+          transparency_score?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_energy_status: {
         Row: {
           admin_notes: string | null
@@ -4921,6 +4978,7 @@ export type Database = {
         }
         Returns: number
       }
+      compute_user_dimensions: { Args: { _user_id: string }; Returns: Json }
       detect_behavior_sequences: {
         Args: { _action_id: string; _action_type: string; _user_id: string }
         Returns: Json
