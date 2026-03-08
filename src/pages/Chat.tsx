@@ -1066,15 +1066,20 @@ const Chat = () => {
                     )}
                   </div>
 
-                  {/* Generated image */}
+                  {/* Generated image with watermark */}
                   {message.type === "image" && message.imageUrl && (
-                    <div className="relative group">
+                    <div className="relative group" data-image-container={index}>
                       <img 
                         src={message.imageUrl} 
                         alt="Generated" 
                         className="max-w-full rounded-xl shadow-lg cursor-pointer"
                         onClick={() => { setSelectedImage(message.imageUrl!); setShowImageDialog(true); }}
                       />
+                      {/* Angel AI watermark */}
+                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-full px-2.5 py-1">
+                        <img src="/angel-ai-signature.png" alt="Angel AI" className="w-5 h-5 rounded-full" />
+                        <span className="text-[10px] font-medium text-white/90">Angel AI</span>
+                      </div>
                       <button
                         onClick={() => handleDownloadImage(message.imageUrl!)}
                         className="absolute top-2 right-2 p-2 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1131,6 +1136,22 @@ const Chat = () => {
                         <Share2 className="w-3 h-3" />
                         <span className="hidden sm:inline">{t("chat.share")}</span>
                       </button>
+                    </div>
+                  )}
+
+                  {/* Angel AI Signature */}
+                  {message.role === "assistant" && message.content && index > 0 && !(isLoading || isGenerating || isAnalyzing) && (
+                    <div className="ml-1 mt-1 flex items-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
+                      <img src="/angel-ai-signature.png" alt="Angel AI" className="w-4 h-4 rounded-full" />
+                      <span className="text-[10px] text-muted-foreground">Angel AI — </span>
+                      <a 
+                        href="https://angel.fun.rich" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-divine-gold hover:text-divine-light transition-colors"
+                      >
+                        FUN Ecosystem
+                      </a>
                     </div>
                   )}
                 </div>
