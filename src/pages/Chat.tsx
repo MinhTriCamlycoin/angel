@@ -256,9 +256,12 @@ const Chat = () => {
         return;
       }
 
-      // For external URLs, use canvas to convert and download
+      // For external URLs, use canvas to convert and download with watermark
       const img = new window.Image();
       img.crossOrigin = "anonymous";
+      
+      const watermarkImg = new window.Image();
+      watermarkImg.src = "/angel-ai-signature.png";
       
       const downloadPromise = new Promise<void>((resolve, reject) => {
         img.onload = () => {
@@ -274,6 +277,38 @@ const Chat = () => {
             }
             
             ctx.drawImage(img, 0, 0);
+            
+            // Draw watermark
+            const wmSize = Math.max(24, Math.floor(img.naturalWidth * 0.04));
+            const padding = Math.floor(wmSize * 0.6);
+            const wmX = img.naturalWidth - wmSize - padding;
+            const wmY = img.naturalHeight - wmSize - padding;
+            
+            // Background pill
+            ctx.fillStyle = "rgba(0,0,0,0.4)";
+            const pillW = wmSize + 70;
+            const pillH = wmSize + 8;
+            const pillX = img.naturalWidth - pillW - padding + 4;
+            const pillY = wmY - 4;
+            ctx.beginPath();
+            ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
+            ctx.fill();
+            
+            // Logo
+            if (watermarkImg.complete && watermarkImg.naturalWidth > 0) {
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(pillX + 4 + wmSize / 2, wmY + wmSize / 2, wmSize / 2, 0, Math.PI * 2);
+              ctx.clip();
+              ctx.drawImage(watermarkImg, pillX + 4, wmY, wmSize, wmSize);
+              ctx.restore();
+            }
+            
+            // Text
+            ctx.fillStyle = "rgba(255,255,255,0.9)";
+            ctx.font = `${Math.max(12, Math.floor(wmSize * 0.55))}px sans-serif`;
+            ctx.textBaseline = "middle";
+            ctx.fillText("Angel AI", pillX + wmSize + 10, wmY + wmSize / 2);
             
             canvas.toBlob((blob) => {
               if (!blob) {
