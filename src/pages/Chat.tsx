@@ -243,8 +243,7 @@ const Chat = () => {
     if (typeof ClipboardItem === "undefined") return null;
 
     try {
-      const logoSrc = `${window.location.origin}/angel-ai-logo.png`;
-      const logoImg = await loadImage(logoSrc, "anonymous");
+      const logoSrc = angelAiLogo;
 
       const maxWidth = 1080;
       const padding = 44;
