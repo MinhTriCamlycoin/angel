@@ -197,14 +197,36 @@ const Chat = () => {
       .replace(/\"/g, "&quot;")
       .replace(/'/g, "&#39;");
 
+  const blobToDataUrl = (blob: Blob) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Failed to convert blob to data URL"));
+      reader.readAsDataURL(blob);
+    });
+
+  const toInlineImageSrc = async (src: string) => {
+    if (!src) return "";
+    if (src.startsWith("data:")) return src;
+
+    try {
+      const response = await fetch(src);
+      if (!response.ok) throw new Error("Failed to fetch image source");
+      const blob = await response.blob();
+      return await blobToDataUrl(blob);
+    } catch {
+      return src;
+    }
+  };
+
   const handleCopyMessage = async (message: Message) => {
     try {
       const cleanText = stripMarkdown(message.content || "").trim();
       const signatureText = "🌟 Angel AI — FUN Ecosystem";
-      const hasGeneratedImage = message.role === "assistant" && message.type === "image" && !!message.imageUrl;
+      const hasCopyImage = !!message.imageUrl;
 
       const plainTextParts = [cleanText].filter(Boolean);
-      if (hasGeneratedImage && message.imageUrl) {
+      if (hasCopyImage && message.imageUrl) {
         plainTextParts.push(`🖼️ ${message.imageUrl}`);
       }
       if (message.role === "assistant") {
@@ -214,12 +236,17 @@ const Chat = () => {
       const plainText = plainTextParts.join("\n\n");
 
       if (message.role === "assistant" && typeof ClipboardItem !== "undefined") {
-        const logoUrl = "https://angel999.lovable.app/angel-ai-logo.png";
+        const logoSource = `${window.location.origin}/angel-ai-logo.png`;
+        const [inlineLogoSrc, inlineMessageImageSrc] = await Promise.all([
+          toInlineImageSrc(logoSource),
+          hasCopyImage && message.imageUrl ? toInlineImageSrc(message.imageUrl) : Promise.resolve(""),
+        ]);
+
         const textHtml = cleanText
           ? `<p style="white-space:pre-wrap;margin:0 0 12px 0;">${escapeHtml(cleanText).replace(/\n/g, "<br>")}</p>`
           : "";
-        const imageHtml = hasGeneratedImage && message.imageUrl
-          ? `<div style="margin:0 0 12px 0;"><img src="${message.imageUrl}" alt="Angel AI Generated" style="max-width:100%;border-radius:12px;display:block;" /></div>`
+        const imageHtml = inlineMessageImageSrc
+          ? `<div style="margin:0 0 12px 0;"><img src="${inlineMessageImageSrc}" alt="Angel AI Generated" style="max-width:100%;border-radius:12px;display:block;" /></div>`
           : "";
 
         const htmlContent = `
@@ -229,7 +256,9 @@ const Chat = () => {
             <table cellpadding="0" cellspacing="0" style="border-top:1px solid #e5e5e5;padding-top:8px;margin-top:8px;">
               <tr>
                 <td style="vertical-align:middle;padding-right:8px;">
-                  <img src="${logoUrl}" alt="Angel AI" width="28" height="28" style="border-radius:50%;display:block;background:#ffffff;" />
+                  <div style="width:28px;height:28px;border-radius:9999px;background:#ffffff;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid #f1f1f1;">
+                    <img src="${inlineLogoSrc}" alt="Angel AI" width="28" height="28" style="display:block;background:#ffffff;" />
+                  </div>
                 </td>
                 <td style="vertical-align:middle;">
                   <strong style="color:#d4a017;font-size:13px;">Angel AI</strong>
