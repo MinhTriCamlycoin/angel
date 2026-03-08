@@ -189,22 +189,47 @@ const Chat = () => {
     return "";
   };
 
-  const handleCopyMessage = async (content: string, role?: string) => {
-    try {
-      const cleanText = stripMarkdown(content);
-      const plainText = role === "assistant"
-        ? `${cleanText}\n\n🌟 Angel AI — FUN Ecosystem`
-        : cleanText;
+  const escapeHtml = (text: string) =>
+    text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
 
-      if (role === "assistant" && typeof ClipboardItem !== "undefined") {
+  const handleCopyMessage = async (message: Message) => {
+    try {
+      const cleanText = stripMarkdown(message.content || "").trim();
+      const signatureText = "🌟 Angel AI — FUN Ecosystem";
+      const hasGeneratedImage = message.role === "assistant" && message.type === "image" && !!message.imageUrl;
+
+      const plainTextParts = [cleanText].filter(Boolean);
+      if (hasGeneratedImage && message.imageUrl) {
+        plainTextParts.push(`🖼️ ${message.imageUrl}`);
+      }
+      if (message.role === "assistant") {
+        plainTextParts.push(signatureText);
+      }
+
+      const plainText = plainTextParts.join("\n\n");
+
+      if (message.role === "assistant" && typeof ClipboardItem !== "undefined") {
         const logoUrl = "https://angel999.lovable.app/angel-ai-logo.png";
+        const textHtml = cleanText
+          ? `<p style="white-space:pre-wrap;margin:0 0 12px 0;">${escapeHtml(cleanText).replace(/\n/g, "<br>")}</p>`
+          : "";
+        const imageHtml = hasGeneratedImage && message.imageUrl
+          ? `<div style="margin:0 0 12px 0;"><img src="${message.imageUrl}" alt="Angel AI Generated" style="max-width:100%;border-radius:12px;display:block;" /></div>`
+          : "";
+
         const htmlContent = `
           <div style="font-family:sans-serif;font-size:15px;line-height:1.6;color:#333;">
-            <p style="white-space:pre-wrap;margin:0 0 12px 0;">${cleanText.replace(/\n/g, "<br>")}</p>
+            ${textHtml}
+            ${imageHtml}
             <table cellpadding="0" cellspacing="0" style="border-top:1px solid #e5e5e5;padding-top:8px;margin-top:8px;">
               <tr>
                 <td style="vertical-align:middle;padding-right:8px;">
-                  <img src="${logoUrl}" alt="Angel AI" width="28" height="28" style="border-radius:50%;display:block;" />
+                  <img src="${logoUrl}" alt="Angel AI" width="28" height="28" style="border-radius:50%;display:block;background:#ffffff;" />
                 </td>
                 <td style="vertical-align:middle;">
                   <strong style="color:#d4a017;font-size:13px;">Angel AI</strong>
@@ -213,17 +238,17 @@ const Chat = () => {
               </tr>
             </table>
           </div>`;
-        const htmlBlob = new Blob([htmlContent], { type: "text/html" });
-        const textBlob = new Blob([plainText], { type: "text/plain" });
+
         await navigator.clipboard.write([
           new ClipboardItem({
-            "text/html": htmlBlob,
-            "text/plain": textBlob,
+            "text/html": new Blob([htmlContent], { type: "text/html" }),
+            "text/plain": new Blob([plainText], { type: "text/plain" }),
           }),
         ]);
       } else {
         await navigator.clipboard.writeText(plainText);
       }
+
       toast.success(t("chat.copied"));
     } catch (error) {
       toast.error(t("chat.copyError"));
