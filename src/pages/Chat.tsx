@@ -219,12 +219,23 @@ const Chat = () => {
     if (src.startsWith("data:")) return src;
 
     try {
-      const response = await fetch(src);
-      if (!response.ok) throw new Error("Failed to fetch image source");
-      const blob = await response.blob();
-      return await blobToDataUrl(blob);
+      const image = await loadImage(src, "anonymous");
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth || image.width;
+      canvas.height = image.naturalHeight || image.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Failed to create image canvas");
+      ctx.drawImage(image, 0, 0);
+      return canvas.toDataURL("image/png");
     } catch {
-      return src;
+      try {
+        const response = await fetch(src);
+        if (!response.ok) throw new Error("Failed to fetch image source");
+        const blob = await response.blob();
+        return await blobToDataUrl(blob);
+      } catch {
+        return src;
+      }
     }
   };
 
@@ -232,7 +243,7 @@ const Chat = () => {
     if (typeof ClipboardItem === "undefined") return null;
 
     try {
-      const logoSrc = `${window.location.origin}/angel-ai-logo.png`;
+      const logoSrc = angelAiLogo;
       const logoImg = await loadImage(logoSrc, "anonymous");
 
       const maxWidth = 1080;
@@ -387,7 +398,7 @@ const Chat = () => {
       const plainText = plainTextParts.join("\n\n");
 
       if (message.role === "assistant" && typeof ClipboardItem !== "undefined") {
-        const logoSource = `${window.location.origin}/angel-ai-logo.png`;
+        const logoSource = angelAiLogo;
         const [inlineLogoSrc, inlineMessageImageSrc] = await Promise.all([
           toInlineImageSrc(logoSource),
           hasCopyImage && message.imageUrl ? toInlineImageSrc(message.imageUrl) : Promise.resolve(""),
