@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import angelAvatar from "@/assets/angel-avatar.png";
+import angelAiLogo from "@/assets/angel-ai-logo.png";
 import ChatRewardNotification from "@/components/ChatRewardNotification";
 import ChatShareDialog from "@/components/ChatShareDialog";
 import EarlyAdopterRewardPopup from "@/components/EarlyAdopterRewardPopup";
@@ -188,9 +189,13 @@ const Chat = () => {
     return "";
   };
 
-  const handleCopyMessage = async (content: string) => {
+  const handleCopyMessage = async (content: string, role?: string) => {
     try {
-      await navigator.clipboard.writeText(stripMarkdown(content));
+      const cleanText = stripMarkdown(content);
+      const textToCopy = role === "assistant" 
+        ? `${cleanText}\n\n🌟 Angel AI — FUN Ecosystem`
+        : cleanText;
+      await navigator.clipboard.writeText(textToCopy);
       toast.success(t("chat.copied"));
     } catch (error) {
       toast.error(t("chat.copyError"));
@@ -261,7 +266,7 @@ const Chat = () => {
       img.crossOrigin = "anonymous";
       
       const watermarkImg = new window.Image();
-      watermarkImg.src = "/angel-ai-signature.png";
+      watermarkImg.src = angelAiLogo;
       
       const downloadPromise = new Promise<void>((resolve, reject) => {
         img.onload = () => {
@@ -1102,7 +1107,7 @@ const Chat = () => {
                     {/* Angel AI Signature inside bubble */}
                     {message.role === "assistant" && message.content && index > 0 && !(isLoading || isGenerating || isAnalyzing) && (
                       <div className="mt-2 pt-1.5 border-t border-dashed border-foreground/10 flex items-center gap-1.5 opacity-50">
-                        <img src="/angel-ai-signature.png" alt="Angel AI" className="w-3.5 h-3.5 rounded-full" />
+                        <img src={angelAiLogo} alt="Angel AI" className="w-3.5 h-3.5 rounded-full" />
                         <span className="text-[10px] text-muted-foreground">🌟 Angel AI — FUN Ecosystem</span>
                       </div>
                     )}
@@ -1119,7 +1124,7 @@ const Chat = () => {
                       />
                       {/* Angel AI watermark */}
                       <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-full px-2.5 py-1">
-                        <img src="/angel-ai-signature.png" alt="Angel AI" className="w-5 h-5 rounded-full" />
+                        <img src={angelAiLogo} alt="Angel AI" className="w-5 h-5 rounded-full" />
                         <span className="text-[10px] font-medium text-white/90">Angel AI</span>
                       </div>
                       <button
@@ -1135,7 +1140,7 @@ const Chat = () => {
                   {message.role === "user" && message.content && (
                     <div className="flex items-center gap-2 mr-1 justify-end">
                       <button
-                        onClick={() => handleCopyMessage(message.content)}
+                        onClick={() => handleCopyMessage(message.content, message.role)}
                         className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-primary hover:bg-primary-pale/50 rounded-md transition-colors"
                       >
                         <Copy className="w-3 h-3" />
@@ -1165,7 +1170,7 @@ const Chat = () => {
                         onStop={stopAudio}
                       />
                       <button
-                        onClick={() => handleCopyMessage(message.content)}
+                        onClick={() => handleCopyMessage(message.content, message.role)}
                         className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-primary hover:bg-primary-pale/50 rounded-md transition-colors"
                       >
                         <Copy className="w-3 h-3" />
