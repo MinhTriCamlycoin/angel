@@ -1174,7 +1174,7 @@ const Chat = () => {
                   {message.role === "user" && message.content && (
                     <div className="flex items-center gap-2 mr-1 justify-end">
                       <button
-                        onClick={() => handleCopyMessage(message.content, message.role)}
+                        onClick={() => handleCopyMessage(message)}
                         className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-primary hover:bg-primary-pale/50 rounded-md transition-colors"
                       >
                         <Copy className="w-3 h-3" />
@@ -1184,7 +1184,7 @@ const Chat = () => {
                   )}
                   
                   {/* Action buttons for assistant messages */}
-                  {message.role === "assistant" && message.content && !(isLoading || isGenerating || isAnalyzing) && (
+                  {message.role === "assistant" && (message.content || message.imageUrl) && !(isLoading || isGenerating || isAnalyzing) && (
                     <div className="flex items-center gap-1 sm:gap-2 ml-1 flex-wrap">
                       {/* Like/Dislike Feedback - Grok style */}
                       <MessageFeedback 
@@ -1204,7 +1204,7 @@ const Chat = () => {
                         onStop={stopAudio}
                       />
                       <button
-                        onClick={() => handleCopyMessage(message.content, message.role)}
+                        onClick={() => handleCopyMessage(message)}
                         className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-primary hover:bg-primary-pale/50 rounded-md transition-colors"
                       >
                         <Copy className="w-3 h-3" />
