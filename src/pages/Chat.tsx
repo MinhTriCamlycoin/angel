@@ -506,34 +506,42 @@ const Chat = () => {
 
       ctx.drawImage(img, 0, 0);
 
-      // Draw watermark
-      const wmSize = Math.max(24, Math.floor(img.naturalWidth * 0.04));
-      const padding = Math.floor(wmSize * 0.6);
-      const wmY = img.naturalHeight - wmSize - padding;
+      // Draw watermark — adaptive to all aspect ratios
+      const shortSide = Math.min(img.naturalWidth, img.naturalHeight);
+      const wmSize = Math.max(28, Math.floor(shortSide * 0.05));
+      const fontSize = Math.max(14, Math.floor(wmSize * 0.6));
+      const padding = Math.floor(wmSize * 0.5);
+      const gap = Math.floor(wmSize * 0.3);
 
-      // Background pill
-      ctx.fillStyle = "rgba(0,0,0,0.4)";
-      const pillW = wmSize + 70;
-      const pillH = wmSize + 8;
-      const pillX = img.naturalWidth - pillW - padding + 4;
-      const pillY = wmY - 4;
+      ctx.font = `700 ${fontSize}px system-ui, -apple-system, sans-serif`;
+      const textWidth = ctx.measureText("Angel AI").width;
+
+      const pillH = wmSize + 12;
+      const pillW = wmSize + gap + textWidth + padding * 2;
+      const pillX = img.naturalWidth - pillW - padding;
+      const pillY = img.naturalHeight - pillH - padding;
+
+      // Semi-transparent pill background
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
       ctx.beginPath();
       ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
       ctx.fill();
 
-      // Logo
+      // Logo (circular clip)
+      const logoX = pillX + padding;
+      const logoY = pillY + (pillH - wmSize) / 2;
       ctx.save();
       ctx.beginPath();
-      ctx.arc(pillX + 4 + wmSize / 2, wmY + wmSize / 2, wmSize / 2, 0, Math.PI * 2);
+      ctx.arc(logoX + wmSize / 2, logoY + wmSize / 2, wmSize / 2, 0, Math.PI * 2);
       ctx.clip();
-      ctx.drawImage(watermarkImg, pillX + 4, wmY, wmSize, wmSize);
+      ctx.drawImage(watermarkImg, logoX, logoY, wmSize, wmSize);
       ctx.restore();
 
       // Text
-      ctx.fillStyle = "rgba(255,255,255,0.9)";
-      ctx.font = `${Math.max(12, Math.floor(wmSize * 0.55))}px sans-serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.font = `700 ${fontSize}px system-ui, -apple-system, sans-serif`;
       ctx.textBaseline = "middle";
-      ctx.fillText("Angel AI", pillX + wmSize + 10, wmY + wmSize / 2);
+      ctx.fillText("Angel AI", logoX + wmSize + gap, pillY + pillH / 2);
 
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob((result) => {
