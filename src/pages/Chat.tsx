@@ -388,57 +388,43 @@ const Chat = () => {
 
       if (message.role === "assistant" && typeof ClipboardItem !== "undefined") {
         const logoSource = `${window.location.origin}/angel-ai-logo.png`;
-        const [inlineLogoSrc, inlineMessageImageSrc, brandedPngBlob] = await Promise.all([
+        const [inlineLogoSrc, inlineMessageImageSrc] = await Promise.all([
           toInlineImageSrc(logoSource),
           hasCopyImage && message.imageUrl ? toInlineImageSrc(message.imageUrl) : Promise.resolve(""),
-          createBrandedClipboardPng(message, cleanText),
         ]);
 
-        // For assistant messages with image: prioritize image/png only so FB/Telegram paste the branded image.
-        if (hasCopyImage && brandedPngBlob) {
-          await navigator.clipboard.write([
-            new ClipboardItem({
-              "image/png": brandedPngBlob,
-            }),
-          ]);
-        } else {
-          const textHtml = cleanText
-            ? `<p style="white-space:pre-wrap;margin:0 0 12px 0;">${escapeHtml(cleanText).replace(/\n/g, "<br>")}</p>`
-            : "";
-          const imageHtml = inlineMessageImageSrc
-            ? `<div style="margin:0 0 12px 0;"><img src="${inlineMessageImageSrc}" alt="Angel AI Generated" style="max-width:100%;border-radius:12px;display:block;" /></div>`
-            : "";
+        const textHtml = cleanText
+          ? `<p style="white-space:pre-wrap;margin:0 0 12px 0;">${escapeHtml(cleanText).replace(/\n/g, "<br>")}</p>`
+          : "";
+        const imageHtml = inlineMessageImageSrc
+          ? `<div style="margin:0 0 12px 0;"><img src="${inlineMessageImageSrc}" alt="Angel AI Generated" style="max-width:100%;border-radius:12px;display:block;" /></div>`
+          : "";
 
-          const htmlContent = `
-            <div style="font-family:sans-serif;font-size:15px;line-height:1.6;color:#333;">
-              ${textHtml}
-              ${imageHtml}
-              <table cellpadding="0" cellspacing="0" style="border-top:1px solid #e5e5e5;padding-top:8px;margin-top:8px;">
-                <tr>
-                  <td style="vertical-align:middle;padding-right:8px;">
-                    <div style="width:28px;height:28px;border-radius:9999px;background:#ffffff;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid #f1f1f1;">
-                      <img src="${inlineLogoSrc}" alt="Angel AI" width="28" height="28" style="display:block;background:#ffffff;" />
-                    </div>
-                  </td>
-                  <td style="vertical-align:middle;">
-                    <strong style="color:#d4a017;font-size:13px;">Angel AI</strong>
-                    <br><span style="color:#888;font-size:11px;">FUN Ecosystem</span>
-                  </td>
-                </tr>
-              </table>
-            </div>`;
+        const htmlContent = `
+          <div style="font-family:sans-serif;font-size:15px;line-height:1.6;color:#333;">
+            ${textHtml}
+            ${imageHtml}
+            <table cellpadding="0" cellspacing="0" style="border-top:1px solid #e5e5e5;padding-top:8px;margin-top:8px;">
+              <tr>
+                <td style="vertical-align:middle;padding-right:8px;">
+                  <div style="width:28px;height:28px;border-radius:9999px;background:#ffffff;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid #f1f1f1;">
+                    <img src="${inlineLogoSrc}" alt="Angel AI" width="28" height="28" style="display:block;background:#ffffff;" />
+                  </div>
+                </td>
+                <td style="vertical-align:middle;">
+                  <strong style="color:#d4a017;font-size:13px;">Angel AI</strong>
+                  <br><span style="color:#888;font-size:11px;">FUN Ecosystem</span>
+                </td>
+              </tr>
+            </table>
+          </div>`;
 
-          const clipboardPayload: Record<string, Blob> = {
+        await navigator.clipboard.write([
+          new ClipboardItem({
             "text/html": new Blob([htmlContent], { type: "text/html" }),
             "text/plain": new Blob([plainText], { type: "text/plain" }),
-          };
-
-          if (brandedPngBlob) {
-            clipboardPayload["image/png"] = brandedPngBlob;
-          }
-
-          await navigator.clipboard.write([new ClipboardItem(clipboardPayload)]);
-        }
+          }),
+        ]);
       } else {
         await navigator.clipboard.writeText(plainText);
       }
