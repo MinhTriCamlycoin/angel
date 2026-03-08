@@ -398,7 +398,7 @@ const Chat = () => {
       const plainText = plainTextParts.join("\n\n");
 
       if (message.role === "assistant" && typeof ClipboardItem !== "undefined") {
-        const logoSource = `${window.location.origin}/angel-ai-logo.png`;
+        const logoSource = angelAiLogo;
         const [inlineLogoSrc, inlineMessageImageSrc] = await Promise.all([
           toInlineImageSrc(logoSource),
           hasCopyImage && message.imageUrl ? toInlineImageSrc(message.imageUrl) : Promise.resolve(""),
