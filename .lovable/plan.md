@@ -1,23 +1,53 @@
 
 
-# Thay logo Angel AI mới cho chữ ký và watermark ảnh
+# Huấn luyện Angel AI đọc và tạo code
 
-## Thay đổi
+## Vấn đề
 
-Thay thế file `public/angel-ai-signature.png` hiện tại bằng logo Angel AI mới (hình tròn vàng gold) mà user vừa upload. Logo này sẽ tự động áp dụng cho:
+Hiện tại `BASE_SYSTEM_PROMPT` trong `supabase/functions/angel-chat/index.ts` không có hướng dẫn nào về khả năng lập trình. Khi user hỏi Angel AI viết code hoặc giải thích code, AI không có ngữ cảnh rõ ràng để trả lời đúng cách — không biết format code block, không biết hỗ trợ ngôn ngữ nào, không có best practices.
 
-1. **Chữ ký cuối tin nhắn** (dòng 1180) — đã dùng `/angel-ai-signature.png`
-2. **Watermark trên ảnh generated** (dòng 1115) — đã dùng `/angel-ai-signature.png`
-3. **Watermark burn-in khi download** (dòng 264) — đã dùng `/angel-ai-signature.png`
+## Giải pháp
 
-Ngoài ra, cần **di chuyển chữ ký vào trong bubble** theo yêu cầu trước đó (từ dòng 1177-1191 xuống trước dòng 1102):
-- Xóa block chữ ký ngoài bubble (dòng 1177-1191)
-- Chèn chữ ký vào trong bubble (trước `</div>` dòng 1102), kèm logo mới
+Thêm section **CODE GENERATION & READING** vào `BASE_SYSTEM_PROMPT` (sau TECHNICAL KNOWLEDGE BASE, trước MISSION — khoảng trước dòng 681), bao gồm:
 
-## Tổng kết
+### Nội dung kiến thức cần thêm
 
-| # | Thay đổi |
-|---|----------|
-| 1 | Copy logo mới → `public/angel-ai-signature.png` (overwrite) |
-| 2 | Di chuyển chữ ký vào trong bubble tin nhắn (Chat.tsx) |
+**1. Năng lực lập trình cốt lõi:**
+- Đọc, phân tích, giải thích code bất kỳ ngôn ngữ nào
+- Viết code hoàn chỉnh, sẵn sàng chạy (không viết code dở)
+- Debug, tìm lỗi, đề xuất sửa
+- Refactor, tối ưu hóa code
+
+**2. Ngôn ngữ & Framework hỗ trợ:**
+- Frontend: HTML, CSS, JavaScript, TypeScript, React, Vue, Angular, Svelte, Next.js, Tailwind CSS
+- Backend: Node.js, Python, Go, Rust, Java, PHP, Ruby, C#
+- Mobile: React Native, Flutter, Swift, Kotlin
+- Database: SQL, PostgreSQL, MySQL, MongoDB, Supabase
+- Blockchain: Solidity, Web3.js, Ethers.js
+- DevOps: Docker, GitHub Actions, CI/CD
+- AI/ML: Python (TensorFlow, PyTorch), LangChain, Prompt Engineering
+
+**3. Quy tắc viết code:**
+- Luôn wrap code trong markdown code blocks với syntax highlighting (```language)
+- Viết comments giải thích bằng tiếng Việt hoặc tiếng Anh tùy ngữ cảnh
+- Code phải hoàn chỉnh, chạy được, không bỏ dở với "// ..."
+- Khi user paste code → phân tích, giải thích từng phần, chỉ ra vấn đề
+- Khi user yêu cầu tạo dự án → cung cấp cấu trúc file, từng file code, hướng dẫn setup
+- Đề xuất best practices, security, performance khi phù hợp
+
+**4. Phong cách hỗ trợ code:**
+- Giải thích code rõ ràng, dễ hiểu cho mọi cấp độ (beginner → senior)
+- Khi sửa code: chỉ rõ dòng nào sửa, tại sao sửa
+- Gợi ý cải thiện thêm sau khi hoàn thành yêu cầu chính
+- Hỗ trợ kiến trúc dự án, thiết kế database, API design
+
+## File cần sửa
+
+**`supabase/functions/angel-chat/index.ts`** — Chèn section mới vào `BASE_SYSTEM_PROMPT` trước dòng 681 (trước section MISSION).
+
+## Lưu ý
+
+- Không thay đổi logic xử lý hay streaming — chỉ mở rộng system prompt
+- Angel AI vốn đã dùng model Gemini 2.5 Flash có khả năng code mạnh — chỉ cần "unlock" qua prompt
+- maxTokens đã đủ lớn (8000) cho các response code dài
 
