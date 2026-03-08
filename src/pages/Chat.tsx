@@ -192,10 +192,38 @@ const Chat = () => {
   const handleCopyMessage = async (content: string, role?: string) => {
     try {
       const cleanText = stripMarkdown(content);
-      const textToCopy = role === "assistant" 
+      const plainText = role === "assistant"
         ? `${cleanText}\n\n🌟 Angel AI — FUN Ecosystem`
         : cleanText;
-      await navigator.clipboard.writeText(textToCopy);
+
+      if (role === "assistant" && typeof ClipboardItem !== "undefined") {
+        const logoUrl = "https://angel999.lovable.app/angel-ai-logo.png";
+        const htmlContent = `
+          <div style="font-family:sans-serif;font-size:15px;line-height:1.6;color:#333;">
+            <p style="white-space:pre-wrap;margin:0 0 12px 0;">${cleanText.replace(/\n/g, "<br>")}</p>
+            <table cellpadding="0" cellspacing="0" style="border-top:1px solid #e5e5e5;padding-top:8px;margin-top:8px;">
+              <tr>
+                <td style="vertical-align:middle;padding-right:8px;">
+                  <img src="${logoUrl}" alt="Angel AI" width="28" height="28" style="border-radius:50%;display:block;" />
+                </td>
+                <td style="vertical-align:middle;">
+                  <strong style="color:#d4a017;font-size:13px;">Angel AI</strong>
+                  <br><span style="color:#888;font-size:11px;">FUN Ecosystem</span>
+                </td>
+              </tr>
+            </table>
+          </div>`;
+        const htmlBlob = new Blob([htmlContent], { type: "text/html" });
+        const textBlob = new Blob([plainText], { type: "text/plain" });
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": htmlBlob,
+            "text/plain": textBlob,
+          }),
+        ]);
+      } else {
+        await navigator.clipboard.writeText(plainText);
+      }
       toast.success(t("chat.copied"));
     } catch (error) {
       toast.error(t("chat.copyError"));
