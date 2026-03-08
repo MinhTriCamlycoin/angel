@@ -248,105 +248,86 @@ const Chat = () => {
   };
 
   const handleDownloadImage = async (imageUrl: string) => {
-    try {
-      // Check if it's a data URL (base64) - can download directly
-      if (imageUrl.startsWith('data:')) {
-        const link = document.createElement("a");
-        link.href = imageUrl;
-        link.download = `angel-ai-image-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success("Đã tải hình ảnh thành công!");
-        return;
-      }
-
-      // For external URLs, use canvas to convert and download with watermark
-      const img = new window.Image();
-      img.crossOrigin = "anonymous";
-      
-      const watermarkImg = new window.Image();
-      watermarkImg.src = angelAiLogo;
-      
-      const downloadPromise = new Promise<void>((resolve, reject) => {
-        img.onload = () => {
-          try {
-            const canvas = document.createElement("canvas");
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-            
-            const ctx = canvas.getContext("2d");
-            if (!ctx) {
-              reject(new Error("Cannot create canvas context"));
-              return;
-            }
-            
-            ctx.drawImage(img, 0, 0);
-            
-            // Draw watermark
-            const wmSize = Math.max(24, Math.floor(img.naturalWidth * 0.04));
-            const padding = Math.floor(wmSize * 0.6);
-            const wmX = img.naturalWidth - wmSize - padding;
-            const wmY = img.naturalHeight - wmSize - padding;
-            
-            // Background pill
-            ctx.fillStyle = "rgba(0,0,0,0.4)";
-            const pillW = wmSize + 70;
-            const pillH = wmSize + 8;
-            const pillX = img.naturalWidth - pillW - padding + 4;
-            const pillY = wmY - 4;
-            ctx.beginPath();
-            ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
-            ctx.fill();
-            
-            // Logo
-            if (watermarkImg.complete && watermarkImg.naturalWidth > 0) {
-              ctx.save();
-              ctx.beginPath();
-              ctx.arc(pillX + 4 + wmSize / 2, wmY + wmSize / 2, wmSize / 2, 0, Math.PI * 2);
-              ctx.clip();
-              ctx.drawImage(watermarkImg, pillX + 4, wmY, wmSize, wmSize);
-              ctx.restore();
-            }
-            
-            // Text
-            ctx.fillStyle = "rgba(255,255,255,0.9)";
-            ctx.font = `${Math.max(12, Math.floor(wmSize * 0.55))}px sans-serif`;
-            ctx.textBaseline = "middle";
-            ctx.fillText("Angel AI", pillX + wmSize + 10, wmY + wmSize / 2);
-            
-            canvas.toBlob((blob) => {
-              if (!blob) {
-                reject(new Error("Cannot create blob"));
-                return;
-              }
-              
-              const blobUrl = URL.createObjectURL(blob);
-              const link = document.createElement("a");
-              link.href = blobUrl;
-              link.download = `angel-ai-image-${Date.now()}.png`;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              URL.revokeObjectURL(blobUrl);
-              resolve();
-            }, "image/png");
-          } catch (err) {
-            reject(err);
-          }
-        };
-        
-        img.onerror = () => reject(new Error("Failed to load image"));
+    const loadImage = (src: string, crossOrigin?: "anonymous") =>
+      new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new window.Image();
+        if (crossOrigin) image.crossOrigin = crossOrigin;
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error("Failed to load image"));
+        image.src = src;
       });
-      
-      img.src = imageUrl;
-      await downloadPromise;
+
+    try {
+      // Always render through canvas so watermark is burned into exported image
+      const [img, watermarkImg] = await Promise.all([
+        loadImage(imageUrl, imageUrl.startsWith("data:") ? undefined : "anonymous"),
+        loadImage(angelAiLogo),
+      ]);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Cannot create canvas context");
+
+      ctx.drawImage(img, 0, 0);
+
+      // Draw watermark
+      const wmSize = Math.max(24, Math.floor(img.naturalWidth * 0.04));
+      const padding = Math.floor(wmSize * 0.6);
+      const wmX = img.naturalWidth - wmSize - padding;
+      const wmY = img.naturalHeight - wmSize - padding;
+
+      // Background pill
+      ctx.fillStyle = "rgba(0,0,0,0.4)";
+      const pillW = wmSize + 70;
+      const pillH = wmSize + 8;
+      const pillX = img.naturalWidth - pillW - padding + 4;
+      const pillY = wmY - 4;
+      ctx.beginPath();
+      ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
+      ctx.fill();
+
+      // Logo
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(pillX + 4 + wmSize / 2, wmY + wmSize / 2, wmSize / 2, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(watermarkImg, pillX + 4, wmY, wmSize, wmSize);
+      ctx.restore();
+
+      // Text
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.font = `${Math.max(12, Math.floor(wmSize * 0.55))}px sans-serif`;
+      ctx.textBaseline = "middle";
+      ctx.fillText("Angel AI", pillX + wmSize + 10, wmY + wmSize / 2);
+
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((result) => {
+          if (!result) {
+            reject(new Error("Cannot create blob"));
+            return;
+          }
+          resolve(result);
+        }, "image/png");
+      });
+
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `angel-ai-image-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+
       toast.success("Đã tải hình ảnh thành công!");
     } catch (error) {
       console.error("Download error:", error);
       // Fallback: try to open in new tab for manual save
       try {
-        window.open(imageUrl, '_blank');
+        window.open(imageUrl, "_blank");
         toast.info("Hình ảnh đã mở trong tab mới. Nhấn giữ để lưu về thiết bị.");
       } catch {
         toast.error("Không thể tải hình ảnh. Vui lòng thử lại.");
