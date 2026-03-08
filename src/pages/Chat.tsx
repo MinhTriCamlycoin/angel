@@ -244,6 +244,7 @@ const Chat = () => {
 
     try {
       const logoSrc = angelAiLogo;
+      const logoImg = await loadImage(logoSrc, "anonymous");
 
       const maxWidth = 1080;
       const padding = 44;
