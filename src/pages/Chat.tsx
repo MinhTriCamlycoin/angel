@@ -189,9 +189,13 @@ const Chat = () => {
     return "";
   };
 
-  const handleCopyMessage = async (content: string) => {
+  const handleCopyMessage = async (content: string, role?: string) => {
     try {
-      await navigator.clipboard.writeText(stripMarkdown(content));
+      const cleanText = stripMarkdown(content);
+      const textToCopy = role === "assistant" 
+        ? `${cleanText}\n\n🌟 Angel AI — FUN Ecosystem`
+        : cleanText;
+      await navigator.clipboard.writeText(textToCopy);
       toast.success(t("chat.copied"));
     } catch (error) {
       toast.error(t("chat.copyError"));
