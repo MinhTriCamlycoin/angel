@@ -1099,6 +1099,13 @@ const Chat = () => {
                         </span>
                       </div>
                     )}
+                    {/* Angel AI Signature inside bubble */}
+                    {message.role === "assistant" && message.content && index > 0 && !(isLoading || isGenerating || isAnalyzing) && (
+                      <div className="mt-2 pt-1.5 border-t border-dashed border-foreground/10 flex items-center gap-1.5 opacity-50">
+                        <img src="/angel-ai-signature.png" alt="Angel AI" className="w-3.5 h-3.5 rounded-full" />
+                        <span className="text-[10px] text-muted-foreground">🌟 Angel AI — FUN Ecosystem</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Generated image with watermark */}
@@ -1174,21 +1181,6 @@ const Chat = () => {
                     </div>
                   )}
 
-                  {/* Angel AI Signature */}
-                  {message.role === "assistant" && message.content && index > 0 && !(isLoading || isGenerating || isAnalyzing) && (
-                    <div className="ml-1 mt-1 flex items-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
-                      <img src="/angel-ai-signature.png" alt="Angel AI" className="w-4 h-4 rounded-full" />
-                      <span className="text-[10px] text-muted-foreground">Angel AI — </span>
-                      <a 
-                        href="https://angel.fun.rich" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-divine-gold hover:text-divine-light transition-colors"
-                      >
-                        FUN Ecosystem
-                      </a>
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
