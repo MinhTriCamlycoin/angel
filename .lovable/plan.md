@@ -1,33 +1,53 @@
 
 
-# Kế hoạch: Thêm chữ ký Angel AI & watermark cho ảnh
+# Huấn luyện Angel AI đọc và tạo code
 
-## 2 việc cần làm
+## Vấn đề
 
-### 1. Chữ ký cuối mỗi câu trả lời Angel AI
-Thêm dòng chữ ký `🌟 Angel AI - FUN Ecosystem: https://angel.fun.rich` vào cuối mỗi tin nhắn assistant trong Chat UI.
+Hiện tại `BASE_SYSTEM_PROMPT` trong `supabase/functions/angel-chat/index.ts` không có hướng dẫn nào về khả năng lập trình. Khi user hỏi Angel AI viết code hoặc giải thích code, AI không có ngữ cảnh rõ ràng để trả lời đúng cách — không biết format code block, không biết hỗ trợ ngôn ngữ nào, không có best practices.
 
-**Cách tiếp cận**: Thêm ở frontend (Chat.tsx), hiển thị dưới mỗi bubble assistant — không sửa backend để tránh ảnh hưởng cache, copy, TTS.
+## Giải pháp
 
-**Thay đổi**:
-- `src/pages/Chat.tsx`: Thêm một dòng chữ ký styled bên dưới nội dung text của mỗi assistant message (trong bubble hoặc ngay dưới bubble). Link `https://angel.fun.rich` sẽ là clickable, styled nhỏ gọn với màu divine-gold.
+Thêm section **CODE GENERATION & READING** vào `BASE_SYSTEM_PROMPT` (sau TECHNICAL KNOWLEDGE BASE, trước MISSION — khoảng trước dòng 681), bao gồm:
 
-### 2. Watermark logo Angel AI trên ảnh generated
-Giống Grok đặt logo ở góc ảnh — thêm Angel AI logo watermark vào góc dưới phải của ảnh đã tạo.
+### Nội dung kiến thức cần thêm
 
-**Cách tiếp cận**: Xử lý ở backend (`generate-image/index.ts`) bằng cách composite logo lên ảnh trước khi upload. Tuy nhiên, Deno edge functions không có Canvas API native. 
+**1. Năng lực lập trình cốt lõi:**
+- Đọc, phân tích, giải thích code bất kỳ ngôn ngữ nào
+- Viết code hoàn chỉnh, sẵn sàng chạy (không viết code dở)
+- Debug, tìm lỗi, đề xuất sửa
+- Refactor, tối ưu hóa code
 
-**Giải pháp thực tế**: Thêm watermark overlay ở frontend — hiển thị logo Angel AI ở góc dưới phải trên mỗi ảnh generated (CSS overlay). Khi download, dùng html2canvas (đã có trong dependencies) để render ảnh kèm watermark.
+**2. Ngôn ngữ & Framework hỗ trợ:**
+- Frontend: HTML, CSS, JavaScript, TypeScript, React, Vue, Angular, Svelte, Next.js, Tailwind CSS
+- Backend: Node.js, Python, Go, Rust, Java, PHP, Ruby, C#
+- Mobile: React Native, Flutter, Swift, Kotlin
+- Database: SQL, PostgreSQL, MySQL, MongoDB, Supabase
+- Blockchain: Solidity, Web3.js, Ethers.js
+- DevOps: Docker, GitHub Actions, CI/CD
+- AI/ML: Python (TensorFlow, PyTorch), LangChain, Prompt Engineering
 
-**Thay đổi**:
-- `src/pages/Chat.tsx`: Wrap ảnh generated trong container có logo overlay ở góc dưới phải
-- `src/pages/Chat.tsx`: Cập nhật hàm `handleDownloadImage` để render watermark vào ảnh khi tải
+**3. Quy tắc viết code:**
+- Luôn wrap code trong markdown code blocks với syntax highlighting (```language)
+- Viết comments giải thích bằng tiếng Việt hoặc tiếng Anh tùy ngữ cảnh
+- Code phải hoàn chỉnh, chạy được, không bỏ dở với "// ..."
+- Khi user paste code → phân tích, giải thích từng phần, chỉ ra vấn đề
+- Khi user yêu cầu tạo dự án → cung cấp cấu trúc file, từng file code, hướng dẫn setup
+- Đề xuất best practices, security, performance khi phù hợp
 
-## Tổng kết
+**4. Phong cách hỗ trợ code:**
+- Giải thích code rõ ràng, dễ hiểu cho mọi cấp độ (beginner → senior)
+- Khi sửa code: chỉ rõ dòng nào sửa, tại sao sửa
+- Gợi ý cải thiện thêm sau khi hoàn thành yêu cầu chính
+- Hỗ trợ kiến trúc dự án, thiết kế database, API design
 
-| # | File | Thay đổi |
-|---|------|----------|
-| 1 | `src/pages/Chat.tsx` | Thêm chữ ký dưới assistant messages + watermark overlay trên generated images + download kèm watermark |
+## File cần sửa
 
-Không ảnh hưởng backend, cache, hay TTS.
+**`supabase/functions/angel-chat/index.ts`** — Chèn section mới vào `BASE_SYSTEM_PROMPT` trước dòng 681 (trước section MISSION).
+
+## Lưu ý
+
+- Không thay đổi logic xử lý hay streaming — chỉ mở rộng system prompt
+- Angel AI vốn đã dùng model Gemini 2.5 Flash có khả năng code mạnh — chỉ cần "unlock" qua prompt
+- maxTokens đã đủ lớn (8000) cho các response code dài
 

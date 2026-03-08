@@ -256,9 +256,12 @@ const Chat = () => {
         return;
       }
 
-      // For external URLs, use canvas to convert and download
+      // For external URLs, use canvas to convert and download with watermark
       const img = new window.Image();
       img.crossOrigin = "anonymous";
+      
+      const watermarkImg = new window.Image();
+      watermarkImg.src = "/angel-ai-signature.png";
       
       const downloadPromise = new Promise<void>((resolve, reject) => {
         img.onload = () => {
@@ -274,6 +277,38 @@ const Chat = () => {
             }
             
             ctx.drawImage(img, 0, 0);
+            
+            // Draw watermark
+            const wmSize = Math.max(24, Math.floor(img.naturalWidth * 0.04));
+            const padding = Math.floor(wmSize * 0.6);
+            const wmX = img.naturalWidth - wmSize - padding;
+            const wmY = img.naturalHeight - wmSize - padding;
+            
+            // Background pill
+            ctx.fillStyle = "rgba(0,0,0,0.4)";
+            const pillW = wmSize + 70;
+            const pillH = wmSize + 8;
+            const pillX = img.naturalWidth - pillW - padding + 4;
+            const pillY = wmY - 4;
+            ctx.beginPath();
+            ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
+            ctx.fill();
+            
+            // Logo
+            if (watermarkImg.complete && watermarkImg.naturalWidth > 0) {
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(pillX + 4 + wmSize / 2, wmY + wmSize / 2, wmSize / 2, 0, Math.PI * 2);
+              ctx.clip();
+              ctx.drawImage(watermarkImg, pillX + 4, wmY, wmSize, wmSize);
+              ctx.restore();
+            }
+            
+            // Text
+            ctx.fillStyle = "rgba(255,255,255,0.9)";
+            ctx.font = `${Math.max(12, Math.floor(wmSize * 0.55))}px sans-serif`;
+            ctx.textBaseline = "middle";
+            ctx.fillText("Angel AI", pillX + wmSize + 10, wmY + wmSize / 2);
             
             canvas.toBlob((blob) => {
               if (!blob) {
@@ -1066,15 +1101,20 @@ const Chat = () => {
                     )}
                   </div>
 
-                  {/* Generated image */}
+                  {/* Generated image with watermark */}
                   {message.type === "image" && message.imageUrl && (
-                    <div className="relative group">
+                    <div className="relative group" data-image-container={index}>
                       <img 
                         src={message.imageUrl} 
                         alt="Generated" 
                         className="max-w-full rounded-xl shadow-lg cursor-pointer"
                         onClick={() => { setSelectedImage(message.imageUrl!); setShowImageDialog(true); }}
                       />
+                      {/* Angel AI watermark */}
+                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-full px-2.5 py-1">
+                        <img src="/angel-ai-signature.png" alt="Angel AI" className="w-5 h-5 rounded-full" />
+                        <span className="text-[10px] font-medium text-white/90">Angel AI</span>
+                      </div>
                       <button
                         onClick={() => handleDownloadImage(message.imageUrl!)}
                         className="absolute top-2 right-2 p-2 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1131,6 +1171,22 @@ const Chat = () => {
                         <Share2 className="w-3 h-3" />
                         <span className="hidden sm:inline">{t("chat.share")}</span>
                       </button>
+                    </div>
+                  )}
+
+                  {/* Angel AI Signature */}
+                  {message.role === "assistant" && message.content && index > 0 && !(isLoading || isGenerating || isAnalyzing) && (
+                    <div className="ml-1 mt-1 flex items-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
+                      <img src="/angel-ai-signature.png" alt="Angel AI" className="w-4 h-4 rounded-full" />
+                      <span className="text-[10px] text-muted-foreground">Angel AI — </span>
+                      <a 
+                        href="https://angel.fun.rich" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-divine-gold hover:text-divine-light transition-colors"
+                      >
+                        FUN Ecosystem
+                      </a>
                     </div>
                   )}
                 </div>
