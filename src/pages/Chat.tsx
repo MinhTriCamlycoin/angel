@@ -440,6 +440,57 @@ const Chat = () => {
     }
   };
 
+  const handleOpenShare = (answerIndex: number, answerContent: string) => {
+    const question = getQuestionForAnswer(answerIndex);
+    setShareDialog({
+      isOpen: true,
+      question,
+      answer: answerContent,
+    });
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error(t("chat.fileImageOnly"));
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(t("chat.fileTooLarge"));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      setPendingImage(dataUrl);
+      setShowImageActionDialog(true);
+    };
+    reader.readAsDataURL(file);
+
+    e.target.value = "";
+  };
+
+  const handleSelectImageAction = (action: "analyze" | "edit") => {
+    if (!pendingImage) return;
+
+    setUploadedImage(pendingImage);
+    setChatMode(action === "analyze" ? "analyze-image" : "edit-image");
+    setShowImageActionDialog(false);
+    setPendingImage(null);
+  };
+
+  const handleDownloadImage = async (imageUrl: string) => {
+    try {
+      // Always render through canvas so watermark is burned into exported image
+      const [img, watermarkImg] = await Promise.all([
+        loadImage(imageUrl, imageUrl.startsWith("data:") ? undefined : "anonymous"),
+        loadImage(angelAiLogo, "anonymous"),
+      ]);
+
       const canvas = document.createElement("canvas");
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
@@ -452,7 +503,6 @@ const Chat = () => {
       // Draw watermark
       const wmSize = Math.max(24, Math.floor(img.naturalWidth * 0.04));
       const padding = Math.floor(wmSize * 0.6);
-      const wmX = img.naturalWidth - wmSize - padding;
       const wmY = img.naturalHeight - wmSize - padding;
 
       // Background pill
@@ -501,7 +551,6 @@ const Chat = () => {
       toast.success("Đã tải hình ảnh thành công!");
     } catch (error) {
       console.error("Download error:", error);
-      // Fallback: try to open in new tab for manual save
       try {
         window.open(imageUrl, "_blank");
         toast.info("Hình ảnh đã mở trong tab mới. Nhấn giữ để lưu về thiết bị.");
