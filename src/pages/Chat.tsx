@@ -205,6 +205,15 @@ const Chat = () => {
       reader.readAsDataURL(blob);
     });
 
+  const loadImage = (src: string, crossOrigin?: "anonymous") =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new window.Image();
+      if (crossOrigin) image.crossOrigin = crossOrigin;
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Failed to load image"));
+      image.src = src;
+    });
+
   const toInlineImageSrc = async (src: string) => {
     if (!src) return "";
     if (src.startsWith("data:")) return src;
@@ -216,6 +225,148 @@ const Chat = () => {
       return await blobToDataUrl(blob);
     } catch {
       return src;
+    }
+  };
+
+  const createBrandedClipboardPng = async (message: Message, cleanText: string) => {
+    if (typeof ClipboardItem === "undefined") return null;
+
+    try {
+      const logoSrc = `${window.location.origin}/angel-ai-logo.png`;
+      const logoImg = await loadImage(logoSrc, "anonymous");
+
+      const maxWidth = 1080;
+      const padding = 44;
+      const contentWidth = maxWidth - padding * 2;
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+
+      const text = cleanText || "Angel AI";
+      ctx.font = "500 34px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+
+      const lines: string[] = [];
+      text.split("\n").forEach((paragraph) => {
+        if (!paragraph.trim()) {
+          lines.push("");
+          return;
+        }
+        const words = paragraph.split(" ");
+        let current = "";
+        for (const word of words) {
+          const test = current ? `${current} ${word}` : word;
+          if (ctx.measureText(test).width > contentWidth && current) {
+            lines.push(current);
+            current = word;
+          } else {
+            current = test;
+          }
+        }
+        if (current) lines.push(current);
+      });
+
+      const lineHeight = 48;
+      const textHeight = Math.max(lines.length * lineHeight, 52);
+
+      let generatedImage: HTMLImageElement | null = null;
+      if (message.imageUrl) {
+        try {
+          generatedImage = await loadImage(
+            message.imageUrl,
+            message.imageUrl.startsWith("data:") ? undefined : "anonymous"
+          );
+        } catch {
+          generatedImage = null;
+        }
+      }
+
+      const imageHeight = generatedImage
+        ? Math.min(620, (generatedImage.naturalHeight / generatedImage.naturalWidth) * contentWidth)
+        : 0;
+
+      const headerHeight = 86;
+      const footerHeight = 92;
+      const spacing = 24;
+      const totalHeight = Math.ceil(
+        padding + headerHeight + textHeight + (imageHeight ? spacing + imageHeight : 0) + spacing + footerHeight + padding
+      );
+
+      canvas.width = maxWidth;
+      canvas.height = totalHeight;
+
+      // Background
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Main content
+      let y = padding + 16;
+      ctx.fillStyle = "#1f2937";
+      ctx.font = "500 34px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+      for (const line of lines) {
+        if (!line) {
+          y += lineHeight * 0.55;
+        } else {
+          ctx.fillText(line, padding, y + lineHeight * 0.75);
+          y += lineHeight;
+        }
+      }
+
+      if (generatedImage && imageHeight > 0) {
+        y += 8;
+        ctx.save();
+        ctx.beginPath();
+        const radius = 24;
+        const imageY = y;
+        ctx.moveTo(padding + radius, imageY);
+        ctx.lineTo(padding + contentWidth - radius, imageY);
+        ctx.quadraticCurveTo(padding + contentWidth, imageY, padding + contentWidth, imageY + radius);
+        ctx.lineTo(padding + contentWidth, imageY + imageHeight - radius);
+        ctx.quadraticCurveTo(padding + contentWidth, imageY + imageHeight, padding + contentWidth - radius, imageY + imageHeight);
+        ctx.lineTo(padding + radius, imageY + imageHeight);
+        ctx.quadraticCurveTo(padding, imageY + imageHeight, padding, imageY + imageHeight - radius);
+        ctx.lineTo(padding, imageY + radius);
+        ctx.quadraticCurveTo(padding, imageY, padding + radius, imageY);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(generatedImage, padding, imageY, contentWidth, imageHeight);
+        ctx.restore();
+        y += imageHeight;
+      }
+
+      y += spacing;
+
+      // Divider
+      ctx.strokeStyle = "#e5e7eb";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(padding, y);
+      ctx.lineTo(padding + contentWidth, y);
+      ctx.stroke();
+
+      // Signature
+      y += 22;
+      const logoSize = 40;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(padding + logoSize / 2, y + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(padding, y, logoSize, logoSize);
+      ctx.drawImage(logoImg, padding, y, logoSize, logoSize);
+      ctx.restore();
+
+      ctx.fillStyle = "#b58400";
+      ctx.font = "700 24px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+      ctx.fillText("Angel AI", padding + logoSize + 12, y + 18);
+      ctx.fillStyle = "#6b7280";
+      ctx.font = "500 17px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+      ctx.fillText("FUN Ecosystem", padding + logoSize + 12, y + 40);
+
+      return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png", 1));
+    } catch {
+      return null;
     }
   };
 
@@ -237,9 +388,10 @@ const Chat = () => {
 
       if (message.role === "assistant" && typeof ClipboardItem !== "undefined") {
         const logoSource = `${window.location.origin}/angel-ai-logo.png`;
-        const [inlineLogoSrc, inlineMessageImageSrc] = await Promise.all([
+        const [inlineLogoSrc, inlineMessageImageSrc, brandedPngBlob] = await Promise.all([
           toInlineImageSrc(logoSource),
           hasCopyImage && message.imageUrl ? toInlineImageSrc(message.imageUrl) : Promise.resolve(""),
+          createBrandedClipboardPng(message, cleanText),
         ]);
 
         const textHtml = cleanText
@@ -268,12 +420,16 @@ const Chat = () => {
             </table>
           </div>`;
 
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            "text/html": new Blob([htmlContent], { type: "text/html" }),
-            "text/plain": new Blob([plainText], { type: "text/plain" }),
-          }),
-        ]);
+        const clipboardPayload: Record<string, Blob> = {
+          "text/html": new Blob([htmlContent], { type: "text/html" }),
+          "text/plain": new Blob([plainText], { type: "text/plain" }),
+        };
+
+        if (brandedPngBlob) {
+          clipboardPayload["image/png"] = brandedPngBlob;
+        }
+
+        await navigator.clipboard.write([new ClipboardItem(clipboardPayload)]);
       } else {
         await navigator.clipboard.writeText(plainText);
       }
@@ -283,68 +439,6 @@ const Chat = () => {
       toast.error(t("chat.copyError"));
     }
   };
-
-  const handleOpenShare = (answerIndex: number, answerContent: string) => {
-    const question = getQuestionForAnswer(answerIndex);
-    setShareDialog({
-      isOpen: true,
-      question,
-      answer: answerContent
-    });
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      toast.error(t("chat.fileImageOnly"));
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error(t("chat.fileTooLarge"));
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      // Show action dialog to choose between analyze or edit
-      setPendingImage(dataUrl);
-      setShowImageActionDialog(true);
-    };
-    reader.readAsDataURL(file);
-    
-    // Reset input value to allow same file selection
-    e.target.value = '';
-  };
-
-  const handleSelectImageAction = (action: "analyze" | "edit") => {
-    if (!pendingImage) return;
-    
-    setUploadedImage(pendingImage);
-    setChatMode(action === "analyze" ? "analyze-image" : "edit-image");
-    setShowImageActionDialog(false);
-    setPendingImage(null);
-  };
-
-  const handleDownloadImage = async (imageUrl: string) => {
-    const loadImage = (src: string, crossOrigin?: "anonymous") =>
-      new Promise<HTMLImageElement>((resolve, reject) => {
-        const image = new window.Image();
-        if (crossOrigin) image.crossOrigin = crossOrigin;
-        image.onload = () => resolve(image);
-        image.onerror = () => reject(new Error("Failed to load image"));
-        image.src = src;
-      });
-
-    try {
-      // Always render through canvas so watermark is burned into exported image
-      const [img, watermarkImg] = await Promise.all([
-        loadImage(imageUrl, imageUrl.startsWith("data:") ? undefined : "anonymous"),
-        loadImage(angelAiLogo),
-      ]);
 
       const canvas = document.createElement("canvas");
       canvas.width = img.naturalWidth;
